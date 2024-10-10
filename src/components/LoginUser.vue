@@ -90,7 +90,8 @@ export default {
 
 .login-form {
   width: 25%;
-  padding: 20px;
+  padding: 2%;
+  text-align: center;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -108,7 +109,7 @@ export default {
 }
 
 h2 {
-  margin-bottom: 20px;
+  margin-bottom: 5%;
   text-align: center;
   font-size: 1.5em;
   color: #333;
@@ -120,15 +121,17 @@ h2 {
 
 .input-field {
   width: 80%;
-  padding: 10px;
+  padding: 2%;
   font-size: 1em;
   border: 1px solid #ccc;
   border-radius: 4px;
+  text-align: center;
 }
 
 .submit-btn {
-  width: 100%;
-  padding: 10px;
+  width: 80%;
+  padding: 2%;
+  text-align: center;
   background-color: #28a745;
   color: white;
   border: none;
