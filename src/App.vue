@@ -1,25 +1,34 @@
 <template>
-  <div id="app">
-    <router-view></router-view>
-  </div>
+  <v-app>
+    <!-- Top App Bar -->
+    <AppBar/>
+
+    <!-- Navigation Drawer (placed below the App Bar) -->
+    
+     
+    
+    <!-- Main Content -->
+    <v-main>
+      <v-container fluid>
+        <router-view />
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script>
-
+import AppBar from './components/AppBar.vue';
 
 export default {
-  name: 'App',
   components: {
-    
-  }
-}
+    AppBar,
+  },
+  data() {
+    return {};  
+  },
+};
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
-}
+<style scoped>
+/* Custom styles for app layout */
 </style>

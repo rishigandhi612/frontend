@@ -6,39 +6,80 @@ Vue.use(Vuex);
 
 const store = new Vuex.Store({
   state: {
-    user: null, // Store user data after login
+    user: null,       // Store user data after login
+    token: null,      // Store access token
+    refreshToken: null, // Store refresh token
   },
   mutations: {
     SET_USER(state, user) {
-      state.user = user; // Set user mutation
+      state.user = user;  // Set user mutation
+    },
+    SET_TOKEN(state, token) {
+      state.token = token;  // Set access token mutation
+    },
+    SET_REFRESH_TOKEN(state, refreshToken) {
+      state.refreshToken = refreshToken;  // Set refresh token mutation
     },
     CLEAR_USER(state) {
-      state.user = null; // Clear user data
+      state.user = null;
+      state.token = null;
+      state.refreshToken = null;
     },
   },
   actions: {
+    // Action to log in and store both tokens
     async loginUser({ commit }, credentials) {
-      return axios
-        .post("http://localhost:3001/auth/login", credentials)
-        .then((response) => {
-          // console.log("Login successful:", response.data);
-          commit("SET_USER", response.data.user);
-          localStorage.setItem("token", response.data.token); // Save token to localStorage
-        })
-        .catch((error) => {
-          console.log("Error logging in:", error);
-          throw error; // Rethrow error for handling in the component
-        });
+      try {
+        const response = await axios.post('http://localhost:3001/auth/login', credentials);
+        const { user, token, refreshToken } = response.data;
+        
+        commit('SET_USER', user);
+        commit('SET_TOKEN', token);
+        commit('SET_REFRESH_TOKEN', refreshToken);
+        
+        // Store both tokens in localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
+      } catch (error) {
+        console.error('Error logging in:', error);
+        throw error; // Re-throw to handle in components
+      }
     },
+    
+    // Action to refresh the token using the refresh token
+    async refreshToken({ state, commit }) {
+      try {
+        const response = await axios.post('http://localhost:3001/auth/refresh', {
+          refreshToken: state.refreshToken || localStorage.getItem('refreshToken'), // Use stored refresh token
+        });
+
+        const newToken = response.data.token;
+        
+        // Set the new access token
+        commit('SET_TOKEN', newToken);
+        localStorage.setItem('token', newToken); // Update token in localStorage
+
+        return newToken;  // Return the new token for further requests
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        commit('CLEAR_USER');  // Clear user data if refresh fails
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        throw error;  // Re-throw to handle in components
+      }
+    },
+    
+    // Action to log out
     logoutUser({ commit }) {
-      localStorage.removeItem("token"); // Clear the token from localStorage
-      commit("CLEAR_USER"); // Clear user data
-      return Promise.resolve(); // Ensure it's a Promise for easier handling
+      // Remove tokens from localStorage and clear state
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      commit('CLEAR_USER');
     },
   },
   getters: {
-    currentUser: (state) => state.user,
-    isAuthenticated: (state) => !!state.user, // Boolean check for authentication
+    isAuthenticated: state => !!state.token, // Check if user is authenticated
+    currentUser: state => state.user,
   },
 });
 export default store;

@@ -1,41 +1,48 @@
 <template>
-  <div class="login-container">
-    <!-- Show form only if user is not authenticated -->
-    <form v-if="!isAuthenticated" @submit.prevent="login" class="login-form">
-      <h2>Hello, Welcome!</h2>
-      <div class="form-group">
-        <input
-          id="email"
-          v-model="emailid"
-          type="email"
-          placeholder="Enter your email"
-          required
-          class="input-field"
-        />
-      </div>
-
-      <div class="form-group">
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          placeholder="Enter your password"
-          required
-          class="input-field"
-        />
-      </div>
-
-      <button type="submit" class="submit-btn">Login</button>
-      
-      <!-- Display error message if login fails -->
-      <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-    </form>
+  <v-main  fluid class="fill-height">
+  <v-container class="login-container">
+    <v-form v-if="!isAuthenticated" @submit.prevent="login">
+      <v-row>
+        <v-col cols="12" md="6" sm="12" xl="12">
+          <v-card elevation="10" justify="center" min-width="350">
+            <v-card-title >
+              <p>Hello,Welcome!</p>
+            </v-card-title>
+            <v-card-text>
+              <v-text-field
+                v-model="emailid"
+                label="Enter your email"
+                type="email"
+                required
+                outlined
+                :rules="[emailRequired]"
+              />
+              <v-text-field
+                v-model="password"
+                label="Enter your password"
+                type="password"
+                required
+                outlined
+                :rules="[passwordRequired]"
+              />
+              <v-btn type="submit" class="submit-btn" color="success" block><v-icon>mdi-import</v-icon> Login</v-btn>
+              
+              <!-- Display error message if login fails -->
+              <v-alert v-if="errorMessage" type="error" dismissible>
+                {{ errorMessage }}
+              </v-alert>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </v-form>
 
     <!-- Optional message for authenticated users or future customization -->
     <div v-else class="auth-message">
       <p>You are already logged in.</p>
     </div>
-  </div>
+  </v-container>
+</v-main>
 </template>
 
 <script>
@@ -51,6 +58,12 @@ export default {
   },
   computed: {
     ...mapGetters(['isAuthenticated']), // Get authentication state from Vuex
+    emailRequired() {
+      return v => !!v || 'Email is required';
+    },
+    passwordRequired() {
+      return v => !!v || 'Password is required';
+    },
   },
   methods: {
     ...mapActions(['loginUser']),
@@ -78,73 +91,13 @@ export default {
 </script>
 
 <style scoped>
+
 .login-container {
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
-  margin-top: 18%;
-  /* height: 100vh; */
-  /* background-color: #f5f5f5; */
+  height: 100vh;
 }
-
-.login-form {
-  width: 25%;
-  padding: 2%;
-  text-align: center;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Media query for small screens */
-@media (max-width: 768px) {
-  .login-form {
-    width: 80%; /* Set width to 80% for small screens */
-  }
-
-  .login-form {
-    margin-top: 50%; /* Set width to 80% for small screens */
-  }
-}
-
-h2 {
-  margin-bottom: 5%;
-  text-align: center;
-  font-size: 1.5em;
-  color: #333;
-}
-
-.form-group {
-  margin-bottom: 15px;
-}
-
-.input-field {
-  width: 80%;
-  padding: 2%;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.submit-btn {
-  width: 80%;
-  padding: 2%;
-  text-align: center;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.submit-btn:hover {
-  background-color: #218838;
-}
-
 .auth-message {
   text-align: center;
   font-size: 1.2em;
@@ -152,7 +105,7 @@ h2 {
 }
 
 .error-message {
-  color: #d9534f; /* Bootstrap danger color */
+  color: #d9534f;
   text-align: center;
   margin-top: 15px;
 }
