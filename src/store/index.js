@@ -1,10 +1,15 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import axios from 'axios';
+import dashboard from './dashboard'; 
 
 Vue.use(Vuex);
 
-const store = new Vuex.Store({
+// Create and export the Vuex store with modules
+export default new Vuex.Store({
+  modules: {
+    dashboard, // Register the dashboard module
+  },
   state: {
     user: null,       // Store user data after login
     token: null,      // Store access token
@@ -81,5 +86,5 @@ const store = new Vuex.Store({
     isAuthenticated: state => !!state.token, // Check if user is authenticated
     currentUser: state => state.user,
   },
+ 
 });
-export default store;
