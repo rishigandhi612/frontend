@@ -2,6 +2,7 @@ import Vue from 'vue';
 import Vuex from 'vuex';
 import axios from 'axios';
 import dashboard from './dashboard'; 
+import customers from './customers';
 
 Vue.use(Vuex);
 
@@ -9,6 +10,7 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   modules: {
     dashboard, // Register the dashboard module
+    customers,
   },
   state: {
     user: null,       // Store user data after login

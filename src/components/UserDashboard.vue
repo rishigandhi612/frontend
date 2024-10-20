@@ -6,7 +6,7 @@
         <v-card class="mx-auto" color="lightgrey">
           <v-card-title>{{ formatTitle(key) }}</v-card-title>
           <v-card-subtitle>{{ value }}</v-card-subtitle>
-          <v-card-actions >
+          <v-card-actions>
             <v-btn color="primary" rounded @click="handleAction(key)">View Details</v-btn>
           </v-card-actions>
         </v-card>
@@ -36,7 +36,10 @@ export default {
       return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase()); // Format the title from camelCase
     },
     handleAction(key) {
-      // Define any action you want to perform when a button is clicked
+      if (key === 'totalCustomers') {
+        this.$router.push('/customer'); // Navigate to /customer
+      }
+      // You can add more conditions for other keys if needed
       console.log(`Viewing details for ${key}`);
     },
   },
