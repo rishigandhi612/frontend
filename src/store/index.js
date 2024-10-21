@@ -14,8 +14,8 @@ export default new Vuex.Store({
   },
   state: {
     user: null,       // Store user data after login
-    token: null,      // Store access token
-    refreshToken: null, // Store refresh token
+    token: localStorage.getItem('token') || null,  // Load token from localStorage on reload
+    refreshToken: localStorage.getItem('refreshToken') || null, // Load refresh token from localStorage on reload
   },
   mutations: {
     SET_USER(state, user) {
@@ -85,8 +85,7 @@ export default new Vuex.Store({
     },
   },
   getters: {
-    isAuthenticated: state => !!state.token, // Check if user is authenticated
+    isAuthenticated: state => !!state.token, // Check if user is authenticated based on token
     currentUser: state => state.user,
   },
- 
 });

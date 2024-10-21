@@ -13,7 +13,6 @@ new Vue({
 
   // Use the Vuex store
   store,
-
   vuetify,
   render: h => h(App)
 }).$mount('#app');
