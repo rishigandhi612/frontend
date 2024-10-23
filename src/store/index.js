@@ -3,6 +3,7 @@ import Vuex from 'vuex';
 import axios from 'axios';
 import dashboard from './dashboard'; 
 import customers from './customers';
+import products from './products';
 
 Vue.use(Vuex);
 
@@ -11,6 +12,7 @@ export default new Vuex.Store({
   modules: {
     dashboard, // Register the dashboard module
     customers,
+    products,
   },
   state: {
     user: null,       // Store user data after login

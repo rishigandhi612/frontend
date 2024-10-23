@@ -4,7 +4,8 @@ import Login from '../components/LoginUser.vue';
 import UserDashboard from '../components/UserDashboard.vue';
 import CustomerList from '../components/CustomerList.vue'
 import CustomerDetail from '@/components/CustomerDetail.vue';
-
+import ProductList from '@/components/ProductList.vue';
+import ProductDetail from '@/components/ProductDetail.vue';
 
 Vue.use(Router);
 
@@ -31,6 +32,18 @@ const router = new Router({
       path: '/customer/:id', 
       component: CustomerDetail, 
       name: 'customerDetail', 
+      meta: { requiresAuth: true } 
+    },
+    { 
+      path: '/product', 
+      component: ProductList, 
+      name: 'productList', 
+      meta: { requiresAuth: true } 
+    },
+    { 
+      path: '/product/:id', 
+      component: ProductDetail, 
+      name: 'productDetail', 
       meta: { requiresAuth: true } 
     },
   ]

@@ -39,6 +39,9 @@ export default {
       if (key === 'totalCustomers') {
         this.$router.push('/customer'); // Navigate to /customer
       }
+      if (key === 'totalProducts') {
+        this.$router.push('/product'); // Navigate to /customer
+      }
       // You can add more conditions for other keys if needed
       console.log(`Viewing details for ${key}`);
     },
