@@ -104,7 +104,7 @@
       async updateProduct() {
         try {
           await this.updateProductInStore({ id: this.productId, data: this.updatedProductData });
-          this.$router.push('/products'); // Redirect after update
+          this.$router.push('/product'); // Redirect after update
         } catch (err) {
           this.error = "Error updating product.";
         }
@@ -115,7 +115,7 @@
       async deleteProduct() {
         try {
           await this.deleteProductFromStore(this.productId);
-          this.$router.push('/products'); // Redirect after delete
+          this.$router.push('/product'); // Redirect after delete
         } catch (err) {
           this.error = "Error deleting product.";
         } finally {

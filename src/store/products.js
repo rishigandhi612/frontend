@@ -30,7 +30,20 @@ const actions = {
       commit('SET_LOADING', false);
     }
   },
-
+  async createProductInStore({ commit }, productData) {
+    try {
+      const response = await apiClient.post('/product', productData);
+      if (response.data.success) {
+        // You can dispatch fetchProducts or commit to update state after creation
+        commit('ADD_PRODUCT', response.data.data);  // Optionally, add the new product to the state
+      } else {
+        throw new Error('Product creation failed');
+      }
+    } catch (error) {
+      console.error("Error creating product:", error);
+      throw error;
+    }
+  },
   async fetchProductDetail({ commit }, productId) {
     try {
       const response = await apiClient.get(`/product/${productId}`);
