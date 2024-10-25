@@ -19,7 +19,7 @@
     >
       <v-app-bar-nav-icon @click="toggleDrawer"></v-app-bar-nav-icon>
 
-      <v-toolbar-title>Dashboard</v-toolbar-title>
+      <v-btn color="transparent" elevation="0" @click="redirecthome">Dashboard</v-btn>
       <v-spacer></v-spacer>
 
       <!-- <v-btn icon>
@@ -77,6 +77,12 @@ export default {
           console.log("Logout failed:", error);
         });
     },
+    redirecthome() {
+  if (this.$route.path !== "/dashboard") {
+    this.$router.push("/dashboard");
+  }
+}
+
   },
 };
 </script>

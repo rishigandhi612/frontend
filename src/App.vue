@@ -26,7 +26,7 @@
           </v-list-item-avatar>
         </v-list-item>
 
-        <v-list-item link>
+        <v-list-item link >
           <v-list-item-content>
             <v-list-item-title class="text-h6">Sandra Adams</v-list-item-title>
             <v-list-item-subtitle>sandra_a88@gmail.com</v-list-item-subtitle>
@@ -37,13 +37,13 @@
       <v-divider></v-divider>
 
       <v-list nav dense>
-        <v-list-item link>
+        <v-list-item link @click="$router.push('/customer')" >
           <v-list-item-icon>
             <v-icon>mdi-account-multiple</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Customers</v-list-item-title>
         </v-list-item>
-        <v-list-item link>
+        <v-list-item link @click="$router.push('/product')">
           <v-list-item-icon>
             <v-icon>mdi-pi-box</v-icon>
           </v-list-item-icon>
