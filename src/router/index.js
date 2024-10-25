@@ -7,6 +7,7 @@ import CustomerDetail from '@/components/CustomerDetail.vue';
 import ProductList from '@/components/ProductList.vue';
 import ProductDetail from '@/components/ProductDetail.vue';
 import AddProduct from '@/components/AddProduct.vue';
+import InvoiceList from '@/components/InvoiceList.vue';
 
 Vue.use(Router);
 
@@ -51,6 +52,12 @@ const router = new Router({
       path: '/addproduct', 
       component: AddProduct, 
       name: 'addProduct', 
+      meta: { requiresAuth: true } 
+    },
+    { 
+      path: '/invoice', 
+      component: InvoiceList, 
+      name: 'invoiceList', 
       meta: { requiresAuth: true } 
     },
   ]
