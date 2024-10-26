@@ -8,6 +8,8 @@ import ProductList from '@/components/ProductList.vue';
 import ProductDetail from '@/components/ProductDetail.vue';
 import AddProduct from '@/components/AddProduct.vue';
 import InvoiceList from '@/components/InvoiceList.vue';
+import InvoiceDetail from '@/components/InvoiceDetail.vue';
+
 
 Vue.use(Router);
 
@@ -58,6 +60,12 @@ const router = new Router({
       path: '/invoice', 
       component: InvoiceList, 
       name: 'invoiceList', 
+      meta: { requiresAuth: true } 
+    },
+    { 
+      path: '/invoice/:id', 
+      component: InvoiceDetail, 
+      name: 'invoiceDetail', 
       meta: { requiresAuth: true } 
     },
   ]

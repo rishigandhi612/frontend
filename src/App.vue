@@ -49,7 +49,7 @@
           </v-list-item-icon>
           <v-list-item-title>Products</v-list-item-title>
         </v-list-item>
-        <v-list-item link>
+        <v-list-item link @click="$router.push('/invoice')"> 
           <v-list-item-icon>
             <v-icon>mdi-star</v-icon>
           </v-list-item-icon>

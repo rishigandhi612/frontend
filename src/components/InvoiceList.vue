@@ -17,7 +17,7 @@
         </template>
   
         <template v-slot:item="{ item }">
-          <tr>
+          <tr @click="navigateToInvoiceDetail(item._id)" style="cursor: pointer;">
             <td>{{ item._id }}</td>
             <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
             <td>{{ formatDate(item.createdAt) }}</td>
@@ -73,6 +73,9 @@
       },
       calculateTotal(quantity, unit_price) {
         return quantity * unit_price;
+      },
+      navigateToInvoiceDetail(invoiceId) {
+        this.$router.push(`/invoice/${invoiceId}`);
       },
     },
   };
