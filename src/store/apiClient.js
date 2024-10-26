@@ -33,7 +33,7 @@ apiClient.interceptors.response.use(
       try {
         const newToken = await store.dispatch('refreshToken');
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return apiClient(originalRequest);
+        return apiClient(originalRequest); // Retry the original request
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError);
         return Promise.reject(refreshError);
@@ -42,6 +42,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 
 export default apiClient;

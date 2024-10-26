@@ -94,6 +94,7 @@
       },
   
       editInvoice() {
+        // Redirecting to the edit page with the invoice ID
         this.$router.push({ name: 'EditInvoice', params: { id: this.invoice._id } });
       },
   
@@ -107,7 +108,7 @@
     created() {
       this.loadInvoiceDetail();
     },
-  }
+  };
   </script>
   
   <style scoped>

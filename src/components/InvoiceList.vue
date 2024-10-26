@@ -3,7 +3,7 @@
       <h1>Invoice List</h1>
       <v-data-table
         :headers="headers"
-        :items="allInvoices"
+        :items="sortedInvoices"
         class="elevation-1"
         :items-per-page="10"
         :loading="loading"
@@ -13,15 +13,21 @@
             <v-toolbar-title>Invoices</v-toolbar-title>
             <v-spacer></v-spacer>
             <v-btn @click="fetchInvoices" color="primary">Refresh</v-btn>
+            <v-btn @click="navigateToAddInvoice" color="success" class="ml-2">Add Invoice</v-btn>
           </v-toolbar>
         </template>
   
         <template v-slot:item="{ item }">
-          <tr @click="navigateToInvoiceDetail(item._id)" style="cursor: pointer;">
-            <td>{{ item._id }}</td>
+          <tr>
+            <td @click="navigateToInvoiceDetail(item._id)" style="cursor: pointer;">{{ item._id }}</td>
             <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
             <td>{{ formatDate(item.createdAt) }}</td>
             <td>{{ calculateTotal(item.quantity, item.unit_price) }}</td>
+            <td>
+              <v-btn small icon @click.stop="navigateToEditInvoice(item._id)">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+            </td>
           </tr>
         </template>
       </v-data-table>
@@ -40,12 +46,16 @@
           { text: "Customer Name", value: "customerName" },
           { text: "Date", value: "date" },
           { text: "Total Amount", value: "totalAmount" },
+          { text: "Actions", value: "actions", sortable: false }, // Actions column
         ],
         loading: false,
       };
     },
     computed: {
       ...mapGetters("invoices", ["allInvoices", "isLoading"]),
+      sortedInvoices() {
+        return [...this.allInvoices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      },
     },
     watch: {
       isLoading(newLoading) {
@@ -67,15 +77,25 @@
         }
       },
       formatDate(dateString) {
-        const options = { year: "numeric", month: "2-digit", day: "2-digit" };
         const date = new Date(dateString);
-        return date.toLocaleDateString(undefined, options);
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
       },
       calculateTotal(quantity, unit_price) {
         return quantity * unit_price;
       },
       navigateToInvoiceDetail(invoiceId) {
         this.$router.push(`/invoice/${invoiceId}`);
+   
+      },
+      navigateToEditInvoice(invoiceId) {
+        this.$router.push(`/addinvoice/${invoiceId}`);
+        console.log('invoice/${invoiceId}')
+      },
+      navigateToAddInvoice() {
+        this.$router.push('/addinvoice');
       },
     },
   };
