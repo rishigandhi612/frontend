@@ -80,13 +80,13 @@
         try {
           await this.fetchInvoiceDetail(this.$route.params.id);
         } catch (err) {
-          this.error = "Error fetching invoice details.";
+          this.error = "Error fetching invoice details."; // Handle error gracefully
         }
       },
   
       async deleteInvoice() {
         try {
-          await this.deleteInvoiceFromStore(this.$route.params.id);
+          await this.deleteInvoiceFromStore(this.invoice._id); // Ensure you're deleting the correct invoice
           this.$router.push('/invoice'); // Redirect after delete
         } catch (err) {
           this.error = "Error deleting invoice.";
@@ -95,7 +95,7 @@
   
       editInvoice() {
         // Redirecting to the edit page with the invoice ID
-        this.$router.push({ name: 'EditInvoice', params: { id: this.invoice._id } });
+        this.$router.push({ path: `/addinvoice/${this.invoice._id}` });
       },
   
       formatAddress(address) {

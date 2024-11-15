@@ -41,7 +41,7 @@ export default new Vuex.Store({
     // Action to log in and store both tokens
     async loginUser({ commit }, credentials) {
       try {
-        const response = await axios.post('http://localhost:3001/auth/login', credentials);
+        const response = await axios.post('https://backend.rishigandhi.xyz/auth/login', credentials);
         const { user, token, refreshToken } = response.data;
         
         commit('SET_USER', user);

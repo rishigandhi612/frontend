@@ -18,8 +18,8 @@
         </template>
   
         <template v-slot:item="{ item }">
-          <tr>
-            <td @click="navigateToInvoiceDetail(item._id)" style="cursor: pointer;">{{ item._id }}</td>
+          <tr @click="navigateToInvoiceDetail(item._id)" style="cursor: pointer;">
+            <td>{{ item._id }}</td>
             <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
             <td>{{ formatDate(item.createdAt) }}</td>
             <td>{{ calculateTotal(item.quantity, item.unit_price) }}</td>
@@ -87,17 +87,22 @@
         return quantity * unit_price;
       },
       navigateToInvoiceDetail(invoiceId) {
+        // Navigate to the invoice detail page
         this.$router.push(`/invoice/${invoiceId}`);
-   
       },
       navigateToEditInvoice(invoiceId) {
+        // Navigate to the edit invoice page
         this.$router.push(`/addinvoice/${invoiceId}`);
-        console.log('invoice/${invoiceId}')
       },
       navigateToAddInvoice() {
+        // Navigate to the add invoice page
         this.$router.push('/addinvoice');
       },
     },
   };
   </script>
+  
+  <style scoped>
+  /* Add any necessary styles here */
+  </style>
   
