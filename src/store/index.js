@@ -60,7 +60,7 @@ export default new Vuex.Store({
     // Action to refresh the token using the refresh token
     async refreshToken({ state, commit }) {
       try {
-        const response = await axios.post('http://localhost:3001/auth/refresh', {
+        const response = await axios.post('https://backend.rishigandhi.xyz/auth/refresh', {
           refreshToken: state.refreshToken || localStorage.getItem('refreshToken'), // Use stored refresh token
         });
 

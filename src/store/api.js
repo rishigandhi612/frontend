@@ -2,7 +2,7 @@ import axios from 'axios';
 import store from './store';  // Import the Vuex store
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001', // Your API base URL
+  baseURL: 'https://backend.rishigandhi.xyz/', // Your API base URL
 });
 
 // Add request interceptor to include token in the headers
