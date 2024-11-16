@@ -58,8 +58,14 @@
       </v-card-text>
 
       <v-card-actions>
-        <v-btn color="primary" @click="updateProduct"><v-icon left>mdi-pencil</v-icon> Update</v-btn>
-        <v-btn color="red" @click="openDeleteConfirmation"><v-icon left>mdi-delete</v-icon>Delete</v-btn>
+        <v-btn color="primary" @click="updateProduct">
+          <v-icon left>mdi-pencil</v-icon> 
+          Update
+        </v-btn>
+        <v-btn color="red" @click="openDeleteConfirmation">
+          <v-icon left>mdi-delete</v-icon>
+          Delete
+          </v-btn>
         <v-spacer></v-spacer>
       </v-card-actions>
     </v-card>

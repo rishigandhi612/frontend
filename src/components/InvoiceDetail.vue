@@ -1,85 +1,134 @@
 <template>
-  <v-container>
-    <h1 class="text-center">Invoice Detail</h1>
-
-    <!-- Show loader while fetching invoice details -->
-    <v-row v-if="loading" class="d-flex justify-center align-center" style="height: 80vh;">
-      <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
+  <v-container v-if="!isLoading" class="pa-5">
+    <!-- Loader when data is loading -->
+    <v-row v-if="isLoading" class="d-flex justify-center">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </v-row>
 
-    <!-- Show error message if there's an error -->
-    <v-alert v-if="error" type="error" dismissible>
-      {{ error }}
-    </v-alert>
+    <!-- Invoice Details Section -->
+    <v-row v-else>
+      <v-col cols="12">
+        <v-card v-if="invoiceDetail">
+          <v-row>
+            <!-- Back Button Section -->
+            <v-col cols="12" md="3" class="d-flex justify-start align-center">
+              <v-btn color="grey" @click="goBack" class="ml-2">
+                <v-icon left>mdi-arrow-left</v-icon> Back
+              </v-btn>
+            </v-col>
 
-    <!-- Show the "Back" button -->
-    <v-btn v-if="!loading" color="grey" @click="goBack" class="mb-4">
-      <v-icon left>mdi-arrow-left</v-icon>Invoices
-    </v-btn>
+            <!-- Invoice Title Section -->
+            <v-col cols="12" md="6" class="d-flex justify-center align-center">
+              <h1>Invoice Details</h1>
+            </v-col>
+          </v-row>
 
-    <!-- Show invoice details once loaded -->
-    <v-card v-if="!loading && invoice" class="mx-auto" max-width="600">
-      <v-card-title>
-        <span class="headline">Invoice for {{ invoice.product.name }}</span>
-      </v-card-title>
-      <v-card-text>
-        <!-- Product Details -->
-        <h3>Product Information</h3>
-        <p><strong>Product:</strong> {{ invoice.product.name }}</p>
-        <p><strong>Description:</strong> {{ invoice.product.desc }}</p>
-        <p><strong>HSN Code:</strong> {{ invoice.product.hsn_code }}</p>
-        <p><strong>Quantity:</strong> {{ invoice.quantity }}</p>
-        <p><strong>Unit Price:</strong> {{ invoice.unit_price }}</p>
-        <p>
-          <strong>Total Price:</strong>
-          {{ invoice.quantity * invoice.unit_price }}
-        </p>
-        <p>
-          <strong>Created At:</strong>
-          {{ new Date(invoice.createdAt).toLocaleDateString() }}
-        </p>
+          <!-- Invoice Header -->
+          <v-card-subtitle>
+            <v-row>
+              <!-- Invoice Number (Left Aligned) -->
+              <v-col cols="12" md="8" class="d-flex justify-start">
+                <h2>Invoice #{{ invoiceDetail._id }}</h2>
+              </v-col>
 
-        <!-- Customer Details -->
-        <h3>Customer Information</h3>
-        <p>
-          <strong>Customer Name:</strong>
-          {{ invoice.customer ? invoice.customer.name : "N/A" }}
-        </p>
-        <p>
-          <strong>Customer Address:</strong>
-          {{ formatAddress(invoice.customer?.address) }}
-        </p>
-        <p><strong>GSTIN:</strong> {{ invoice.customer?.gstin || "N/A" }}</p>
-        <p><strong>Email:</strong> {{ invoice.customer?.email_id || "N/A" }}</p>
-        <p><strong>Phone:</strong> {{ invoice.customer?.phone_no || "N/A" }}</p>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn color="blue" @click="editInvoice">Update Invoice</v-btn>
-        <v-btn color="red" @click="deleteDialog = true">Delete Invoice</v-btn>
-      </v-card-actions>
-    </v-card>
+              <!-- Date (Right Aligned) -->
+              <v-col cols="12" md="4" class="d-flex justify-end">
+                <h2>Date: {{ formatDate(invoiceDetail.createdAt) }}</h2>
+              </v-col>
+            </v-row>
+          </v-card-subtitle>
 
-    <!-- Show message if no invoice found, only if data is loaded -->
-    <v-card v-if="!loading && !invoice" class="mx-auto" max-width="600">
-      <v-card-text>
-        <p class="text-center">No invoice found</p>
-      </v-card-text>
-    </v-card>
+          <!-- Customer Details -->
+          <v-card-text>
+            <v-row>
+              <v-col cols="12" sm="6">
+                <p>
+                  <strong>Name:</strong>
+                  {{ invoiceDetail.customer?.name || "N/A" }}
+                </p>
+                <p>
+                  <strong>Email:</strong>
+                  {{ invoiceDetail.customer?.email_id || "N/A" }}
+                </p>
+                <p>
+                  <strong>Phone No:</strong>
+                  {{ invoiceDetail.customer?.phone_no || "N/A" }}
+                </p>
+              </v-col>
+              <v-col cols="12" sm="6">
+                <p><strong>Address:</strong></p>
+                <p>{{ invoiceDetail.customer?.address?.line1 || "N/A" }}</p>
+                <p>
+                  {{
+                    capitalizeFirstLetter(
+                      invoiceDetail.customer?.address?.city || "N/A"
+                    )
+                  }},
+                  {{
+                    capitalizeFirstLetter(
+                      invoiceDetail.customer?.address?.state || "N/A"
+                    )
+                  }}
+                  |
+                  <strong> Pin: </strong>
+                  {{ invoiceDetail.customer?.address?.pincode || "N/A" }}
+                </p>
+              </v-col>
+            </v-row>
+          </v-card-text>
 
-    <!-- Confirmation Dialog -->
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title class="headline">Confirm Deletion</v-card-title>
-        <v-card-text>
-          Are you sure you want to delete this invoice? This action cannot be undone.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="green" text @click="deleteInvoice">Yes, Delete</v-btn>
-          <v-btn color="red" text @click="deleteDialog = false">Cancel</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+          <!-- Products Section -->
+          <v-card-text>
+            <h3>Received the following goods in order and condition</h3>
+            <v-list>
+              <v-list-item-group
+                v-for="product in invoiceDetail.products"
+                :key="product._id"
+              >
+                <v-list-item>
+                  <v-list-item-content>
+                    <v-list-item-title
+                      ><strong>Product Name:</strong>
+                      {{ product.name }}</v-list-item-title
+                    >
+                    <v-list-item-subtitle>
+                      <strong>Quantity:</strong> {{ product.quantity }} Kgs
+                      <strong>Rate:</strong> ₹{{ product.unit_price }}/kg
+                      <strong>Amount:</strong> ₹{{ product.quantity * product.unit_price }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+                <v-divider></v-divider>
+              </v-list-item-group>
+            </v-list>
+          </v-card-text>
+
+          <!-- Total Amount Section -->
+          <v-card-actions>
+            <h3>Total Amount: ₹{{ invoiceDetail.totalAmount }}</h3>
+          </v-card-actions>
+
+          <!-- Action Buttons -->
+          <v-card-actions>
+            <v-btn color="primary" @click="updateInvoice" class="mr-4">
+              <v-icon>mdi-pencil</v-icon> Update Invoice
+            </v-btn>
+          </v-card-actions>
+
+          <!-- For Small Screen Devices: Delete Button on New Line -->
+          <v-card-actions>
+            <v-btn color="error" @click="deleteInvoice" class="w-100">
+              <v-icon>mdi-delete</v-icon> Delete Invoice
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Error Handling Section -->
+    <v-row v-if="errorMessage" class="d-flex justify-center">
+      <v-alert type="error" dismissible>{{ errorMessage }}</v-alert>
+    </v-row>
   </v-container>
 </template>
 
@@ -89,65 +138,150 @@ import { mapState, mapActions } from "vuex";
 export default {
   data() {
     return {
-      error: null,
-      deleteDialog: false,
-      loading: true,  // Set loading to true initially
+      errorMessage: null,
     };
   },
-  computed: {
-    ...mapState("invoices", {
-      invoice: (state) => state.invoiceDetail,
-    }),
-  },
-  methods: {
-    ...mapActions("invoices", ["fetchInvoiceDetail", "deleteInvoiceFromStore"]),
 
-    async loadInvoiceDetail() {
+  computed: {
+    ...mapState("invoices", ["invoiceDetail", "isLoading"]),
+  },
+
+  methods: {
+    ...mapActions("invoices", [
+      "fetchInvoiceDetail",
+      "updateInvoiceDetail",
+      "deleteInvoiceDetail",
+    ]),
+
+    async loadInvoiceDetails() {
       try {
-        await this.$store.dispatch(
-          "invoices/fetchInvoiceDetail",
-          this.$route.params.id
-        );
-        this.loading = false;  // Set loading to false once data is fetched
-      } catch (err) {
-        console.error("Failed to load invoice details", err);
-        this.error = "Error loading invoice details.";
-        this.loading = false;  // Hide the loader even if there's an error
+        const invoiceId = this.$route.params.id; // Assuming you're passing the invoice ID in the route params
+        await this.fetchInvoiceDetail(invoiceId);
+      } catch (error) {
+        this.errorMessage = "Failed to load invoice details.";
       }
+    },
+
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString(); // You can format the date as needed
+    },
+    capitalizeFirstLetter(string) {
+      if (typeof string === "string") {
+        return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+      }
+      return string;
+    },
+    updateInvoice() {
+      this.$router.push(`/update-invoice/${this.invoiceDetail._id}`); // Navigate to update page
     },
 
     async deleteInvoice() {
-      try {
-        await this.deleteInvoiceFromStore(this.invoice._id); // Ensure you're deleting the correct invoice
-        this.$router.push("/invoice"); // Redirect after delete
-      } catch (err) {
-        this.error = "Error deleting invoice.";
+      const confirmation = confirm(
+        "Are you sure you want to delete this invoice?"
+      );
+      if (confirmation) {
+        try {
+          await this.deleteInvoiceDetail(this.invoiceDetail._id);
+          this.$router.push("/invoices"); // Redirect to the invoice list page after deletion
+        } catch (error) {
+          this.errorMessage = "Failed to delete invoice.";
+        }
       }
     },
-    goBack() {
-      this.$router.push('/invoice'); // Navigate back to the /invoice page
-    },
-    editInvoice() {
-      // Redirecting to the edit page with the invoice ID
-      this.$router.push({ path: `/addinvoice/${this.invoice._id}` });
-    },
 
-    formatAddress(address) {
-      if (!address) return "N/A";
-      const city = address.city.charAt(0).toUpperCase() + address.city.slice(1);
-      const state =
-        address.state.charAt(0).toUpperCase() + address.state.slice(1);
-      return `${address.line1}\n${city}, ${state} - ${address.pincode}`;
+    goBack() {
+      this.$router.go(-1); // Go back to the previous page
     },
   },
-  created() {
-    this.loadInvoiceDetail();
+
+  watch: {
+    "$route.params.id": "loadInvoiceDetails", // Watch for route changes (if using dynamic routes for different invoices)
+  },
+
+  mounted() {
+    this.loadInvoiceDetails(); // Load the invoice details on initial mount
   },
 };
 </script>
 
 <style scoped>
-.v-card {
-  margin-bottom: 20px;
+/* Basic styling */
+.loading-spinner {
+  text-align: center;
+  margin-top: 50px;
+}
+
+.error-message {
+  color: red;
+  margin-top: 20px;
+}
+
+v-row {
+  margin-top: 20px;
+}
+
+h1,
+h2,
+h3 {
+  font-family: Arial, sans-serif;
+}
+
+p {
+  font-size: 14px;
+}
+
+strong {
+  font-weight: bold;
+}
+
+v-card {
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .v-card {
+    padding: 10px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-size: 1.2rem;
+  }
+
+  p {
+    font-size: 12px;
+  }
+
+  .v-btn {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .v-col {
+    text-align: center;
+  }
+
+  .v-btn.w-100 {
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 960px) {
+  /* For Medium Devices */
+  .v-col {
+    text-align: center;
+  }
+
+  .v-btn {
+    width: auto;
+  }
+
+  .v-card-actions {
+    display: flex;
+    justify-content: space-between;
+  }
 }
 </style>

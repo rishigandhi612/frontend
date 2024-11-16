@@ -17,61 +17,58 @@ const actions = {
     commit('SET_LOADING', true);
     try {
       const response = await apiClient.get('/custprod');
-      commit('SET_INVOICES', response.data.data);
+      if (response.data.success) {
+        commit('SET_INVOICES', response.data.data);
+      } else {
+        console.error('Failed to fetch invoices.');
+      }
     } catch (error) {
-      console.error("Error fetching invoices:", error);
+      console.error('Error fetching invoices:', error);
       throw error;
     } finally {
       commit('SET_LOADING', false);
     }
   },
 
-  async fetchInvoiceDetail({ dispatch, commit }, id) {
+  async fetchInvoiceDetail({ commit, dispatch }, id) {
     try {
-      // Fetch invoice by ID from API using dispatch to another action
+      // Fetch invoice by ID using a helper action
       const response = await dispatch('fetchInvoiceById', id);
-      
+
       // Check if the response was successful
-      if (response && response.success) {
+      if (response.success) {
         const invoice = response.data;  // Extract invoice data
-        
-        // Log the invoice data for debugging
-        console.log('Invoice Data:', invoice);
-        
-        // Commit to Vuex store if needed (optional)
+
+        // Commit to Vuex store
         commit('SET_INVOICE_DETAIL', invoice);
-        
-        // If you want to store some other specific values in the state, commit them as well
-        commit('SET_CUSTOMER_ID', invoice.customer._id);  // For example, commit customer ID
-        commit('SET_PRODUCT_ID', invoice.product._id);    // Commit product ID
-  
+
+        // Commit other necessary data such as customer ID and product IDs
+        commit('SET_CUSTOMER_ID', invoice.customer ? invoice.customer._id : null);
+        invoice.products.forEach(product => {
+          commit('SET_PRODUCT_ID', product._id);
+        });
       } else {
-        throw new Error("Failed to load invoice details for edit.");
+        throw new Error('Failed to load invoice details.');
       }
     } catch (err) {
-      console.error("Error fetching invoice details:", err);
-      this.error = "Failed to load invoice details."; // Update this part in the component if needed
+      console.error('Error fetching invoice details:', err);
+      throw new Error('Failed to fetch invoice details.');
     }
-  },  
+  },
+
   async fetchInvoiceById(_, id) {
     try {
       // API call to fetch invoice by ID
       const response = await apiClient.get(`/custprod/${id}`);
-      
-      // Log the response for debugging
-      console.log('Fetched Invoice:', response.data);
-      
-      // Return the response data
-      return response.data;
-      
+      return response.data;  // Return the response data
     } catch (error) {
-      console.error("Error fetching invoice:", error);
-      throw new Error("Failed to load invoice details for edit.");
+      console.error('Error fetching invoice:', error);
+      throw new Error('Failed to load invoice details.');
     }
-  }
-  ,  
+  },
 
   async createInvoiceInStore({ commit }, invoiceData) {
+    commit('SET_LOADING', true);
     try {
       const response = await apiClient.post('/custprod', invoiceData);
       if (response.data.success) {
@@ -80,8 +77,10 @@ const actions = {
         throw new Error('Invoice creation failed');
       }
     } catch (error) {
-      console.error("Error creating invoice:", error);
+      console.error('Error creating invoice:', error);
       throw error;
+    } finally {
+      commit('SET_LOADING', false);
     }
   },
 
@@ -91,7 +90,7 @@ const actions = {
       const response = await apiClient.put(`/custprod/${id}`, data);
       commit('UPDATE_INVOICE', response.data.data);
     } catch (error) {
-      console.error("Error updating invoice:", error);
+      console.error('Error updating invoice:', error);
       throw error;
     } finally {
       commit('SET_LOADING', false);
@@ -104,7 +103,7 @@ const actions = {
       await apiClient.delete(`/custprod/${invoiceId}`);
       commit('REMOVE_INVOICE', invoiceId);
     } catch (error) {
-      console.error("Error deleting invoice:", error);
+      console.error('Error deleting invoice:', error);
       throw error;
     } finally {
       commit('SET_LOADING', false);
@@ -139,6 +138,19 @@ const mutations = {
   },
   SET_LOADING(state, loading) {
     state.loading = loading;
+  },
+  SET_CUSTOMER_ID(state, customerId) {
+    if (state.invoiceDetail) {
+      state.invoiceDetail.customerId = customerId;
+    }
+  },
+  SET_PRODUCT_ID(state, productId) {
+    if (state.invoiceDetail) {
+      if (!state.invoiceDetail.productIds) {
+        state.invoiceDetail.productIds = [];
+      }
+      state.invoiceDetail.productIds.push(productId);
+    }
   },
 };
 
