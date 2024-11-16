@@ -131,7 +131,7 @@
           customer: this.selectedCustomerId,
           product: this.selectedProductId,
           quantity: parseInt(this.quantity),
-          unit_price: parseFloat(this.unitPrice),
+          unit_price: parseInt(this.unitPrice),
         };
   
         if (
