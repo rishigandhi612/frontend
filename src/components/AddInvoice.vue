@@ -4,11 +4,7 @@
     <v-row>
       <v-col cols="12" class="d-flex align-center">
         <!-- Back Button with Grey Background -->
-        <v-btn
-          icon
-          @click="goBack"
-          class="back-btn"
-        >
+        <v-btn icon @click="goBack" class="back-btn">
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
 
@@ -29,12 +25,7 @@
     <!-- Loader Spinner -->
     <v-row v-if="loading" justify="center">
       <v-col cols="auto">
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="64"
-          width="6"
-        ></v-progress-circular>
+        <v-progress-circular indeterminate color="primary" size="64" width="6"></v-progress-circular>
       </v-col>
     </v-row>
 
@@ -48,7 +39,6 @@
           item-value="_id"
           label="Select Customer"
           return-object
-          :disabled="isEditing"
         />
       </div>
 
@@ -87,20 +77,15 @@
 
         <v-col cols="12" md="2">
           <v-text-field
-            :value="(product.quantity * product.unitPrice).toFixed(2)"
+            :value="getTotalPrice(index)" 
             label="Total Price"
             readonly
-            
           />
         </v-col>
 
         <v-col cols="12" md="1" class="d-flex align-center justify-center">
-          <v-btn
-            color="error"
-            @click="removeProduct(index)"
-            icon
-          >
-            <v-icon>mdi-delete</v-icon>Remove 
+          <v-btn color="error" @click="removeProduct(index)" icon>
+            <v-icon>mdi-delete</v-icon> Remove
           </v-btn>
         </v-col>
       </v-row>
@@ -108,21 +93,13 @@
       <!-- Add Product and Submit Button -->
       <v-row class="mt-3">
         <v-col cols="12" class="d-flex justify-center">
-          <v-btn
-            color="primary"
-            @click="addProduct"
-            icon
-          >
+          <v-btn color="primary" @click="addProduct" icon>
             <v-icon>mdi-plus</v-icon> Add Product
           </v-btn>
         </v-col>
 
         <v-col cols="12" class="d-flex justify-end mt-3">
-          <v-btn
-            :disabled="!valid || invoiceProducts.length === 0"
-            color="success"
-            @click="isEditing ? updateInvoice() : addInvoice()"
-          >
+          <v-btn :disabled="!valid || invoiceProducts.length === 0" color="success" @click="isEditing ? updateInvoice() : addInvoice()">
             {{ isEditing ? "Update Invoice" : "Add Invoice" }}
           </v-btn>
         </v-col>
@@ -189,18 +166,21 @@ export default {
 
     async fetchInvoiceDetail(id) {
       try {
-        const response = await this.$store.dispatch(
-          "invoices/fetchInvoiceById",
-          id
-        );
+        const response = await this.$store.dispatch("invoices/fetchInvoiceById", id);
         if (response && response.success) {
           const invoice = response.data;
-          this.selectedCustomerId = invoice.customer._id; // Set preselected customer ID
+
+          // Set customer details
+          this.selectedCustomerId = invoice.customer._id;
+
+          // Map products properly to ensure unit price and total price are calculated
           this.invoiceProducts = invoice.products.map((product) => ({
             productId: product.product._id,
             quantity: product.quantity,
-            unitPrice: product.unitPrice, // Add unit price when editing
+            unitPrice: product.unit_price,
+            totalPrice: (product.unit_price * product.quantity).toFixed(2), // Calculate total price
           }));
+
           this.originalInvoice = { ...invoice }; // Save the original invoice data for comparison
         } else {
           throw new Error("Failed to load invoice details for edit.");
@@ -211,8 +191,18 @@ export default {
       }
     },
 
+    getTotalPrice(index) {
+      const product = this.invoiceProducts[index];
+      return (product.quantity * product.unitPrice).toFixed(2);
+    },
+
     addProduct() {
-      this.invoiceProducts.push({ productId: null, quantity: "", unitPrice: 0 });
+      this.invoiceProducts.push({
+        productId: null,
+        quantity: 1, // Default quantity to 1
+        unitPrice: 0,
+        totalPrice: 0, // This will be dynamically updated
+      });
     },
 
     removeProduct(index) {
@@ -224,10 +214,11 @@ export default {
 
       const payload = {
         customer: this.selectedCustomerId,
-        products: this.invoiceProducts.map((product) => ({
+        products: this.invoiceProducts.map((product, index) => ({
           product: product.productId,
           quantity: parseInt(product.quantity),
           unitPrice: parseFloat(product.unitPrice),
+          totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
         })),
       };
 
@@ -256,10 +247,11 @@ export default {
 
       const payload = {
         customer: this.selectedCustomerId,
-        products: this.invoiceProducts.map((product) => ({
+        products: this.invoiceProducts.map((product, index) => ({
           product: product.productId,
           quantity: parseInt(product.quantity),
           unitPrice: parseFloat(product.unitPrice),
+          totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
         })),
       };
 
@@ -288,7 +280,6 @@ export default {
     },
   },
 };
-
 </script>
 
 <style scoped>
