@@ -26,32 +26,50 @@ const actions = {
     }
   },
 
-  async fetchInvoiceDetail(id) {
+  async fetchInvoiceDetail({ dispatch, commit }, id) {
     try {
-      const response = await this.$store.dispatch('invoices/fetchInvoiceById', id); // Call the correct action
+      // Fetch invoice by ID from API using dispatch to another action
+      const response = await dispatch('fetchInvoiceById', id);
+      
+      // Check if the response was successful
       if (response && response.success) {
-        const invoice = response.data; // Get the invoice data directly
-        this.customerId = invoice.customer._id; // Access customer ID correctly
-        this.productId = invoice.product._id;   // Access product ID correctly
-        this.quantity = invoice.quantity;
-        this.unitPrice = invoice.unit_price;
+        const invoice = response.data;  // Extract invoice data
+        
+        // Log the invoice data for debugging
+        console.log('Invoice Data:', invoice);
+        
+        // Commit to Vuex store if needed (optional)
+        commit('SET_INVOICE_DETAIL', invoice);
+        
+        // If you want to store some other specific values in the state, commit them as well
+        commit('SET_CUSTOMER_ID', invoice.customer._id);  // For example, commit customer ID
+        commit('SET_PRODUCT_ID', invoice.product._id);    // Commit product ID
+  
       } else {
         throw new Error("Failed to load invoice details for edit.");
       }
     } catch (err) {
       console.error("Error fetching invoice details:", err);
-      this.error = "Failed to load invoice details.";
+      this.error = "Failed to load invoice details."; // Update this part in the component if needed
     }
   },  
-  async fetchInvoiceById(_, id) { // Updated here
+  async fetchInvoiceById(_, id) {
     try {
+      // API call to fetch invoice by ID
       const response = await apiClient.get(`/custprod/${id}`);
-      return response.data; // Return the response for further processing in the component
+      
+      // Log the response for debugging
+      console.log('Fetched Invoice:', response.data);
+      
+      // Return the response data
+      return response.data;
+      
     } catch (error) {
       console.error("Error fetching invoice:", error);
       throw new Error("Failed to load invoice details for edit.");
     }
-  },  
+  }
+  ,  
 
   async createInvoiceInStore({ commit }, invoiceData) {
     try {
