@@ -2,11 +2,23 @@
   <v-container>
     <h1 class="text-center">Invoice Detail</h1>
 
+    <!-- Show loader while fetching invoice details -->
+    <v-row v-if="loading" class="d-flex justify-center align-center" style="height: 80vh;">
+      <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
+    </v-row>
+
+    <!-- Show error message if there's an error -->
     <v-alert v-if="error" type="error" dismissible>
       {{ error }}
     </v-alert>
 
-    <v-card v-if="invoice" class="mx-auto" max-width="600">
+    <!-- Show the "Back" button -->
+    <v-btn v-if="!loading" color="grey" @click="goBack" class="mb-4">
+      <v-icon left>mdi-arrow-left</v-icon>Invoices
+    </v-btn>
+
+    <!-- Show invoice details once loaded -->
+    <v-card v-if="!loading && invoice" class="mx-auto" max-width="600">
       <v-card-title>
         <span class="headline">Invoice for {{ invoice.product.name }}</span>
       </v-card-title>
@@ -47,7 +59,8 @@
       </v-card-actions>
     </v-card>
 
-    <v-card v-else class="mx-auto" max-width="600">
+    <!-- Show message if no invoice found, only if data is loaded -->
+    <v-card v-if="!loading && !invoice" class="mx-auto" max-width="600">
       <v-card-text>
         <p class="text-center">No invoice found</p>
       </v-card-text>
@@ -58,8 +71,7 @@
       <v-card>
         <v-card-title class="headline">Confirm Deletion</v-card-title>
         <v-card-text>
-          Are you sure you want to delete this invoice? This action cannot be
-          undone.
+          Are you sure you want to delete this invoice? This action cannot be undone.
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -79,6 +91,7 @@ export default {
     return {
       error: null,
       deleteDialog: false,
+      loading: true,  // Set loading to true initially
     };
   },
   computed: {
@@ -95,8 +108,11 @@ export default {
           "invoices/fetchInvoiceDetail",
           this.$route.params.id
         );
+        this.loading = false;  // Set loading to false once data is fetched
       } catch (err) {
         console.error("Failed to load invoice details", err);
+        this.error = "Error loading invoice details.";
+        this.loading = false;  // Hide the loader even if there's an error
       }
     },
 
@@ -108,7 +124,9 @@ export default {
         this.error = "Error deleting invoice.";
       }
     },
-
+    goBack() {
+      this.$router.push('/invoice'); // Navigate back to the /invoice page
+    },
     editInvoice() {
       // Redirecting to the edit page with the invoice ID
       this.$router.push({ path: `/addinvoice/${this.invoice._id}` });
