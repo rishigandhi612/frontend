@@ -172,7 +172,7 @@ export default {
     },
 
     goBack() {
-      this.$router.push("/product");
+      this.$router.go(-1); // Go back to the previous page
     },
 
     formatDate(dateString) {

@@ -48,7 +48,7 @@
                 ></v-progress-circular>
 
                 <!-- Error message if login fails -->
-                <v-alert v-if="errorMessage" type="error" dismissible>
+                <v-alert v-if="errorMessage" type="error" dismissible class="mt-2">
                   {{ errorMessage }}
                 </v-alert>
               </v-card-text>
@@ -104,11 +104,27 @@ export default {
           this.$router.push('/dashboard');
         })
         .catch(error => {
-          console.log('Login failed:', error);
-          // Set error message and hide the spinner on failure
+        console.log('Login failed:', error);
+
+        // Handle network error (e.g., no internet connection)
+        if (error.message === 'Network Error') {
+          this.errorMessage = 'No internet connection. Please check your network.';
+        }
+        // Handle timeout error (e.g., request took too long)
+        else if (error.code === 'ECONNABORTED') {
+          this.errorMessage = 'Request timed out. Please try again.';
+        }
+        // Handle server-side errors (API responses)
+        else if (error.response && error.response.data && error.response.data.message) {
+          // Use the error message from the API response
+          this.errorMessage = error.response.data.message;
+        } else {
+          // Fallback error message
           this.errorMessage = 'Login failed. Please check your credentials.';
-          this.loading = false;
-        });
+        }
+
+        this.loading = false; // Hide the spinner
+      });
     },
   },
 };

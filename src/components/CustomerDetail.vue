@@ -176,8 +176,8 @@ export default {
     },
 
     goBack() {
-      this.$router.push('/customer');
-    }
+      this.$router.go(-1); // Go back to the previous page
+    },
   },
   created() {
     this.loadCustomerDetail();

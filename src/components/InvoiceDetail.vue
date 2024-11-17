@@ -1,5 +1,5 @@
 <template>
-  <v-container v-if="!isLoading" class="pa-5">
+  <v-container v-if="!isLoading" class="pt-5">
     <!-- Loader when data is loading -->
     <v-row v-if="isLoading" class="d-flex justify-center">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -9,20 +9,57 @@
     <v-row v-else>
       <v-col cols="12">
         <v-card v-if="invoiceDetail">
+          <!-- <v-toolbar flat rounded outlined> -->
+
           <v-row>
             <!-- Back Button Section -->
-            <v-col cols="12" md="3" class="d-flex justify-start align-center">
-              <v-btn color="grey" @click="goBack" class="ml-2">
+            <v-col
+              cols="12"
+              md="2"
+              sm="12"
+              class="d-flex justify-start align-center"
+            >
+              <v-btn @click="goBack" class="ml-2">
                 <v-icon left>mdi-arrow-left</v-icon> Back
               </v-btn>
             </v-col>
 
             <!-- Invoice Title Section -->
-            <v-col cols="12" md="6" class="d-flex justify-center align-center">
-              <h1>Invoice Details</h1>
+            <v-col
+              cols="12"
+              md="4"
+              sm="12"
+              class="d-flex justify-center align-center"
+            >
+              <h2>Invoice Details</h2>
+            </v-col>
+
+            <!-- Action Buttons Section (Update & Delete) -->
+            <v-col
+              cols="12"
+              md="6"
+              sm="12"
+              class="d-flex justify-end align-center"
+            >
+              <v-row>
+                <!-- Update Button -->
+                <v-col cols="12" md="6" sm="12" class="d-flex justify-center">
+                  <v-btn color="primary" @click="updateInvoice" class="w-100">
+                    <v-icon>mdi-pencil</v-icon> Update Invoice
+                  </v-btn>
+                </v-col>
+
+                <!-- Delete Button -->
+                <v-col cols="12" md="6" sm="12" class="d-flex justify-center">
+                  <v-btn color="error" @click="deleteInvoice" class="w-100">
+                    <v-icon>mdi-delete</v-icon> Delete Invoice
+                  </v-btn>
+                </v-col>
+              </v-row>
             </v-col>
           </v-row>
-
+          <v-divider class="mt-2"></v-divider>
+          <!-- </v-toolbar> -->
           <!-- Invoice Header -->
           <v-card-subtitle>
             <v-row>
@@ -33,7 +70,7 @@
 
               <!-- Date (Right Aligned) -->
               <v-col cols="12" md="4" class="d-flex justify-end">
-                <h2>Date: {{ formatDate(invoiceDetail.createdAt) }}</h2>
+                <h3>Date: {{ formatDate(invoiceDetail.createdAt) }}</h3>
               </v-col>
             </v-row>
           </v-card-subtitle>
@@ -94,7 +131,9 @@
                     <v-list-item-subtitle>
                       <strong>Quantity:</strong> {{ product.quantity }} Kgs
                       <strong>Rate:</strong> ₹{{ product.unit_price }}/kg
-                      <strong>Amount:</strong> ₹{{ product.quantity * product.unit_price }}
+                      <strong>Amount:</strong> ₹{{
+                        product.quantity * product.unit_price
+                      }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
@@ -106,20 +145,6 @@
           <!-- Total Amount Section -->
           <v-card-actions>
             <h3>Total Amount: ₹{{ invoiceDetail.totalAmount }}</h3>
-          </v-card-actions>
-
-          <!-- Action Buttons -->
-          <v-card-actions>
-            <v-btn color="primary" @click="updateInvoice" class="mr-4">
-              <v-icon>mdi-pencil</v-icon> Update Invoice
-            </v-btn>
-          </v-card-actions>
-
-          <!-- For Small Screen Devices: Delete Button on New Line -->
-          <v-card-actions>
-            <v-btn color="error" @click="deleteInvoice" class="w-100">
-              <v-icon>mdi-delete</v-icon> Delete Invoice
-            </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -164,7 +189,10 @@ export default {
 
     formatDate(dateString) {
       const date = new Date(dateString);
-      return date.toLocaleDateString(); // You can format the date as needed
+      const day = String(date.getDate()).padStart(2, "0"); // Pad single digit day with a leading zero
+      const month = date.toLocaleString("default", { month: "short" }); // Get the 3-letter month abbreviation (e.g., "Nov")
+      const year = date.getFullYear(); // Get the full year
+      return `${day} ${month} ${year}`; // Return formatted date as dd-MMM-yyyy
     },
     capitalizeFirstLetter(string) {
       if (typeof string === "string") {
@@ -215,73 +243,5 @@ export default {
 .error-message {
   color: red;
   margin-top: 20px;
-}
-
-v-row {
-  margin-top: 20px;
-}
-
-h1,
-h2,
-h3 {
-  font-family: Arial, sans-serif;
-}
-
-p {
-  font-size: 14px;
-}
-
-strong {
-  font-weight: bold;
-}
-
-v-card {
-  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-}
-
-@media (max-width: 768px) {
-  .v-card {
-    padding: 10px;
-  }
-
-  h1,
-  h2,
-  h3 {
-    font-size: 1.2rem;
-  }
-
-  p {
-    font-size: 12px;
-  }
-
-  .v-btn {
-    width: 100%;
-    margin-bottom: 10px;
-  }
-
-  .v-col {
-    text-align: center;
-  }
-
-  .v-btn.w-100 {
-    width: 100%;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 960px) {
-  /* For Medium Devices */
-  .v-col {
-    text-align: center;
-  }
-
-  .v-btn {
-    width: auto;
-  }
-
-  .v-card-actions {
-    display: flex;
-    justify-content: space-between;
-  }
 }
 </style>

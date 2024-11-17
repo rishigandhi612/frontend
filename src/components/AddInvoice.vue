@@ -276,7 +276,7 @@ export default {
     },
 
     goBack() {
-      this.$router.push("/invoice"); // Navigate back to the invoice list page
+      this.$router.go(-1); // Go back to the previous page
     },
   },
 };
