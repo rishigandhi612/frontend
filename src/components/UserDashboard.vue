@@ -111,7 +111,7 @@ export default {
       if (key === 'totalCustProd') return 'mdi-invoice-list'; // New icon for invoices
       if (key === 'totalCustomers') return 'mdi-account-group';
       if (key === 'totalProducts') return 'mdi-cube';
-      return 'mdi-tune';
+      return 'mdi-account-multiple';
     }
   },
 };
