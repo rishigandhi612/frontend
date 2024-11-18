@@ -1,32 +1,53 @@
 <template>
   <v-container>
-    <h1>User Dashboard</h1>
+    <h1 class="text-center my-4">User Dashboard</h1>
 
     <!-- Show loader if dashboardStats are not loaded -->
     <v-row
       v-if="loading"
       class="d-flex justify-center align-center"
-      style="height: 80vh;" 
+      style="height: 80vh;"
     >
       <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
     </v-row>
 
     <!-- Show dashboard stats once data is loaded -->
     <v-row v-else>
-      <v-col v-for="(value, key) in dashboardStats" :key="key" cols="12" sm="6" md="3">
-        <v-card class="mx-auto" color="lightgrey">
-          <v-card-title>{{ formatTitle(key) }}</v-card-title>
-          <v-card-subtitle>{{ value }}</v-card-subtitle>
-          <v-card-actions>
-            <v-btn color="primary" rounded @click="handleAction(key)">View Details</v-btn>
+      <v-col v-for="(value, key) in dashboardStats" :key="key" cols="12" sm="6" md="4" lg="3">
+        <v-card 
+          class="mx-auto my-4" 
+          :color="getCardColor(key)" 
+          dark
+          outlined
+          tile
+          elevation="4"
+          hover
+        >
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2" :color="getCardIconColor(key)">
+              {{ getCardIcon(key) }}
+            </v-icon>
+            {{ key === 'totalCustProd' ? 'Total Invoices' : formatTitle(key) }}
+          </v-card-title>
+
+          <v-card-subtitle class="text-h6 font-weight-bold">
+            {{ value }}
+          </v-card-subtitle>
+
+          <v-card-actions class="justify-end">
+            <v-btn color="primary" rounded @click="handleAction(key)" elevation="2">
+              View Details
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
 
     <!-- Show message when no stats are available (fallback case) -->
-    <div v-if="!loading && !dashboardStats.totalCustomers && !dashboardStats.totalProducts">
-      No data available.
+    <div v-if="!loading && (!dashboardStats.totalCustomers && !dashboardStats.totalProducts && !dashboardStats.totalCustProd)">
+      <v-alert type="error" border="left" colored-border>
+        No data available.
+      </v-alert>
     </div>
   </v-container>
 </template>
@@ -72,13 +93,49 @@ export default {
       if (key === 'totalCustProd') {
         this.$router.push('/invoice'); // Navigate to /invoice
       }
-      // You can add more conditions for other keys if needed
       console.log(`Viewing details for ${key}`);
     },
+    getCardColor(key) {
+      if (key === 'totalCustProd') return 'indigo';
+      if (key === 'totalCustomers') return 'green';
+      if (key === 'totalProducts') return 'blue';
+      return 'grey';
+    },
+    getCardIconColor(key) {
+      if (key === 'totalCustProd') return 'yellow';
+      if (key === 'totalCustomers') return 'white';
+      if (key === 'totalProducts') return 'white';
+      return 'white';
+    },
+    getCardIcon(key) {
+      if (key === 'totalCustProd') return 'mdi-invoice-list'; // New icon for invoices
+      if (key === 'totalCustomers') return 'mdi-account-group';
+      if (key === 'totalProducts') return 'mdi-cube';
+      return 'mdi-tune';
+    }
   },
 };
 </script>
 
 <style scoped>
-/* Add any additional styles here if necessary */
+/* Additional styling to enhance UI */
+.v-card {
+  transition: transform 0.3s ease;
+}
+
+.v-card:hover {
+  transform: translateY(-5px);
+}
+
+.v-btn {
+  transition: background-color 0.2s ease;
+}
+
+.v-btn:hover {
+  background-color: #3f51b5 !important; /* On hover, make the button slightly more pronounced */
+}
+
+.v-row {
+  justify-content: center;
+}
 </style>
