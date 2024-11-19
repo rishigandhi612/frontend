@@ -1,7 +1,7 @@
 <template>
   <v-container>
     <!-- Loader Spinner -->
-    <v-row v-if="loading" justify="center">
+    <v-row v-if="loading" justify="center" class="mb-4">
       <v-col cols="auto">
         <v-progress-circular
           indeterminate
@@ -13,26 +13,24 @@
     </v-row>
 
     <!-- Header Section with Title and Back Button -->
-    <v-row class="d-flex align-center">
+    <v-row class="d-flex align-center mb-4">
       <v-col cols="auto">
-        <!-- Back Button aligned left, same style as other buttons -->
-        <v-btn color="grey" @click="goBack">
+        <v-btn color="grey" @click="goBack" class="elevation-2">
           <v-icon left>mdi-arrow-left</v-icon> Back
         </v-btn>
       </v-col>
-      <v-col class="text-center">
-        <!-- Title centered -->
-        <h1>Product Detail</h1>
+      <v-col class="text-start">
+        <h1 class="text-h5 font-weight-bold">Product Detail</h1>
       </v-col>
     </v-row>
 
     <!-- Error Alert -->
-    <v-alert v-if="error" type="error" dismissible>
+    <v-alert v-if="error" type="error" dismissible class="mb-4">
       {{ error }}
     </v-alert>
 
     <!-- Product Details Card (Visible after data is loaded) -->
-    <v-card v-if="!loading && product" class="mx-auto" max-width="600">
+    <v-card v-if="!loading && product" class="mx-auto elevation-8" max-width="800">
       <v-card-title>
         <span class="headline">{{ formattedProductName }}</span>
       </v-card-title>
@@ -41,39 +39,34 @@
         <v-row>
           <v-col cols="12" md="6">
             <p><strong>HSN Code:</strong> {{ product.hsn_code }}</p>
+            <p><strong>Width:</strong> {{ product.width }} {{ product.width > 70 ? 'mm' : '"' }}</p>
             <p><strong>Quantity:</strong> {{ product.quantity }}</p>
           </v-col>
           <v-col cols="12" md="6">
             <p><strong>Price:</strong> ₹{{ product.price }}</p>
-            <p>
-              <strong>Created At:</strong> {{ formatDate(product.createdAt) }}
-            </p>
-            <p>
-              <strong>Updated At:</strong> {{ formatDate(product.updatedAt) }}
-            </p>
+            <p><strong>Created At:</strong> {{ formatDate(product.createdAt) }}</p>
+            <p><strong>Updated At:</strong> {{ formatDate(product.updatedAt) }}</p>
           </v-col>
         </v-row>
 
-        <p><strong>Description:</strong> {{ product.desc }}</p>
+        <p><strong>Description:</strong> {{ product.desc || 'No description available.' }}</p>
       </v-card-text>
 
       <v-card-actions>
-        <v-btn color="primary" @click="updateProduct">
-          <v-icon left>mdi-pencil</v-icon> 
-          Update
+        <v-btn color="primary" @click="updateProduct" class="w-100 text-uppercase">
+          <v-icon left>mdi-pencil</v-icon> Update
         </v-btn>
-        <v-btn color="red" @click="openDeleteConfirmation">
-          <v-icon left>mdi-delete</v-icon>
-          Delete
-          </v-btn>
+        <v-btn color="error" @click="openDeleteConfirmation" class="w-100 text-uppercase">
+          <v-icon left>mdi-delete</v-icon> Delete
+        </v-btn>
         <v-spacer></v-spacer>
       </v-card-actions>
     </v-card>
 
     <!-- If no product is found -->
-    <v-card v-if="!loading && !product" class="mx-auto" max-width="600">
+    <v-card v-if="!loading && !product" class="mx-auto elevation-4" max-width="800">
       <v-card-text>
-        <p class="text-center">No product found</p>
+        <p class="text-center">No product found.</p>
       </v-card-text>
     </v-card>
 
@@ -82,8 +75,7 @@
       <v-card>
         <v-card-title class="headline">Confirm Deletion</v-card-title>
         <v-card-text>
-          Are you sure you want to delete this product? This action cannot be
-          undone.
+          Are you sure you want to delete this product? This action cannot be undone.
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -190,6 +182,8 @@ export default {
 <style scoped>
 .v-card {
   margin-bottom: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .text-center {
@@ -198,5 +192,30 @@ export default {
 
 .v-row {
   margin-bottom: 20px;
+}
+
+.v-btn {
+  text-transform: none;
+}
+
+.v-card-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.v-alert {
+  margin-bottom: 20px;
+}
+
+.elevation-12 {
+  box-shadow: 0 12px 16px rgba(0, 0, 0, 0.2);
+}
+
+.elevation-4 {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.text-uppercase {
+  text-transform: uppercase;
 }
 </style>

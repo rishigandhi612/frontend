@@ -7,7 +7,6 @@
         <v-btn icon @click="goBack" class="back-btn">
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
-
         <!-- Title centered in the same column -->
         <div class="flex-grow-1 text-center">
           <h1>
@@ -23,15 +22,19 @@
     </v-alert>
 
     <!-- Loader Spinner -->
-    <v-row v-if="loading" justify="center">
+    <v-row v-if="loading" justify="center" align="center">
       <v-col cols="auto">
-        <v-progress-circular indeterminate color="primary" size="64" width="6"></v-progress-circular>
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="64"
+          width="6"
+        ></v-progress-circular>
       </v-col>
     </v-row>
 
     <!-- Form -->
     <v-form ref="form" v-model="valid" v-if="!loading">
-      <div>
         <v-select
           v-model="selectedCustomerId"
           :items="allCustomers"
@@ -39,67 +42,102 @@
           item-value="_id"
           label="Select Customer"
           return-object
+          required
         />
-      </div>
 
       <!-- Product List Section -->
       <v-row v-for="(product, index) in invoiceProducts" :key="index">
-        <v-col cols="12" md="3">
-          <v-select
-            v-model="product.productId"
-            :items="allProducts"
-            item-text="name"
-            item-value="_id"
-            label="Select Product"
-            return-object
-          />
-        </v-col>
+  <!-- Product Selection Column -->
+  <v-col cols="12" md="3" class="pa-n ma-n">
+    <v-select
+      v-model="product.productId"
+      :items="allProducts"
+      item-text="name"
+      item-value="_id"
+      label="Select Product"
+      return-object
+      required
+    />
+  </v-col>
 
-        <v-col cols="12" md="3">
-          <v-text-field
-            v-model="product.quantity"
-            label="Quantity"
-            :rules="[rules.required, rules.numeric]"
-            required
-          />
-        </v-col>
+  <!-- Width Column -->
+  <v-col cols="12" md="2" class="mt-0 py-0 pa-n ma-n">
+    <v-text-field
+      v-model="product.width"
+      label="Width"
+      :rules="[rules.required, rules.numeric]"
+      required
+      type="number"
+      min="1"
+    />
+  </v-col>
 
-        <v-col cols="12" md="3">
-          <v-text-field
-            v-model="product.unitPrice"
-            label="Unit Price"
-            :rules="[rules.required, rules.numeric]"
-            required
-            type="number"
-            min="0"
-          />
-        </v-col>
+  <!-- Quantity Column -->
+  <v-col cols="12" md="2" class="mt-0 py-0 pa-n ma-n">
+    <v-text-field
+      v-model="product.quantity"
+      label="Quantity"
+      :rules="[rules.required, rules.numeric]"
+      required
+      type="number"
+      min="1"
+    />
+  </v-col>
 
-        <v-col cols="12" md="2">
-          <v-text-field
-            :value="getTotalPrice(index)" 
-            label="Total Price"
-            readonly
-          />
-        </v-col>
+  <!-- Unit Price Column -->
+  <v-col cols="12" md="2" class="mt-0 py-0 pa-n ma-n">
+    <v-text-field
+      v-model="product.unitPrice"
+      label="Unit Price"
+      :rules="[rules.required, rules.numeric]"
+      required
+      type="number"
+      min="0"
+    />
+  </v-col>
 
-        <v-col cols="12" md="1" class="d-flex align-center justify-center">
-          <v-btn color="error" @click="removeProduct(index)" icon>
-            <v-icon>mdi-delete</v-icon> Remove
-          </v-btn>
-        </v-col>
-      </v-row>
+  <!-- Total Price Column -->
+  <v-col cols="12" md="2" class="mt-0 py-0 pa-n ma-n">
+    <v-text-field
+      :value="getTotalPrice(index)"
+      label="Total Price"
+      readonly
+    />
+  </v-col>
+
+  <!-- Remove Product Button -->
+  <v-col cols="12" md="1" class="d-flex align-center justify-start pl-n1 pa-n ma-n">
+    <v-btn
+      color="error"
+      @click="removeProduct(index)"
+      icon
+      aria-label="Remove Product"
+    >
+      <v-icon>mdi-delete</v-icon>
+    </v-btn>
+  </v-col>
+</v-row>
 
       <!-- Add Product and Submit Button -->
       <v-row class="mt-3">
         <v-col cols="12" class="d-flex justify-center">
-          <v-btn color="primary" @click="addProduct" icon>
+          <v-btn
+            color="primary"
+            @click="addProduct"
+            icon
+            aria-label="Add Product"
+          >
             <v-icon>mdi-plus</v-icon> Add Product
           </v-btn>
         </v-col>
 
         <v-col cols="12" class="d-flex justify-end mt-3">
-          <v-btn :disabled="!valid || invoiceProducts.length === 0" color="success" @click="isEditing ? updateInvoice() : addInvoice()">
+          <v-btn
+            :disabled="!valid || invoiceProducts.length === 0"
+            color="success"
+            @click="isEditing ? updateInvoice() : addInvoice()"
+            aria-label="Submit Invoice"
+          >
             {{ isEditing ? "Update Invoice" : "Add Invoice" }}
           </v-btn>
         </v-col>
@@ -166,7 +204,10 @@ export default {
 
     async fetchInvoiceDetail(id) {
       try {
-        const response = await this.$store.dispatch("invoices/fetchInvoiceById", id);
+        const response = await this.$store.dispatch(
+          "invoices/fetchInvoiceById",
+          id
+        );
         if (response && response.success) {
           const invoice = response.data;
 
@@ -176,6 +217,7 @@ export default {
           // Map products properly to ensure unit price and total price are calculated
           this.invoiceProducts = invoice.products.map((product) => ({
             productId: product.product._id,
+            width:product.width,
             quantity: product.quantity,
             unitPrice: product.unit_price,
             totalPrice: (product.unit_price * product.quantity).toFixed(2), // Calculate total price
@@ -199,6 +241,7 @@ export default {
     addProduct() {
       this.invoiceProducts.push({
         productId: null,
+        width:0,
         quantity: 1, // Default quantity to 1
         unitPrice: 0,
         totalPrice: 0, // This will be dynamically updated
@@ -216,6 +259,7 @@ export default {
         customer: this.selectedCustomerId,
         products: this.invoiceProducts.map((product, index) => ({
           product: product.productId,
+          width:parseInt(product.width),
           quantity: parseInt(product.quantity),
           unitPrice: parseFloat(product.unitPrice),
           totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
@@ -226,7 +270,11 @@ export default {
       if (
         !payload.customer ||
         payload.products.some(
-          (product) => !product.product || isNaN(product.quantity) || isNaN(product.unitPrice)
+          (product) =>
+            !product.product ||
+            isNaN(product.width) ||
+            isNaN(product.quantity) ||
+            isNaN(product.unitPrice)
         )
       ) {
         this.error = "Please fill out all required fields correctly.";
@@ -249,6 +297,7 @@ export default {
         customer: this.selectedCustomerId,
         products: this.invoiceProducts.map((product, index) => ({
           product: product.productId,
+          width: parseInt(product.width),
           quantity: parseInt(product.quantity),
           unitPrice: parseFloat(product.unitPrice),
           totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
@@ -259,7 +308,11 @@ export default {
       if (
         !payload.customer ||
         payload.products.some(
-          (product) => !product.product || isNaN(product.quantity) || isNaN(product.unitPrice)
+          (product) =>
+            !product.product ||
+            isNaN(product.width) ||
+            isNaN(product.quantity) ||
+            isNaN(product.unitPrice)
         )
       ) {
         this.error = "Please fill out all required fields correctly.";
@@ -296,12 +349,24 @@ export default {
   color: #000; /* Black icon for visibility */
   border-radius: 50%; /* Make the button circular */
   padding: 10px; /* Add padding for better clickability */
+  transition: background-color 0.3s ease;
+}
+
+.back-btn:hover {
+  background-color: #bdbdbd !important; /* Slightly darker grey when hovered */
 }
 
 h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 500;
-  text-align: center;
+}
+
+.v-btn {
+  transition: background-color 0.2s ease;
+}
+
+.v-text-field[readonly] {
+  background-color: #f5f5f5;
 }
 </style>
