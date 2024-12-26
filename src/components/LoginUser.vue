@@ -19,13 +19,16 @@
                   :rules="[emailRequired]"
                 />
                 <v-text-field
-                  v-model="password"
-                  label="Enter your password"
-                  type="password"
-                  required
-                  outlined
-                  :rules="[passwordRequired]"
-                />
+  v-model="password"
+  :type="showPassword ? 'text' : 'password'"
+  label="Enter your password"
+  required
+  outlined
+  :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+  @click:append="togglePasswordVisibility"
+  :rules="[passwordRequired]"
+/>
+
                 
                 <!-- Submit button -->
                 <v-btn
@@ -66,30 +69,25 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'vuex';
+import { mapActions } from 'vuex';
 
 export default {
   data() {
     return {
       emailid: '',
       password: '',
-      errorMessage: '', // Error message state
-      loading: false,   // Loading state to show spinner
+      showPassword: false, // Password visibility toggle
+      errorMessage: '',
+      loading: false,
     };
-  },
-  computed: {
-    ...mapGetters(['isAuthenticated']), // Get authentication state from Vuex
-    emailRequired() {
-      return v => !!v || 'Email is required';
-    },
-    passwordRequired() {
-      return v => !!v || 'Password is required';
-    },
   },
   methods: {
     ...mapActions(['loginUser']),
+    togglePasswordVisibility() {
+      this.showPassword = !this.showPassword; // Toggle password visibility
+    },
     login() {
-      this.loading = true; // Show spinner while API call is in progress
+      this.loading = true;
       const credentials = {
         emailid: this.emailid,
         password: this.password,
@@ -97,37 +95,27 @@ export default {
 
       this.loginUser(credentials)
         .then(() => {
-          // Reset error message and loading state on successful login
           this.errorMessage = '';
-          this.loading = false; // Hide spinner
-          // Redirect to dashboard after successful login
+          this.loading = false;
           this.$router.push('/dashboard');
         })
         .catch(error => {
-        console.log('Login failed:', error);
-
-        // Handle network error (e.g., no internet connection)
-        if (error.message === 'Network Error') {
-          this.errorMessage = 'No internet connection. Please check your network.';
-        }
-        // Handle timeout error (e.g., request took too long)
-        else if (error.code === 'ECONNABORTED') {
-          this.errorMessage = 'Request timed out. Please try again.';
-        }
-        // Handle server-side errors (API responses)
-        else if (error.response && error.response.data && error.response.data.message) {
-          // Use the error message from the API response
-          this.errorMessage = error.response.data.message;
-        } else {
-          // Fallback error message
-          this.errorMessage = 'Login failed. Please check your credentials.';
-        }
-
-        this.loading = false; // Hide the spinner
-      });
+          console.log('Login failed:', error);
+          if (error.message === 'Network Error') {
+            this.errorMessage = 'No internet connection. Please check your network.';
+          } else if (error.code === 'ECONNABORTED') {
+            this.errorMessage = 'Request timed out. Please try again.';
+          } else if (error.response && error.response.data && error.response.data.message) {
+            this.errorMessage = error.response.data.message;
+          } else {
+            this.errorMessage = 'Login failed. Please check your credentials.';
+          }
+          this.loading = false;
+        });
     },
   },
 };
+
 </script>
 
 <style scoped>

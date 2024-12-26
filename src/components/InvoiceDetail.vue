@@ -20,7 +20,7 @@
 
             <!-- Invoice Title Section -->
             <v-col cols="12" md="4" sm="12" class="d-flex justify-center align-center">
-              <h2>Tax Invoice </h2>
+              <h2>Tax Invoice</h2>
             </v-col>
 
             <!-- Action Buttons Section (Update & Delete) -->
@@ -64,7 +64,7 @@
                 <p><strong>Name:</strong> {{ invoiceDetail.customer?.name || "N/A" }}</p>
                 <p><strong>Email:</strong> {{ invoiceDetail.customer?.email_id || "N/A" }}</p>
                 <p><strong>Phone No:</strong> {{ invoiceDetail.customer?.phone_no || "N/A" }}</p>
-                <p><strong>GSTIN</strong> {{ invoiceDetail.customer?.gstin || "N/A" }}</p>
+                <p><strong>GSTIN:</strong> {{ invoiceDetail.customer?.gstin || "N/A" }}</p>
               </v-col>
               <v-col cols="12" sm="6">
                 <p><strong>Address:</strong>{{ invoiceDetail.customer?.address?.line1 || "N/A" }}
@@ -101,10 +101,39 @@
             </v-simple-table>
           </v-card-text>
 
-          <!-- Total Amount Section -->
-          <v-card-actions>
-            <h3>Total Amount: ₹{{ invoiceDetail.totalAmount }}</h3>
-          </v-card-actions>
+          <!-- Additional Charges Section (GST, Other Charges, Total) -->
+          <v-card-text>
+            <v-simple-table>
+              <thead>
+                <tr>
+                  <!-- <th class="text-right">Description</th>
+                  <th class="text-left">Amount (₹)</th> -->
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="text-right">Basic Total</td>
+                  <td class="text-center">₹{{ invoiceDetail.totalAmount }}</td>
+                </tr>
+                <tr>
+                  <td class="text-right">CGST</td>
+                  <td class="text-center">₹{{ invoiceDetail.cgst }}</td>
+                </tr>
+                <tr>
+                  <td class="text-right">SGST</td>
+                  <td class="text-center">₹{{ invoiceDetail.sgst }}</td>
+                </tr>
+                <tr>
+                  <td class="text-right">Other Charges</td>
+                  <td class="text-center">₹{{ invoiceDetail.otherCharges }}</td>
+                </tr>
+                <tr>
+                  <td class="text-right"><strong>Grand Total</strong></td>
+                  <td class="text-center"><strong style="font-size: 1.2em; color: black;">₹{{ invoiceDetail.grandTotal }}</strong></td>
+                </tr>
+              </tbody>
+            </v-simple-table>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
