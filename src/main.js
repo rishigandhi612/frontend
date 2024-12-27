@@ -8,9 +8,8 @@ import vuetify from './plugins/vuetify'
 Vue.config.productionTip = false;
 
 new Vue({
-  // Make sure the router is initialized here
+  //the router initialization
   router,
-
   // Use the Vuex store
   store,
   vuetify,

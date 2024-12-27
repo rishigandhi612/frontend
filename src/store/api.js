@@ -2,9 +2,9 @@ import axios from 'axios';
 import store from './store';  // Import the Vuex store
 
 const api = axios.create({
-  baseURL: 'process.env.frontend', // Your API base URL
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3001', // Fallback to default URL
 });
-
+console.log('Environment Base URL:', process.env.VUE_APP_API_BASE_URL);
 // Add request interceptor to include token in the headers
 api.interceptors.request.use(config => {
   const token = store.state.token || localStorage.getItem('token');

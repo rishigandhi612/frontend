@@ -1,35 +1,37 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
 import axios from 'axios';
-import dashboard from './dashboard'; 
+import dashboard from './dashboard';
 import customers from './customers';
 import products from './products';
 import invoices from './invoice';
 
 Vue.use(Vuex);
 
-// Create and export the Vuex store with modules
+const BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:3001';
+console.log('Environment Base URL:', process.env);
+
 export default new Vuex.Store({
   modules: {
-    dashboard, // Register the dashboard module
+    dashboard,
     customers,
     products,
-    invoices
+    invoices,
   },
   state: {
-    user: null,       // Store user data after login
-    token: localStorage.getItem('token') || null,  // Load token from localStorage on reload
-    refreshToken: localStorage.getItem('refreshToken') || null, // Load refresh token from localStorage on reload
+    user: null,
+    token: localStorage.getItem('token') || null,
+    refreshToken: localStorage.getItem('refreshToken') || null,
   },
   mutations: {
     SET_USER(state, user) {
-      state.user = user;  // Set user mutation
+      state.user = user;
     },
     SET_TOKEN(state, token) {
-      state.token = token;  // Set access token mutation
+      state.token = token;
     },
     SET_REFRESH_TOKEN(state, refreshToken) {
-      state.refreshToken = refreshToken;  // Set refresh token mutation
+      state.refreshToken = refreshToken;
     },
     CLEAR_USER(state) {
       state.user = null;
@@ -38,58 +40,53 @@ export default new Vuex.Store({
     },
   },
   actions: {
-    // Action to log in and store both tokens
     async loginUser({ commit }, credentials) {
       try {
-        const response = await axios.post( process.env.frontend'/auth/login', credentials);
+        console.log('Base URL:', BASE_URL); // Debugging
+        const response = await axios.post(`${BASE_URL}/auth/login`, credentials);
         const { user, token, refreshToken } = response.data;
-        
+
         commit('SET_USER', user);
         commit('SET_TOKEN', token);
         commit('SET_REFRESH_TOKEN', refreshToken);
-        
-        // Store both tokens in localStorage
+
         localStorage.setItem('token', token);
         localStorage.setItem('refreshToken', refreshToken);
       } catch (error) {
-        console.error('Error logging in:', error);
-        throw error; // Re-throw to handle in components
+        console.error('Error logging in:', error.response?.data || error.message);
+        throw error;
       }
     },
-    
-    // Action to refresh the token using the refresh token
+
     async refreshToken({ state, commit }) {
       try {
-        const response = await axios.post('process.env.frontendauth/refresh', {
-          refreshToken: state.refreshToken || localStorage.getItem('refreshToken'), // Use stored refresh token
+        const response = await axios.post(`${BASE_URL}/auth/refresh`, {
+          refreshToken: state.refreshToken || localStorage.getItem('refreshToken'),
         });
 
         const newToken = response.data.token;
-        
-        // Set the new access token
-        commit('SET_TOKEN', newToken);
-        localStorage.setItem('token', newToken); // Update token in localStorage
 
-        return newToken;  // Return the new token for further requests
+        commit('SET_TOKEN', newToken);
+        localStorage.setItem('token', newToken);
+
+        return newToken;
       } catch (error) {
-        console.error('Error refreshing token:', error);
-        commit('CLEAR_USER');  // Clear user data if refresh fails
+        console.error('Error refreshing token:', error.response?.data || error.message);
+        commit('CLEAR_USER');
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        throw error;  // Re-throw to handle in components
+        throw error;
       }
     },
-    
-    // Action to log out
+
     logoutUser({ commit }) {
-      // Remove tokens from localStorage and clear state
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
       commit('CLEAR_USER');
     },
   },
   getters: {
-    isAuthenticated: state => !!state.token, // Check if user is authenticated based on token
+    isAuthenticated: state => !!state.token,
     currentUser: state => state.user,
   },
 });
