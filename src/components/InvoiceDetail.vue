@@ -6,59 +6,70 @@
     </v-row>
 
     <!-- Invoice Details Section -->
-    <v-row v-else>
-      <v-col cols="12">
-        <v-card v-if="invoiceDetail">
-          <!-- Invoice Header -->
-          <v-row>
-            <!-- Back Button Section -->
-            <v-col
-              cols="12"
-              md="2"
-              sm="12"
-              class="d-flex justify-start align-center"
-            >
-              <v-btn @click="goBack" class="ml-2">
-                <v-icon left>mdi-arrow-left</v-icon> Back
+      <v-row v-else>
+        <v-col cols="12">
+          <v-card v-if="invoiceDetail">
+            <!-- Invoice Header -->
+            <v-row>
+              <!-- Back Button Section -->
+              <v-col
+                cols="12"
+                md="2"
+                sm="12"
+                class="d-flex justify-start align-center"
+              >
+                <v-btn @click="goBack" class="ml-2">
+                  <v-icon left>mdi-arrow-left</v-icon> Back
+                </v-btn>
+              </v-col>
+
+              <!-- Action Buttons Section (Update & Delete) -->
+              <v-col
+                cols="12"
+                md="10"
+                sm="12"
+                class="d-flex justify-center align-center"
+              >
+                <v-row>
+                  <!-- Update Button -->
+                  <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
+                    <v-btn color="primary" @click="updateInvoice" class="w-100">
+                      <v-icon>mdi-pencil</v-icon> Update Invoice
+                    </v-btn>
+                  </v-col>
+
+                  <!-- Delete Button -->
+                  <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
+                    <v-btn color="error" @click="confirmAndDeleteInvoice" class="w-100">
+                      <v-icon>mdi-delete</v-icon> Delete Invoice
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="12"  md="3" sm="12" class="d-flex justify-center">
+              <v-btn @click="downloadInvoicePdf" color="success">
+                <v-icon>mdi-download</v-icon> Download Invoice
               </v-btn>
             </v-col>
-
-            <!-- Invoice Title Section -->
-            <v-col
-              cols="12"
-              md="4"
-              sm="12"
-              class="d-flex justify-center align-center"
-            >
-              <h2>Tax Invoice</h2>
-            </v-col>
-
-            <!-- Action Buttons Section (Update & Delete) -->
-            <v-col
-              cols="12"
-              md="6"
-              sm="12"
-              class="d-flex justify-center align-center"
-            >
-              <v-row>
-                <!-- Update Button -->
-                <v-col cols="12" md="6" sm="12" class="d-flex justify-center">
-                  <v-btn color="primary" @click="updateInvoice" class="w-100">
-                    <v-icon>mdi-pencil</v-icon> Update Invoice
-                  </v-btn>
-                </v-col>
-
-                <!-- Delete Button -->
-                <v-col cols="12" md="6" sm="12" class="d-flex justify-center">
-                  <v-btn color="error" @click="confirmAndDeleteInvoice" class="w-100">
-                    <v-icon>mdi-delete</v-icon> Delete Invoice
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-col>
-          </v-row>
+                </v-row>
+              </v-col>
+             
+              
+           
+          <!-- InvoicePdf Component -->
+          <InvoicePdf :invoiceDetail="invoiceDetail" ref="invoicePdfComponent" />
+            </v-row>
           <v-divider class="mt-2"></v-divider>
-
+           <!-- Invoice Title Section -->
+            <v-row>
+              <v-col
+                cols="12"
+                md="12"
+                sm="12"
+                class="d-flex justify-center align-center"
+              >
+                <h2>Tax Invoice</h2>
+              </v-col>
+            </v-row>
+              
           <!-- Invoice Header -->
           <v-card-subtitle>
             <v-row>
@@ -195,6 +206,8 @@
 
 <script>
 import { mapState, mapActions } from "vuex";
+import InvoicePdf from "@/components/InvoicePdf.vue"; // Import the new InvoicePdf component
+
 
 export default {
   data() {
@@ -202,7 +215,9 @@ export default {
       errorMessage: null,
     };
   },
-
+  components: {
+    InvoicePdf,
+  },
   computed: {
     ...mapState("invoices", ["invoiceDetail", "isLoading"]),
   },
@@ -252,6 +267,10 @@ export default {
     },
     goBack() {
       this.$router.go(-1); // Go back to the previous page
+    },
+     // New method to download the invoice PDF
+     downloadInvoicePdf() {
+      this.$refs.invoicePdfComponent.downloadPdf();
     },
   },
 
