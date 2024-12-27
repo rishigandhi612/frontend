@@ -19,17 +19,16 @@
                   :rules="[emailRequired]"
                 />
                 <v-text-field
-  v-model="password"
-  :type="showPassword ? 'text' : 'password'"
-  label="Enter your password"
-  required
-  outlined
-  :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-  @click:append="togglePasswordVisibility"
-  :rules="[passwordRequired]"
-/>
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  label="Enter your password"
+                  required
+                  outlined
+                  :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append="togglePasswordVisibility"
+                  :rules="[passwordRequired]"
+                />
 
-                
                 <!-- Submit button -->
                 <v-btn
                   type="submit"
@@ -51,7 +50,12 @@
                 ></v-progress-circular>
 
                 <!-- Error message if login fails -->
-                <v-alert v-if="errorMessage" type="error" dismissible class="mt-2">
+                <v-alert
+                  v-if="errorMessage"
+                  type="error"
+                  dismissible
+                  class="mt-2"
+                >
                   {{ errorMessage }}
                 </v-alert>
               </v-card-text>
@@ -69,20 +73,29 @@
 </template>
 
 <script>
-import { mapActions } from 'vuex';
+import { mapActions, mapGetters } from "vuex";
 
 export default {
   data() {
     return {
-      emailid: '',
-      password: '',
+      emailid: "",
+      password: "",
       showPassword: false, // Password visibility toggle
-      errorMessage: '',
+      errorMessage: "",
       loading: false,
     };
   },
+  computed: {
+    ...mapGetters(["isAuthenticated"]), // Get authentication state from Vuex
+    emailRequired() {
+      return (v) => !!v || "Email is required";
+    },
+    passwordRequired() {
+      return (v) => !!v || "Password is required";
+    },
+  },
   methods: {
-    ...mapActions(['loginUser']),
+    ...mapActions(["loginUser"]),
     togglePasswordVisibility() {
       this.showPassword = !this.showPassword; // Toggle password visibility
     },
@@ -95,27 +108,31 @@ export default {
 
       this.loginUser(credentials)
         .then(() => {
-          this.errorMessage = '';
+          this.errorMessage = "";
           this.loading = false;
-          this.$router.push('/dashboard');
+          this.$router.push("/dashboard");
         })
-        .catch(error => {
-          console.log('Login failed:', error);
-          if (error.message === 'Network Error') {
-            this.errorMessage = 'No internet connection. Please check your network.';
-          } else if (error.code === 'ECONNABORTED') {
-            this.errorMessage = 'Request timed out. Please try again.';
-          } else if (error.response && error.response.data && error.response.data.message) {
+        .catch((error) => {
+          console.log("Login failed:", error);
+          if (error.message === "Network Error") {
+            this.errorMessage =
+              "No internet connection. Please check your network.";
+          } else if (error.code === "ECONNABORTED") {
+            this.errorMessage = "Request timed out. Please try again.";
+          } else if (
+            error.response &&
+            error.response.data &&
+            error.response.data.message
+          ) {
             this.errorMessage = error.response.data.message;
           } else {
-            this.errorMessage = 'Login failed. Please check your credentials.';
+            this.errorMessage = "Login failed. Please check your credentials.";
           }
           this.loading = false;
         });
     },
   },
 };
-
 </script>
 
 <style scoped>
@@ -144,4 +161,3 @@ export default {
   margin: 20px auto;
 }
 </style>
-

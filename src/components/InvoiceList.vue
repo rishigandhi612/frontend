@@ -30,7 +30,7 @@
           <td>{{ item._id }}</td>
           <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
           <td>{{ formatDate(item.createdAt) }}</td>
-          <td>₹ {{ item.totalAmount }}</td>
+          <td>₹ {{ item.grandTotal }}</td>
           <td>
             <v-btn small icon @click.stop="navigateToEditInvoice(item._id)">
               <v-icon>mdi-pencil</v-icon>

@@ -5,7 +5,7 @@ import store from './index';
 
 // Create an Axios instance
 const apiClient = axios.create({
-  baseURL: 'https://backend.rishigandhi.xyz/', // Set your base URL
+  baseURL: 'process.env.frontend', // Set your base URL
 });
 
 // Add a request interceptor to include the token

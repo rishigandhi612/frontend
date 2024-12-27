@@ -12,19 +12,34 @@
           <!-- Invoice Header -->
           <v-row>
             <!-- Back Button Section -->
-            <v-col cols="12" md="2" sm="12" class="d-flex justify-start align-center">
+            <v-col
+              cols="12"
+              md="2"
+              sm="12"
+              class="d-flex justify-start align-center"
+            >
               <v-btn @click="goBack" class="ml-2">
                 <v-icon left>mdi-arrow-left</v-icon> Back
               </v-btn>
             </v-col>
 
             <!-- Invoice Title Section -->
-            <v-col cols="12" md="4" sm="12" class="d-flex justify-center align-center">
+            <v-col
+              cols="12"
+              md="4"
+              sm="12"
+              class="d-flex justify-center align-center"
+            >
               <h2>Tax Invoice</h2>
             </v-col>
 
             <!-- Action Buttons Section (Update & Delete) -->
-            <v-col cols="12" md="6" sm="12" class="d-flex justify-center align-center">
+            <v-col
+              cols="12"
+              md="6"
+              sm="12"
+              class="d-flex justify-center align-center"
+            >
               <v-row>
                 <!-- Update Button -->
                 <v-col cols="12" md="6" sm="12" class="d-flex justify-center">
@@ -34,8 +49,8 @@
                 </v-col>
 
                 <!-- Delete Button -->
-                <v-col cols="12" md="6" sm="12" class="d-flex justify-center ">
-                  <v-btn color="error" @click="deleteInvoice" class="w-100">
+                <v-col cols="12" md="6" sm="12" class="d-flex justify-center">
+                  <v-btn color="error" @click="confirmAndDeleteInvoice" class="w-100">
                     <v-icon>mdi-delete</v-icon> Delete Invoice
                   </v-btn>
                 </v-col>
@@ -61,16 +76,39 @@
           <v-card-text>
             <v-row>
               <v-col cols="12" sm="6">
-                <p><strong>Name:</strong> {{ invoiceDetail.customer?.name || "N/A" }}</p>
-                <p><strong>Email:</strong> {{ invoiceDetail.customer?.email_id || "N/A" }}</p>
-                <p><strong>Phone No:</strong> {{ invoiceDetail.customer?.phone_no || "N/A" }}</p>
-                <p><strong>GSTIN:</strong> {{ invoiceDetail.customer?.gstin || "N/A" }}</p>
+                <p>
+                  <strong>Name:</strong>
+                  {{ invoiceDetail.customer?.name || "N/A" }}
+                </p>
+                <p>
+                  <strong>Email:</strong>
+                  {{ invoiceDetail.customer?.email_id || "N/A" }}
+                </p>
+                <p>
+                  <strong>Phone No:</strong>
+                  {{ invoiceDetail.customer?.phone_no || "N/A" }}
+                </p>
+                <p>
+                  <strong>GSTIN:</strong>
+                  {{ invoiceDetail.customer?.gstin || "N/A" }}
+                </p>
               </v-col>
               <v-col cols="12" sm="6">
-                <p><strong>Address:</strong>{{ invoiceDetail.customer?.address?.line1 || "N/A" }}
-                  {{ capitalizeFirstLetter(invoiceDetail.customer?.address?.city || "N/A") }},
-                  {{ capitalizeFirstLetter(invoiceDetail.customer?.address?.state || "N/A") }} |
-                  <strong>Pin: </strong>{{ invoiceDetail.customer?.address?.pincode || "N/A" }}
+                <p>
+                  <strong>Address:</strong
+                  >{{ invoiceDetail.customer?.address?.line1 || "N/A" }}
+                  {{
+                    capitalizeFirstLetter(
+                      invoiceDetail.customer?.address?.city || "N/A"
+                    )
+                  }},
+                  {{
+                    capitalizeFirstLetter(
+                      invoiceDetail.customer?.address?.state || "N/A"
+                    )
+                  }}
+                  | <strong>Pin: </strong
+                  >{{ invoiceDetail.customer?.address?.pincode || "N/A" }}
                 </p>
               </v-col>
             </v-row>
@@ -90,10 +128,16 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="product in invoiceDetail.products" :key="product._id">
+                <tr
+                  v-for="product in invoiceDetail.products"
+                  :key="product._id"
+                >
                   <td>{{ product.name }}</td>
                   <td>{{ product.quantity }}</td>
-                  <td>{{ product.width }} {{ product.width > 70 ? 'mm' : 'inches' }}</td>
+                  <td>
+                    {{ product.width }}
+                    {{ product.width > 70 ? "mm" : "inches" }}
+                  </td>
                   <td>₹{{ product.unit_price }}</td>
                   <td>₹{{ product.quantity * product.unit_price }}</td>
                 </tr>
@@ -129,7 +173,11 @@
                 </tr>
                 <tr>
                   <td class="text-right"><strong>Grand Total</strong></td>
-                  <td class="text-center"><strong style="font-size: 1.2em; color: black;">₹{{ invoiceDetail.grandTotal }}</strong></td>
+                  <td class="text-center">
+                    <strong style="font-size: 1.2em; color: black">
+                      ₹{{ invoiceDetail.grandTotal }}
+                    </strong>
+                  </td>
                 </tr>
               </tbody>
             </v-simple-table>
@@ -191,21 +239,17 @@ export default {
     updateInvoice() {
       this.$router.push(`/update-invoice/${this.invoiceDetail._id}`); // Navigate to update page
     },
-
-    async deleteInvoice() {
-      const confirmation = confirm(
-        "Are you sure you want to delete this invoice?"
-      );
+    async confirmAndDeleteInvoice() {
+      const confirmation = confirm("Are you sure you want to delete this invoice?");
       if (confirmation) {
         try {
-          await this.deleteInvoiceDetail(this.invoiceDetail._id);
-          this.$router.push("/invoices"); // Redirect to the invoice list page after deletion
+          await this.deleteInvoiceDetail(this.invoiceDetail._id); // Local method
+          this.$router.push("/invoice");
         } catch (error) {
-          this.errorMessage = "Failed to delete invoice.";
+          this.errorMessage = error?.message || "Failed to delete invoice.";
         }
       }
     },
-
     goBack() {
       this.$router.go(-1); // Go back to the previous page
     },

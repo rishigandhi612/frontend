@@ -78,7 +78,6 @@ import { mapGetters } from "vuex";
 import AppBar from './components/AppBar.vue';
 
 
-
 export default {
   components: {
     AppBar,

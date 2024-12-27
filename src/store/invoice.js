@@ -4,6 +4,11 @@ const state = {
   invoices: [],
   invoiceDetail: null,
   loading: false,
+  loadingState: {
+    fetchInvoices: false,
+    deleteInvoice: false,
+    // other actions...
+  },
 };
 
 const getters = {
@@ -97,16 +102,21 @@ const actions = {
     }
   },
 
-  async deleteInvoiceFromStore({ commit }, invoiceId) {
-    commit('SET_LOADING', true);
+  async deleteInvoiceDetail({ commit }, invoiceId) {
+    console.log("deleteInvoiceDetail action called with ID:", invoiceId);
+    commit("SET_LOADING", true);
     try {
-      await apiClient.delete(`/custprod/${invoiceId}`);
-      commit('REMOVE_INVOICE', invoiceId);
+      const response = await apiClient.delete(`/custprod/${invoiceId}`);
+      if (response.data.success) {
+        commit("REMOVE_INVOICE", invoiceId);
+      } else {
+        throw new Error("Failed to delete the invoice on the server.");
+      }
     } catch (error) {
-      console.error('Error deleting invoice:', error);
-      throw error;
+      console.error("Error deleting invoice:", error);
+      throw new Error(error.response?.data?.message || "Failed to delete the invoice.");
     } finally {
-      commit('SET_LOADING', false);
+      commit("SET_LOADING", false);
     }
   },
 };
@@ -131,11 +141,14 @@ const mutations = {
     }
   },
   REMOVE_INVOICE(state, invoiceId) {
+    // Filter out the deleted invoice from the list
     state.invoices = state.invoices.filter((invoice) => invoice._id !== invoiceId);
+  
+    // Clear invoiceDetail only if it matches the deleted invoice
     if (state.invoiceDetail && state.invoiceDetail._id === invoiceId) {
       state.invoiceDetail = null;
     }
-  },
+  },  
   SET_LOADING(state, loading) {
     state.loading = loading;
   },

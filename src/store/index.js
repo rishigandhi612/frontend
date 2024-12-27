@@ -41,7 +41,7 @@ export default new Vuex.Store({
     // Action to log in and store both tokens
     async loginUser({ commit }, credentials) {
       try {
-        const response = await axios.post('https://backend.rishigandhi.xyz/auth/login', credentials);
+        const response = await axios.post( process.env.frontend'/auth/login', credentials);
         const { user, token, refreshToken } = response.data;
         
         commit('SET_USER', user);
@@ -60,7 +60,7 @@ export default new Vuex.Store({
     // Action to refresh the token using the refresh token
     async refreshToken({ state, commit }) {
       try {
-        const response = await axios.post('https://backend.rishigandhi.xyz/auth/refresh', {
+        const response = await axios.post('process.env.frontendauth/refresh', {
           refreshToken: state.refreshToken || localStorage.getItem('refreshToken'), // Use stored refresh token
         });
 
