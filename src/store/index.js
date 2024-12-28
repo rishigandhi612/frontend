@@ -9,7 +9,7 @@ import invoices from './invoice';
 Vue.use(Vuex);
 
 const BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:3001';
-console.log('Environment Base URL:', process.env);
+// console.log('Environment Base URL:', process.env);
 
 export default new Vuex.Store({
   modules: {

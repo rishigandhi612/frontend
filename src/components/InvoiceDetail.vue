@@ -6,70 +6,75 @@
     </v-row>
 
     <!-- Invoice Details Section -->
-      <v-row v-else>
-        <v-col cols="12">
-          <v-card v-if="invoiceDetail">
-            <!-- Invoice Header -->
-            <v-row>
-              <!-- Back Button Section -->
-              <v-col
-                cols="12"
-                md="2"
-                sm="12"
-                class="d-flex justify-start align-center"
-              >
-                <v-btn @click="goBack" class="ml-2">
-                  <v-icon left>mdi-arrow-left</v-icon> Back
-                </v-btn>
-              </v-col>
-
-              <!-- Action Buttons Section (Update & Delete) -->
-              <v-col
-                cols="12"
-                md="10"
-                sm="12"
-                class="d-flex justify-center align-center"
-              >
-                <v-row>
-                  <!-- Update Button -->
-                  <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
-                    <v-btn color="primary" @click="updateInvoice" class="w-100">
-                      <v-icon>mdi-pencil</v-icon> Update Invoice
-                    </v-btn>
-                  </v-col>
-
-                  <!-- Delete Button -->
-                  <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
-                    <v-btn color="error" @click="confirmAndDeleteInvoice" class="w-100">
-                      <v-icon>mdi-delete</v-icon> Delete Invoice
-                    </v-btn>
-                  </v-col>
-                  <v-col cols="12"  md="3" sm="12" class="d-flex justify-center">
-              <v-btn @click="downloadInvoicePdf" color="success">
-                <v-icon>mdi-download</v-icon> Download Invoice
+    <v-row v-else>
+      <v-col cols="12">
+        <v-card v-if="invoiceDetail">
+          <!-- Invoice Header -->
+          <v-row>
+            <!-- Back Button Section -->
+            <v-col
+              cols="12"
+              md="2"
+              sm="12"
+              class="d-flex justify-start align-center"
+            >
+              <v-btn @click="goBack" class="ml-2">
+                <v-icon left>mdi-arrow-left</v-icon> Back
               </v-btn>
             </v-col>
-                </v-row>
-              </v-col>
-             
-              
-           
-          <!-- InvoicePdf Component -->
-          <InvoicePdf :invoiceDetail="invoiceDetail" ref="invoicePdfComponent" />
-            </v-row>
+
+            <!-- Action Buttons Section (Update & Delete) -->
+            <v-col
+              cols="12"
+              md="10"
+              sm="12"
+              class="d-flex justify-center align-center"
+            >
+              <v-row>
+                <!-- Update Button -->
+                <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
+                  <v-btn color="primary" @click="updateInvoice" class="w-100">
+                    <v-icon>mdi-pencil</v-icon> Update Invoice
+                  </v-btn>
+                </v-col>
+
+                <!-- Delete Button -->
+                <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
+                  <v-btn
+                    color="error"
+                    @click="confirmAndDeleteInvoice"
+                    class="w-100"
+                  >
+                    <v-icon>mdi-delete</v-icon> Delete Invoice
+                  </v-btn>
+                </v-col>
+                <v-col cols="12" md="3" sm="12" class="d-flex justify-center">
+                  <v-btn @click="downloadInvoicePdf" color="success">
+                    <v-icon>mdi-download</v-icon> Download Invoice
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-col>
+
+            <!-- InvoicePdf Component -->
+            <InvoicePdf
+              :invoiceDetail="invoiceDetail"
+              ref="invoicePdfComponent"
+            />
+          </v-row>
           <v-divider class="mt-2"></v-divider>
-           <!-- Invoice Title Section -->
-            <v-row>
-              <v-col
-                cols="12"
-                md="12"
-                sm="12"
-                class="d-flex justify-center align-center"
-              >
-                <h2>Tax Invoice</h2>
-              </v-col>
-            </v-row>
-              
+          <!-- Invoice Title Section -->
+          <v-row>
+            <v-col
+              cols="12"
+              md="12"
+              sm="12"
+              class="d-flex justify-center align-center"
+            >
+              <h2>Tax Invoice</h2>
+            </v-col>
+          </v-row>
+
           <!-- Invoice Header -->
           <v-card-subtitle>
             <v-row>
@@ -127,13 +132,14 @@
 
           <!-- Products Section (Tabular Format) -->
           <v-card-text>
-            <h3>Received the following goods in order and condition:</h3>
+            <h3  class="text-subtitle-1 text-center">Received the following goods in order and condition:</h3>
             <v-simple-table>
               <thead>
                 <tr>
-                  <th class="text-left">Product Name</th>
-                  <th class="text-left">Quantity (kg)</th>
+                  <th class="text-left">Description Of Goods</th>
+                  <th class="text-left">HSN/SAC</th>
                   <th class="text-left">Width</th>
+                  <th class="text-left">Quantity (kg)</th>
                   <th class="text-left">Rate (₹/kg)</th>
                   <th class="text-left">Amount (₹)</th>
                 </tr>
@@ -144,11 +150,12 @@
                   :key="product._id"
                 >
                   <td>{{ product.name }}</td>
-                  <td>{{ product.quantity }}</td>
+                  <td>{{ product.product.hsn_code || 'N/A' }}</td> <!-- Access hsn_code under product -->
                   <td>
                     {{ product.width }}
                     {{ product.width > 70 ? "mm" : "inches" }}
                   </td>
+                  <td>{{ product.quantity }}</td>
                   <td>₹{{ product.unit_price }}</td>
                   <td>₹{{ product.quantity * product.unit_price }}</td>
                 </tr>
@@ -167,7 +174,7 @@
               </thead>
               <tbody>
                 <tr>
-                  <td class="text-right">Basic Total</td>
+                  <td class="text-right">Sub Total</td>
                   <td class="text-center">₹{{ invoiceDetail.totalAmount }}</td>
                 </tr>
                 <tr>
@@ -207,7 +214,6 @@
 <script>
 import { mapState, mapActions } from "vuex";
 import InvoicePdf from "@/components/InvoicePdf.vue"; // Import the new InvoicePdf component
-
 
 export default {
   data() {
@@ -255,7 +261,9 @@ export default {
       this.$router.push(`/update-invoice/${this.invoiceDetail._id}`); // Navigate to update page
     },
     async confirmAndDeleteInvoice() {
-      const confirmation = confirm("Are you sure you want to delete this invoice?");
+      const confirmation = confirm(
+        "Are you sure you want to delete this invoice?"
+      );
       if (confirmation) {
         try {
           await this.deleteInvoiceDetail(this.invoiceDetail._id); // Local method
@@ -268,8 +276,8 @@ export default {
     goBack() {
       this.$router.go(-1); // Go back to the previous page
     },
-     // New method to download the invoice PDF
-     downloadInvoicePdf() {
+    // New method to download the invoice PDF
+    downloadInvoicePdf() {
       this.$refs.invoicePdfComponent.downloadPdf();
     },
   },
@@ -280,6 +288,8 @@ export default {
 
   mounted() {
     this.loadInvoiceDetails(); // Load the invoice details on initial mount
+    console.log(this.invoiceDetail.products); // Check if the data is loaded correctly
+    // console.log(this.invoiceDetail.products); // Check the products array
   },
 };
 </script>
