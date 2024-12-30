@@ -288,7 +288,7 @@ export default {
 
   mounted() {
     this.loadInvoiceDetails(); // Load the invoice details on initial mount
-    console.log(this.invoiceDetail.products); // Check if the data is loaded correctly
+    // console.log(this.invoiceDetail.products); // Check if the data is loaded correctly
     // console.log(this.invoiceDetail.products); // Check the products array
   },
 };

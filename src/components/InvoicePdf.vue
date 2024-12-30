@@ -177,7 +177,7 @@ export default {
       products.push([
         "Grand Total",
         "",
-        totalQuantity+ " kgs", // Display total quantity here
+        `${totalQuantity} kgs`,
         "",
         "",
         `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`, // Format to 2 decimal places
@@ -188,7 +188,7 @@ export default {
         head: [
           [
             "Product Name",
-            "HSN/SAC", // Added HSN code column
+            "HSN/SAC",
             "Quantity (kg)",
             "Width",
             "Rate (Rs./kg)",
@@ -206,15 +206,37 @@ export default {
         footStyles: {
           fontStyle: "bold",
         },
-        didParseCell: function (data) {
-          if (data.section === "body") {
-            // Bold Quantity Column (index 2) and Amount Column (index 5)
-            if (data.column.index === 2 || data.column.index === 5) {
-              data.cell.styles.fontStyle = "bold";
-            }
-          }
-        },
       });
+
+      // Group by HSN Code
+      const hsnSummary = this.invoiceDetail.products.reduce(
+        (summary, product) => {
+          const hsn = product.product.hsn_code || "N/A";
+          if (!summary[hsn]) {
+            summary[hsn] = {
+              cgst: 0,
+              sgst: 0,
+            };
+          }
+          const amount = product.quantity * product.unit_price ;
+          const cgst = (amount * 9) / 100; // Assuming 9% CGST
+          const sgst = (amount * 9) / 100; // Assuming 9% SGST
+
+          summary[hsn].amount += amount;
+          summary[hsn].cgst += cgst;
+          summary[hsn].sgst += sgst;
+
+          return summary;
+        },
+        {}
+      );
+
+      // Prepare data for the HSN Summary table
+      const hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
+        hsn,
+        `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
+        `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
+      ]);
 
       // Add Grand Total in Words
       const grandTotalInWords = toWords(
@@ -222,13 +244,39 @@ export default {
       ).toUpperCase(); // Convert to words and uppercase
       doc.setFontSize(10);
       doc.text(
-        `AMOUNT CHARGEABLE (in words): INR ${grandTotalInWords} ONLY`,
+        `AMOUNT CHARGEABLE (in words):`,
         14,
         doc.lastAutoTable.finalY + 10 // Place the text below the table
       );
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `INR ${grandTotalInWords} ONLY`,
+        14,
+        doc.lastAutoTable.finalY + 12 // Place the text below the table
+      );
 
-      // Add Footer Note
-      const pageHeight = doc.internal.pageSize.height; // Get the page height
+      // Add HSN Summary Table
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 15, // Place it below the main table
+        head: [
+          [
+            "HSN/SAC",
+            "Central Tax",
+            "State Tax",
+          ],
+        ],
+        body: hsnSummaryData,
+        styles: {
+          fontSize: 10,
+        },
+        headStyles: {
+          fillColor: [0, 0, 0],
+          textColor: [255, 255, 255],
+        },
+      });
+      
+      // Footer Note
+      const pageHeight = doc.internal.pageSize.height;
       doc.setFontSize(8);
       doc.text(
         `Please Check the material before use.
@@ -237,7 +285,7 @@ Goods once sold will not be taken back.
 Interest @24% will be charged if payments are not made before due date.
 This is a computer-generated document and does not require any signature(s).`,
         105,
-        pageHeight - 15, // Adjust position as needed
+        pageHeight - 20,
         "center"
       );
 
@@ -247,7 +295,6 @@ This is a computer-generated document and does not require any signature(s).`,
   },
 };
 </script>
-
 
 <style scoped>
 #invoice-pdf {
