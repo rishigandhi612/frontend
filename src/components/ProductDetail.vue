@@ -1,90 +1,129 @@
 <template>
-  <v-container>
-    <!-- Loader Spinner -->
-    <v-row v-if="loading" justify="center" class="mb-4">
-      <v-col cols="auto">
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="64"
-          width="6"
-        ></v-progress-circular>
-      </v-col>
-    </v-row>
+  <v-app>
+    <v-container fluid>
+      <!-- Loader Spinner -->
+      <v-row v-if="loading">
+        <v-col class="d-flex justify-center align-center">
+          <v-progress-circular
+            indeterminate
+            color="primary"
+          ></v-progress-circular>
+          
+        </v-col>
+        
+      </v-row>
+      <v-alert v-else-if="!product && isEditMode" type="error" dismissible>
+    Failed to load product details. Please try again later.
+  </v-alert>
+      <v-row v-if="!loading">
+        <v-col class="d-flex justify-center align-center">
+          <!-- Header Section with Title and Back Button -->
+          <v-row>
+            <v-col cols="12" md="2">
+              <v-btn @click="goBack" class="ml-2" block>
+                <v-icon left>mdi-arrow-left</v-icon> Back
+              </v-btn>
+            </v-col>
+            <v-col cols="12" md="8" class="d-flex justify-center align-center">
+              <h1 class="text-h5 font-weight-bold">Product Detail</h1>
+            </v-col>
+            
+            <v-col>
+              <!-- Product Details Card (Visible after data is loaded) -->
 
-    <!-- Header Section with Title and Back Button -->
-    <v-row class="d-flex align-center mb-4">
-      <v-col cols="auto">
-        <v-btn color="grey" @click="goBack" class="elevation-2">
-          <v-icon left>mdi-arrow-left</v-icon> Back
-        </v-btn>
-      </v-col>
-      <v-col class="text-start">
-        <h1 class="text-h5 font-weight-bold">Product Detail</h1>
-      </v-col>
-    </v-row>
+              <v-card
+                v-if="product"
+                class="mx-auto elevation-8"
+                max-width="800"
+              >
+                <v-card-title>
+                  <span class="headline">{{ formattedProductName }}</span>
+                </v-card-title>
 
-    <!-- Error Alert -->
-    <v-alert v-if="error" type="error" dismissible class="mb-4">
-      {{ error }}
-    </v-alert>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols="12" md="6">
+                      <p><strong>HSN Code:</strong> {{ product.hsn_code }}</p>
+                      <p>
+                        <strong>Width:</strong> {{ product.width }}
+                        {{ product.width > 70 ? "mm" : '"' }}
+                      </p>
+                      <p><strong>Quantity:</strong> {{ product.quantity }}</p>
+                    </v-col>
+                    <v-col cols="12" md="6">
+                      <p><strong>Price:</strong> ₹{{ product.price }}</p>
+                      <p>
+                        <strong>Created At:</strong>
+                        {{ formatDate(product.createdAt) }}
+                      </p>
+                      <p>
+                        <strong>Updated At:</strong>
+                        {{ formatDate(product.updatedAt) }}
+                      </p>
+                    </v-col>
+                  </v-row>
 
-    <!-- Product Details Card (Visible after data is loaded) -->
-    <v-card v-if="!loading && product" class="mx-auto elevation-8" max-width="800">
-      <v-card-title>
-        <span class="headline">{{ formattedProductName }}</span>
-      </v-card-title>
+                  <p>
+                    <strong>Description:</strong>
+                    {{ product.desc || "No description available." }}
+                  </p>
+                </v-card-text>
 
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="6">
-            <p><strong>HSN Code:</strong> {{ product.hsn_code }}</p>
-            <p><strong>Width:</strong> {{ product.width }} {{ product.width > 70 ? 'mm' : '"' }}</p>
-            <p><strong>Quantity:</strong> {{ product.quantity }}</p>
-          </v-col>
-          <v-col cols="12" md="6">
-            <p><strong>Price:</strong> ₹{{ product.price }}</p>
-            <p><strong>Created At:</strong> {{ formatDate(product.createdAt) }}</p>
-            <p><strong>Updated At:</strong> {{ formatDate(product.updatedAt) }}</p>
-          </v-col>
-        </v-row>
+                <v-card-actions>
+                  <v-btn
+                    color="primary"
+                    @click="updateProduct"
+                    class="w-100 text-uppercase"
+                  >
+                    <v-icon left>mdi-pencil</v-icon> Update
+                  </v-btn>
+                  <v-btn
+                    color="error"
+                    @click="openDeleteConfirmation"
+                    class="w-100 text-uppercase"
+                  >
+                    <v-icon left>mdi-delete</v-icon> Delete
+                  </v-btn>
+                  <v-spacer></v-spacer>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          </v-row>
 
-        <p><strong>Description:</strong> {{ product.desc || 'No description available.' }}</p>
-      </v-card-text>
+          <!-- Error Alert -->
+          <v-alert v-if="error" type="error" dismissible class="mb-4">
+            {{ error }}
+          </v-alert>
 
-      <v-card-actions>
-        <v-btn color="primary" @click="updateProduct" class="w-100 text-uppercase">
-          <v-icon left>mdi-pencil</v-icon> Update
-        </v-btn>
-        <v-btn color="error" @click="openDeleteConfirmation" class="w-100 text-uppercase">
-          <v-icon left>mdi-delete</v-icon> Delete
-        </v-btn>
-        <v-spacer></v-spacer>
-      </v-card-actions>
-    </v-card>
-
-    <!-- If no product is found -->
-    <v-card v-if="!loading && !product" class="mx-auto elevation-4" max-width="800">
-      <v-card-text>
-        <p class="text-center">No product found.</p>
-      </v-card-text>
-    </v-card>
-
-    <!-- Confirmation Dialog for Deleting -->
-    <v-dialog v-model="deleteDialog" max-width="400">
-      <v-card>
-        <v-card-title class="headline">Confirm Deletion</v-card-title>
-        <v-card-text>
-          Are you sure you want to delete this product? This action cannot be undone.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="green" text @click="deleteProduct">Yes, Delete</v-btn>
-          <v-btn color="red" text @click="deleteDialog = false">Cancel</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-  </v-container>
+          <!-- If no product is found -->
+          <v-card v-if="!product" class="mx-auto elevation-4" max-width="800">
+            <v-card-text>
+              <p class="text-center">No product found.</p>
+            </v-card-text>
+          </v-card>
+        </v-col>
+        <!-- Confirmation Dialog for Deleting -->
+        <v-dialog v-model="deleteDialog" max-width="400">
+          <v-card>
+            <v-card-title class="headline">Confirm Deletion</v-card-title>
+            <v-card-text>
+              Are you sure you want to delete this product? This action cannot
+              be undone.
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="green" text @click="deleteProduct"
+                >Yes, Delete</v-btn
+              >
+              <v-btn color="red" text @click="deleteDialog = false"
+                >Cancel</v-btn
+              >
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </v-row>
+    </v-container>
+  </v-app>
 </template>
 
 <script>
@@ -138,11 +177,12 @@ export default {
 
     async updateProduct() {
       try {
-        await this.updateProductInStore({
-          id: this.productId,
-          data: this.updatedProductData,
-        });
-        this.$router.push("/product"); // Redirect after update
+        // await this.updateProductInStore({
+        //   id: this.productId,
+        //   data: this.updatedProductData,
+        // });
+        console.log(this.productId)
+        this.$router.push(`/addproduct/${this.productId}`); // Redirect after update
       } catch (err) {
         this.error = "Error updating product.";
       }

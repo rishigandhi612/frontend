@@ -58,6 +58,12 @@ const router = new Router({
       meta: { requiresAuth: true },
     },
     {
+      path: '/addproduct/:id',
+      component: AddProduct,
+      name: 'addProduct',
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/invoice',
       component: InvoiceList,
       name: 'invoiceList',
