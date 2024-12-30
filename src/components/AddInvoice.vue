@@ -357,7 +357,7 @@ export default {
     products: this.invoiceProducts.map((product, index) => ({
       product: product.productId,
       width: parseInt(product.width),
-      quantity: parseInt(product.quantity),
+      quantity: parseFloat(product.quantity),
       unitPrice: parseFloat(product.unitPrice),
       totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
     })),

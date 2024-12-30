@@ -71,18 +71,21 @@ export default {
       // Horizontal line below
       doc.line(0, 51, 210, 51);
 
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`(Original For Recipient)`, 105, 56, "center");
       // Add Invoice Title
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(`Invoice #${this.invoiceDetail._id}`, 14, 60);
+      doc.text(`Invoice #${this.invoiceDetail._id}`, 14, 62);
 
       // Add Date
       doc.setFontSize(14);
       doc.setFont("helvetica", "normal");
       doc.text(
         `Date: ${this.formatDate(this.invoiceDetail.createdAt)}  `,
-        190,
-        60,
+        200,
+        62,
         "right"
       );
 
@@ -99,7 +102,7 @@ export default {
       doc.setFont("helvetica", "normal");
       doc.text(
         `Address: ${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-          this.invoiceDetail.customer?.address?.city || "N/A"
+          this.invoiceDetail.customer?.address?.city?.pincode || "N/A"
         }`,
         105,
         80,
@@ -125,16 +128,15 @@ export default {
       );
 
       // Calculate total quantity
-      const totalQuantity = this.invoiceDetail.products.reduce(
-        (total, product) => total + product.quantity,
-        0
-      ).toFixed(2); // Total quantity formatted to 2 decimal places
+      const totalQuantity = this.invoiceDetail.products
+        .reduce((total, product) => total + product.quantity, 0)
+        .toFixed(3); // Total quantity formatted to 2 decimal places
 
       // Add Products Table with HSN Code
       const products = this.invoiceDetail.products.map((product) => [
         product.name,
         product.product.hsn_code || "N/A", // Include HSN code here
-        product.quantity.toFixed(2), // Format quantity to 2 decimal places if necessary
+        product.quantity.toFixed(3), // Format quantity to 2 decimal places if necessary
         product.width + (product.width > 70 ? " mm " : "''"),
         `Rs.${product.unit_price.toFixed(2)}`, // Format unit price to 2 decimal places
         `Rs.${(product.quantity * product.unit_price).toFixed(2)}`, // Format amount to 2 decimal places
@@ -206,6 +208,14 @@ export default {
         footStyles: {
           fontStyle: "bold",
         },
+        didParseCell: function (data) {
+          if (data.section === "body") {
+            // Bold Quantity Column (index 2) and Amount Column (index 5)
+            if (data.column.index === 2 || data.column.index === 5) {
+              data.cell.styles.fontStyle = "bold";
+            }
+          }
+        },
       });
 
       // Group by HSN Code
@@ -218,7 +228,7 @@ export default {
               sgst: 0,
             };
           }
-          const amount = product.quantity * product.unit_price ;
+          const amount = product.quantity * product.unit_price;
           const cgst = (amount * 9) / 100; // Assuming 9% CGST
           const sgst = (amount * 9) / 100; // Assuming 9% SGST
 
@@ -246,25 +256,19 @@ export default {
       doc.text(
         `AMOUNT CHARGEABLE (in words):`,
         14,
-        doc.lastAutoTable.finalY + 10 // Place the text below the table
+        doc.lastAutoTable.finalY + 7 // Place the text below the table
       );
       doc.setFont("helvetica", "bold");
       doc.text(
-        `INR ${grandTotalInWords} ONLY`,
+        `INR ${grandTotalInWords} Only`,
         14,
-        doc.lastAutoTable.finalY + 12 // Place the text below the table
+        doc.lastAutoTable.finalY + 14 // Place the text below the table
       );
 
       // Add HSN Summary Table
       doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 15, // Place it below the main table
-        head: [
-          [
-            "HSN/SAC",
-            "Central Tax",
-            "State Tax",
-          ],
-        ],
+        startY: doc.lastAutoTable.finalY + 18, // Place it below the main table
+        head: [["HSN/SAC", "Central Tax", "State Tax"]],
         body: hsnSummaryData,
         styles: {
           fontSize: 10,
@@ -274,19 +278,51 @@ export default {
           textColor: [255, 255, 255],
         },
       });
-      
+      // Calculate Total Tax
+      const totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
+
+      // Convert Total Tax Amount to Words
+      const totalTaxInWords = toWords(Math.round(totalTaxAmount)).toUpperCase(); // Convert to words and uppercase
+
+      // Add Total Tax Amount in Words to the bottom
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `Tax Amount(in words):`,
+        14,
+        doc.lastAutoTable.finalY + 7 // Adjust position below the HSN summary table
+      );
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `INR ${totalTaxInWords} Only`,
+        14,
+        doc.lastAutoTable.finalY + 14 // Adjust position below the numeric tax amount
+      );
       // Footer Note
       const pageHeight = doc.internal.pageSize.height;
       doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
       doc.text(
-        `Please Check the material before use.
-Our responsibility ceases once the material leaves our godown.
-Goods once sold will not be taken back.
-Interest @24% will be charged if payments are not made before due date.
-This is a computer-generated document and does not require any signature(s).`,
+        `T&C
+*Please Check the material before use.
+*Subject To Pune Jurisdiction
+*Our responsibility ceases once the material leaves our godown.
+*Goods once sold will not be taken back.
+*Interest @24% will be charged if payments are not made before due date.`,
+        14,
+        pageHeight - 25,
+      );
+      doc.setFont("helvetica", "bold");
+      doc.text(`This is a computer-generated document and does not require any signature(s).`,105,pageHeight-3,"center")
+
+      doc.text(
+        `        Company's Bank Details
+        Bank Name: Bank Of Maharashtra
+        A/C No. 60038479763
+        Branch & IFS Code: Bajirao Rd, Pune - 411030 & MAHB0000001`,
         105,
-        pageHeight - 20,
-        "center"
+        pageHeight - 25,
+        "left"
       );
 
       // Save the PDF
