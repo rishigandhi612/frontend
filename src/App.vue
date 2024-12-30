@@ -1,8 +1,9 @@
 <template>
   <v-app>
     <!-- Top App Bar -->
-    <AppBar @toggleDrawer="drawer = !drawer"/>
-
+    
+    <v-app-bar v-if="isAuthenticated" app elevation="0" shaped><AppBar @toggleDrawer="drawer = !drawer"/>
+    </v-app-bar>
     <!-- Navigation Drawer (placed below the App Bar) -->
     
     <v-navigation-drawer
@@ -63,9 +64,9 @@
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
-    
+
     <!-- Main Content -->
-    <v-main>
+    <v-main class="pt-16">
       <v-container fluid>
         <router-view />
       </v-container>

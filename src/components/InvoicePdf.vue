@@ -75,12 +75,11 @@ export default {
       doc.setFont("helvetica", "normal");
       doc.text(`(Original For Recipient)`, 105, 56, "center");
       // Add Invoice Title
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
       doc.text(`Invoice #${this.invoiceDetail._id}`, 14, 62);
 
       // Add Date
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text(
         `Date: ${this.formatDate(this.invoiceDetail.createdAt)}  `,
@@ -101,29 +100,29 @@ export default {
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text(
-        `Address: ${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
+        `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
           this.invoiceDetail.customer?.address?.city?.pincode || "N/A"
         }`,
+        105,
+        75,
+        "center"
+      );
+      doc.text(
+        `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
         105,
         80,
         "center"
       );
       doc.text(
-        `Phone No: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
+        `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
+        105,
+        85,
+        "center"
+      );
+      doc.text(
+        `Dispatch through: ${this.invoiceDetail.transporter || "N/A"}`,
         105,
         90,
-        "center"
-      );
-      doc.text(
-        `GSTIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
-        105,
-        100,
-        "center"
-      );
-      doc.text(
-        `Transport: ${this.invoiceDetail.transporter || "N/A"}`,
-        105,
-        110,
         "center"
       );
 
@@ -136,7 +135,7 @@ export default {
       const products = this.invoiceDetail.products.map((product) => [
         product.name,
         product.product.hsn_code || "N/A", // Include HSN code here
-        product.quantity.toFixed(3), // Format quantity to 2 decimal places if necessary
+        product.quantity.toFixed(3) + " Kgs", // Format quantity to 2 decimal places if necessary
         product.width + (product.width > 70 ? " mm " : "''"),
         `Rs.${product.unit_price.toFixed(2)}`, // Format unit price to 2 decimal places
         `Rs.${(product.quantity * product.unit_price).toFixed(2)}`, // Format amount to 2 decimal places
@@ -179,22 +178,22 @@ export default {
       products.push([
         "Grand Total",
         "",
-        `${totalQuantity} kgs`,
+        `${totalQuantity} Kgs`,
         "",
         "",
         `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`, // Format to 2 decimal places
       ]);
 
       doc.autoTable({
-        startY: 120,
+        startY: 100,
         head: [
           [
             "Product Name",
             "HSN/SAC",
-            "Quantity (kg)",
+            "Quantity",
             "Width",
-            "Rate (Rs./kg)",
-            "Amount (Rs.)",
+            "Rate",
+            "Amount",
           ],
         ],
         body: products,

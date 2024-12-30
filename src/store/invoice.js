@@ -36,6 +36,7 @@ const actions = {
   },
 
   async fetchInvoiceDetail({ commit, dispatch }, id) {
+    commit('SET_LOADING', true);
     try {
       // Fetch invoice by ID using a helper action
       const response = await dispatch('fetchInvoiceById', id);
@@ -58,10 +59,12 @@ const actions = {
     } catch (err) {
       console.error('Error fetching invoice details:', err);
       throw new Error('Failed to fetch invoice details.');
+    } finally {
+      commit('SET_LOADING', false);
     }
   },
 
-  async fetchInvoiceById(_, id) {
+  async fetchInvoiceById(_, id ) {
     try {
       // API call to fetch invoice by ID
       const response = await apiClient.get(`/custprod/${id}`);
@@ -69,7 +72,7 @@ const actions = {
     } catch (error) {
       console.error('Error fetching invoice:', error);
       throw new Error('Failed to load invoice details.');
-    }
+    } 
   },
 
   async createInvoiceInStore({ commit }, invoiceData) {
@@ -129,7 +132,8 @@ const mutations = {
     state.invoices.push(invoice);
   },
   SET_INVOICE_DETAIL(state, invoice) {
-    state.invoiceDetail = invoice;
+    // Clear the previous detail before setting the new one to avoid stale data
+    state.invoiceDetail = { ...invoice };  // Clone the invoice data
   },
   UPDATE_INVOICE(state, updatedInvoice) {
     const index = state.invoices.findIndex((invoice) => invoice._id === updatedInvoice._id);

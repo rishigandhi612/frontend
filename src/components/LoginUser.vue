@@ -16,7 +16,7 @@
                   type="email"
                   required
                   outlined
-                  :rules="[emailRequired]"
+                  :rules="[emailRequired, emailFormat]"
                 />
                 <v-text-field
                   v-model="password"
@@ -26,14 +26,15 @@
                   outlined
                   :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
                   @click:append="togglePasswordVisibility"
-                  :rules="[passwordRequired]"
+                  :rules="[passwordRequired, passwordFormat]"
                 />
 
                 <!-- Submit button -->
                 <v-btn
                   type="submit"
                   class="submit-btn"
-                  color="success"
+                  color="orange accent-4"
+                  dark
                   block
                   :disabled="loading"
                 >
@@ -87,11 +88,23 @@ export default {
   },
   computed: {
     ...mapGetters(["isAuthenticated"]), // Get authentication state from Vuex
+
+    // Validation rules
     emailRequired() {
       return (v) => !!v || "Email is required";
     },
+    emailFormat() {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return (v) => emailRegex.test(v) || "Enter a valid email address";
+    },
     passwordRequired() {
       return (v) => !!v || "Password is required";
+    },
+    passwordFormat() {
+      const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+      return (v) =>
+        passwordRegex.test(v) ||
+        "Password must be at least 8 characters, include at least one letter and one number";
     },
   },
   methods: {
