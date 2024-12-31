@@ -23,82 +23,72 @@
         </v-row>
       </v-col>
       <v-col md="8" cols="12" class="d-flex align-center justify-center">
-        <v-container class="">
-          <v-row>
-            <v-col cols="12">
-              <!-- Title centered -->
-              <h1 align="center">Customer Detail</h1>
-              <!-- Customer Details Card (Visible after data is loaded) -->
-              <v-card
-                v-if="!loading && customer"
-                class="mx-auto"
-                max-width="600"
-              >
-                <v-card-title>
-                  <span class="headline">{{ formattedCustomerName }}</span>
-                </v-card-title>
+        <v-row>
+          <v-col cols="12">
+            <!-- Title centered -->
+            <h1 align="center">About Customer</h1>
+            <!-- Customer Details Card (Visible after data is loaded) -->
+            <v-card v-if="!loading && customer">
+              <v-card-title>
+                <span class="headline">{{ formattedCustomerName }}</span>
+              </v-card-title>
 
+              <v-card-text>
+                <v-row>
+                  <v-col cols="12" md="6">
+                    <p>
+                      <strong>Email:</strong>
+                      {{ customer.email_id }}
+                    </p>
+                    <p><strong>Phone:</strong> {{ customer.phone_no }}</p>
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <p><strong>GSTIN:</strong> {{ customer.gstin }}</p>
+                    <p><strong>Created At:</strong> {{ customer.createdAt }}</p>
+                    <p><strong>Updated At:</strong> {{ customer.updatedAt }}</p>
+                  </v-col>
+                </v-row>
+                <v-spacer></v-spacer>
+                <v-row>
+                  <v-col>
+                    <p><strong>Address:</strong></p>
+                    <p>
+                      <strong>Line 1:</strong>
+                      {{ customer.address.line1 }}
+                    </p>
+                    <p><strong>City:</strong> {{ formattedCity }}</p>
+                    <p><strong>State:</strong> {{ formattedState }}</p>
+                    <p>
+                      <strong>Pincode:</strong>
+                      {{ customer.address.pincode }}
+                    </p>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+          </v-col>
+          <v-col cols="12">
+            <!-- Confirmation Dialog for Deleting -->
+            <v-dialog v-model="deleteDialog" max-width="400">
+              <v-card>
+                <v-card-title class="headline">Confirm Deletion</v-card-title>
                 <v-card-text>
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <p>
-                        <strong>Email:</strong>
-                        {{ customer.email_id }}
-                      </p>
-                      <p><strong>Phone:</strong> {{ customer.phone_no }}</p>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <p><strong>GSTIN:</strong> {{ customer.gstin }}</p>
-                      <p>
-                        <strong>Created At:</strong> {{ customer.createdAt }}
-                      </p>
-                      <p>
-                        <strong>Updated At:</strong> {{ customer.updatedAt }}
-                      </p>
-                    </v-col>
-                  </v-row>
-                  <v-spacer></v-spacer>
-                  <v-row>
-                    <v-col>
-                      <p><strong>Address:</strong></p>
-                      <p>
-                        <strong>Line 1:</strong>
-                        {{ customer.address.line1 }}
-                      </p>
-                      <p><strong>City:</strong> {{ formattedCity }}</p>
-                      <p><strong>State:</strong> {{ formattedState }}</p>
-                      <p>
-                        <strong>Pincode:</strong>
-                        {{ customer.address.pincode }}
-                      </p>
-                    </v-col>
-                  </v-row>
+                  Are you sure you want to delete this customer? This action
+                  cannot be undone.
                 </v-card-text>
+                <v-card-actions>
+                  <v-spacer></v-spacer>
+                  <v-btn color="green" text @click="deleteCustomer"
+                    >Yes, Delete</v-btn
+                  >
+                  <v-btn color="red" text @click="deleteDialog = false"
+                    >Cancel</v-btn
+                  >
+                </v-card-actions>
               </v-card>
-            </v-col>
-            <v-col cols="12">
-              <!-- Confirmation Dialog for Deleting -->
-              <v-dialog v-model="deleteDialog" max-width="400">
-                <v-card>
-                  <v-card-title class="headline">Confirm Deletion</v-card-title>
-                  <v-card-text>
-                    Are you sure you want to delete this customer? This action
-                    cannot be undone.
-                  </v-card-text>
-                  <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="green" text @click="deleteCustomer"
-                      >Yes, Delete</v-btn
-                    >
-                    <v-btn color="red" text @click="deleteDialog = false"
-                      >Cancel</v-btn
-                    >
-                  </v-card-actions>
-                </v-card>
-              </v-dialog>
-            </v-col>
-          </v-row>
-        </v-container>
+            </v-dialog>
+          </v-col>
+        </v-row>
 
         <!-- If no customer is found -->
         <v-card v-if="!loading && !customer" class="mx-auto" max-width="600">
@@ -112,13 +102,13 @@
           <v-col cols="12">
             <v-btn color="primary" @click="updateCustomer" block>
               <v-icon left>mdi-pencil</v-icon>
-              Update
+              Update Customer
             </v-btn>
           </v-col>
           <v-col cols="12">
             <v-btn dark color="error" @click="openDeleteConfirmation" block>
               <v-icon left>mdi-delete</v-icon>
-              Delete
+              Delete Customer
             </v-btn>
           </v-col>
         </v-row>
