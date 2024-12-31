@@ -1,5 +1,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
+
+// Import components
 import Login from '../components/LoginUser.vue';
 import UserDashboard from '../components/UserDashboard.vue';
 import CustomerList from '../components/CustomerList.vue';
@@ -10,98 +12,111 @@ import AddProduct from '@/components/AddProduct.vue';
 import InvoiceList from '@/components/InvoiceList.vue';
 import InvoiceDetail from '@/components/InvoiceDetail.vue';
 import AddInvoice from '@/components/AddInvoice.vue';
+import NotFound from '@/components/NotFound.vue';
 
 Vue.use(Router);
 
+// Define routes
+const routes = [
+  {
+    path: '/',
+    component: Login,
+    name: 'login',
+  },
+  {
+    path: '/dashboard',
+    component: UserDashboard,
+    name: 'userDashboard',
+    meta: { requiresAuth: true }, // Route requires authentication
+  },
+  {
+    path: '/customer',
+    component: CustomerList,
+    name: 'customerList',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/customer/:id',
+    component: CustomerDetail,
+    name: 'customerDetail',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/product',
+    component: ProductList,
+    name: 'productList',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/product/:id',
+    component: ProductDetail,
+    name: 'productDetail',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addproduct',
+    component: AddProduct,
+    name: 'addProduct',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addproduct/:id?',
+    component: AddProduct,
+    name: 'editProduct',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/invoice',
+    component: InvoiceList,
+    name: 'invoiceList',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/invoice/:id',
+    component: InvoiceDetail,
+    name: 'invoiceDetail',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addinvoice/:id?',
+    component: AddInvoice,
+    name: 'addInvoice',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '*',
+    component: NotFound,
+    name: 'notFound',
+  },
+];
+
+// Create router instance
 const router = new Router({
   mode: 'history', // Use history mode to avoid hash in URLs
-  routes: [
-    {
-      path: '/',
-      component: Login,
-      name: 'login',
-    },
-    {
-      path: '/dashboard',
-      component: UserDashboard,
-      name: 'UserDashboard',
-      meta: { requiresAuth: true }, // Protect the route
-    },
-    {
-      path: '/customer',
-      component: CustomerList,
-      name: 'customerList',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/customer/:id',
-      component: CustomerDetail,
-      name: 'customerDetail',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/product',
-      component: ProductList,
-      name: 'productList',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/product/:id',
-      component: ProductDetail,
-      name: 'productDetail',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/addproduct',
-      component: AddProduct,
-      name: 'addProduct',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/addproduct/:id',
-      component: AddProduct,
-      name: 'addProduct',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/invoice',
-      component: InvoiceList,
-      name: 'invoiceList',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/invoice/:id',
-      component: InvoiceDetail,
-      name: 'invoiceDetail',
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/addinvoice/:id?', // Optional ID for editing
-      component: AddInvoice,
-      name: 'addInvoice',
-      meta: { requiresAuth: true },
-    },
-  ],
+  routes,
 });
 
-// Navigation Guard for Authentication Check
+// Navigation Guard
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token'); // Check for authentication token
 
-  if (to.matched.some(record => record.meta.requiresAuth)) {
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
+    // Route requires authentication
     if (!token) {
-      console.log('No token, redirecting to login');
-      next({ name: 'login' }); // Redirect to login if no token
+      console.warn('Access denied: No token found. Redirecting to login.');
+      next({ name: 'login' }); // Redirect to login if not authenticated
     } else {
-      console.log('Token exists, proceeding to route');
-      next(); // Proceed to the route
+      console.info('Authenticated user. Proceeding to route:', to.name);
+      next(); // User authenticated, proceed to the route
     }
   } else if (to.name === 'login' && token) {
-    console.log('User is logged in, redirecting to dashboard');
-    next({ name: 'UserDashboard' }); // Redirect to dashboard if trying to access login
+    // User is already logged in, redirect to dashboard
+    console.info('User is logged in. Redirecting to dashboard.');
+    next({ name: 'userDashboard' });
   } else {
-    console.log('No auth required, proceeding');
-    next(); // No authentication required, proceed
+    // No authentication required, proceed
+    console.info('Accessing public route:', to.name);
+    next();
   }
 });
 

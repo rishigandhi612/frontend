@@ -10,7 +10,7 @@
       </v-col>
     </v-row>
     <v-row v-if="!loading">
-       <v-col md="2">
+       <v-col md="2" cols="12">
         <v-row>
         <v-col>
         <v-btn @click="goBack" block>
@@ -19,9 +19,10 @@
       </v-col>
        </v-row>
        </v-col>
-       <v-col md="8">
+       <v-col md="8" cols="12">
       <v-row v-if="!loading">
-        <v-col cols="12">
+        <v-col>
+
           <!-- Title centered in the same column -->
           <div class="flex-grow-1 text-center">
             <h1>

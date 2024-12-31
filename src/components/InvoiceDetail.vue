@@ -181,13 +181,13 @@ export default {
 
     async loadInvoiceDetails() {
       try {
-        this.$store.commit("invoices/setLoading", true); // Set loading to true
+        this.$store.commit("invoices/SET_LOADING", true); // Set loading to true
         const invoiceId = this.$route.params.id;
         await this.fetchInvoiceDetail(invoiceId);
       } catch (error) {
         this.errorMessage = "Failed to load invoice details.";
       } finally {
-        this.$store.commit("invoices/setLoading", false); // Always set loading to false
+        this.$store.commit("invoices/SET_LOADING", false); // Always set loading to false
       }
     },
 

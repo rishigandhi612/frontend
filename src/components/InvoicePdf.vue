@@ -76,7 +76,7 @@ export default {
       doc.text(`(Original For Recipient)`, 105, 56, "center");
       // Add Invoice Title
       doc.setFontSize(12);
-      doc.text(`Invoice #${this.invoiceDetail._id}`, 14, 62);
+      doc.text(`Invoice #${this.invoiceDetail.invoiceNumber}`, 14, 62);
 
       // Add Date
       doc.setFontSize(12);
@@ -323,7 +323,6 @@ export default {
         pageHeight - 25,
         "left"
       );
-
       // Save the PDF
       doc.save(`Invoice_${this.invoiceDetail._id}.pdf`);
     },
