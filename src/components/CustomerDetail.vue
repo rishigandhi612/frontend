@@ -189,7 +189,7 @@ export default {
           id: this.customerId,
           data: this.updatedCustomerData,
         });
-        this.$router.push("/customer"); // Redirect after update
+        this.$router.push(`/addcustomer/${this.customerId}`); // Redirect after update
       } catch (err) {
         this.error = "Error updating customer.";
       }
