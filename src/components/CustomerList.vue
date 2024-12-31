@@ -35,7 +35,7 @@
       <template v-slot:item="{ item }">
         <tr @click="handleRowClick(item._id)">
           <td>{{ capitalizeFirstLetter(item.name) }}</td>
-          <td>{{ capitalizeFirstLetter(item.email_id) }}</td>
+          <td>{{ item.email_id }}</td>
           <td>{{ item.phone_no }}</td>
           <td>{{ item.gstin }}</td>
           <td>{{ capitalizeFirstLetter(item.address.city) }}</td>
@@ -89,10 +89,12 @@ export default {
       }
     },
     formatDate(dateString) {
-      const options = { year: "numeric", month: "2-digit", day: "2-digit" };
-      const date = new Date(dateString);
-      return date.toLocaleDateString(undefined, options);
-    },
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, "0"); // Ensure 2 digits
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const year = date.getFullYear(); // Full year (yyyy)
+  return `${day}/${month}/${year}`; // Format as dd/mm/yyyy
+},
     capitalizeFirstLetter(string) {
       if (!string) return "";
       return string.charAt(0).toUpperCase() + string.slice(1);
