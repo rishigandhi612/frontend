@@ -1,6 +1,23 @@
 <template>
   <v-container>
-    <h1>Product List</h1>
+      <v-row>
+      <v-col>
+        <h1>Products List</h1>
+      </v-col>
+      <v-col justify="end" align="end">
+        <v-btn @click="fetchProducts" color="primary">
+          <v-icon>mdi-refresh</v-icon>
+          Refresh
+        </v-btn>
+        <!-- Add User Button -->
+        <v-btn
+          @click="goToAddProduct"
+          color="success"
+          class="ml-2 mt-2 mb-2">
+          <v-icon>mdi-plus</v-icon> Add Product
+        </v-btn>
+      </v-col>
+    </v-row>
     <v-data-table
       :headers="headers"
       :items="allProducts"
@@ -10,14 +27,7 @@
       :sort-by.sync="sortBy"
       :sort-desc.sync="sortDesc"
     >
-      <template v-slot:top>
-        <v-toolbar flat>
-          <v-toolbar-title>Products</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-btn @click="fetchProducts" color="primary" class="mr-2 p-1">Refresh</v-btn>
-          <v-btn @click="goToAddProduct" color="success">Add Product</v-btn> <!-- New button for adding product -->
-        </v-toolbar>
-      </template>
+   
 
       <template v-slot:item="{ item }">
         <tr @click="handleRowClick(item._id)">
@@ -38,7 +48,7 @@ export default {
   name: "ProductList",
   data() {
     return {
-      sortBy: 'name',
+      sortBy: "name",
       sortDesc: false,
       headers: [
         { text: "Name", value: "name" },
@@ -64,7 +74,7 @@ export default {
     async fetchProducts() {
       this.loading = true;
       try {
-        await this.$store.dispatch('products/fetchProducts');
+        await this.$store.dispatch("products/fetchProducts");
       } catch (error) {
         console.error("Error fetching products:", error);
       } finally {
@@ -72,19 +82,19 @@ export default {
       }
     },
     formatDate(dateString) {
-      const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+      const options = { year: "numeric", month: "2-digit", day: "2-digit" };
       const date = new Date(dateString);
       return date.toLocaleDateString(undefined, options);
     },
     capitalizeFirstLetter(string) {
-      if (!string) return '';
+      if (!string) return "";
       return string.charAt(0).toUpperCase() + string.slice(1);
     },
     handleRowClick(productId) {
-      this.$router.push({ name: 'productDetail', params: { id: productId } });
+      this.$router.push({ name: "productDetail", params: { id: productId } });
     },
     goToAddProduct() {
-      this.$router.push({ name: 'addProduct' }); // Navigate to the Add Product page
+      this.$router.push({ name: "addProduct" }); // Navigate to the Add Product page
     },
   },
 };
