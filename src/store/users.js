@@ -18,7 +18,7 @@ const actions = {
     commit("SET_LOADING", true); // Set loading to true
     try {
       const response = await apiClient.get("/user"); // API call to fetch users
-    //   console.log("Fetched users:", response); // Debug log
+      //   console.log("Fetched users:", response); // Debug log
       if (response && Array.isArray(response.data.data)) {
         commit("SET_USERS", response.data.data); // Commit the user list
       } else {
@@ -92,20 +92,16 @@ const actions = {
 
   // Delete a user
   async deleteUser({ commit }, id) {
-    commit("SET_LOADING", true); // Set loading to true
     try {
-      const response = await apiClient.delete(`/user/${id}`); // API call to delete a user
+      const response = await apiClient.delete(`/user/${id}`); // API call
       if (response.data.success) {
-        commit("REMOVE_USER", id); // Commit the deletion to the store
+        commit("REMOVE_USER", id); // Update state
       } else {
         throw new Error("Failed to delete user");
       }
     } catch (error) {
-      console.error("Error deleting user:", error);
-      commit("SET_LOADING", false); // Stop the loading spinner on error
-      throw error; // Rethrow the error
-    } finally {
-      commit("SET_LOADING", false); // Set loading to false regardless of success/failure
+      console.error("Error in deleteUser Vuex action:", error);
+      throw error; // Rethrow to propagate error
     }
   },
 };
