@@ -34,10 +34,22 @@
               <v-text-field
                 label="Password"
                 v-model="user.password"
-                :rules="[rules.required]"
+                :rules="[rules.required, rules.password]"
+                type="password"
                 required
               ></v-text-field>
             </v-col>
+
+            <v-col cols="12" md="4">
+              <v-text-field
+                label="Confirm Password"
+                v-model="user.confirmPassword"
+                :rules="[rules.required, rules.passwordMatch]"
+                type="password"
+                required
+              ></v-text-field>
+            </v-col>
+
             <v-col cols="12" md="4">
               <v-btn
                 :disabled="!isFormValid || isLoading || !hasChanges"
@@ -72,12 +84,23 @@ export default {
       user: {
         emailid: "",
         password: "",
+        confirmPassword: "",
       },
       initialUser: null, // To store the initial user data
       userId: this.$route.params.id, // user ID from route
       isEditMode: !!this.$route.params.id, // True if editing
       rules: {
         required: (value) => !!value || "This field is required",
+        password: (value) => {
+          if (!value) return "Password is required";
+          if (value.length < 6) return "Password must be at least 6 characters long";
+          if (!/[A-Z]/.test(value)) return "Password must contain at least one uppercase letter";
+          if (!/[a-z]/.test(value)) return "Password must contain at least one lowercase letter";
+          if (!/\d/.test(value)) return "Password must contain at least one number";
+          if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return "Password must contain at least one special character";
+          return true; // Return true if all conditions are met
+        },
+        passwordMatch: (value) => value === this.user.password || "Passwords do not match",
       },
       error: null, // To store the error message
     };
@@ -108,7 +131,8 @@ export default {
         // Populate form with user details after fetching
         this.user = { ...this.$store.state.users.userDetail };
         this.initialUser = { ...this.user }; // Store the initial user data
-        this.user.password=""
+        this.user.password = ""; // Do not populate password during edit
+        this.user.confirmPassword = ""; // Do not populate confirm password during edit
       } catch (error) {
         console.error("Error fetching user details:", error);
       }
@@ -122,7 +146,7 @@ export default {
     async saveUser() {
       try {
         if (this.isEditMode) {
-            console.log('Updating user with ID:', this.userId);  // Debug log
+          console.log('Updating user with ID:', this.userId);  // Debug log
           await this.$store.dispatch("users/updateUser", {
             userId: this.userId,
             userData: this.user,
@@ -132,11 +156,13 @@ export default {
         }
         this.$router.push("/user"); // Redirect to user list after save
       } catch (err) {
+        console.log(err)
         // Check for duplicate key error (MongoDB E11000)
         if (err.response && err.response.data) {
           const errorMessage = err.response.data.message;
-          this.error = errorMessage || "Error saving user."; // Show the exact error message
-        } else {
+          this.error = errorMessage ; // Show the exact error message
+        } 
+        else {
           this.error = "Error saving user."; // Generic error message
         }
       }
