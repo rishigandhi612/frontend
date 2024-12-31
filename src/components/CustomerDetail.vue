@@ -57,6 +57,7 @@
                       </p>
                     </v-col>
                   </v-row>
+                  <v-spacer></v-spacer>
                   <v-row>
                     <v-col>
                       <p><strong>Address:</strong></p>

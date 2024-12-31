@@ -5,6 +5,8 @@ import dashboard from './dashboard';
 import customers from './customers';
 import products from './products';
 import invoices from './invoice';
+import users from './users'
+import auth from './apiClient'
 
 Vue.use(Vuex);
 
@@ -13,10 +15,12 @@ const BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:3001';
 
 export default new Vuex.Store({
   modules: {
+    auth,
     dashboard,
     customers,
     products,
     invoices,
+    users
   },
   state: {
     user: null,
