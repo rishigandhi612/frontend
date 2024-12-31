@@ -56,7 +56,7 @@
           </v-list-item-icon>
           <v-list-item-title>Invoices</v-list-item-title>
         </v-list-item>
-        <v-list-item link>
+        <v-list-item link @click="$router.push('/user')">
           <v-list-item-icon>
             <v-icon>mdi-account</v-icon>
           </v-list-item-icon>

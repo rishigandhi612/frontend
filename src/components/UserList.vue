@@ -1,120 +1,132 @@
 <template>
-    <div class="user-list">
-      <h1>All Users</h1>
-  
-      <!-- Display loading spinner -->
-      <div v-if="isLoading" class="loading-spinner">
-        <p>Loading users...</p>
-      </div>
-  
-      <!-- Display error message -->
-      <div v-else-if="error" class="error-message">
-        <p>{{ error }}</p>
-      </div>
-  
-      <!-- Display user list -->
-      <div v-else>
-        <table v-if="users.length > 0" class="user-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Email</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in users" :key="user._id">
-              <td>{{ user._id }}</td>
-              <td>{{ user.emailid }}</td>
-              <td>
-                <button @click="viewUserDetail(user._id)">View</button>
-                <button @click="deleteUser(user._id)">Delete</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-  
-        <p v-else>No users found.</p>
-      </div>
-    </div>
-  </template>
-  
-  <script>
-  import { mapGetters, mapActions } from 'vuex';
-  
-  export default {
-    name: 'UserList',
-    data() {
-      return {
-        error: null, // To store any error messages
-      };
+  <v-container>
+    <v-row>
+      <v-col>
+        <h1>Users List</h1>
+      </v-col>
+      <v-col justify="end" align="end">
+        <v-btn @click="fetchUsers" color="primary">
+          <v-icon>mdi-refresh</v-icon>
+          Refresh
+        </v-btn>
+        <!-- Add User Button -->
+        <v-btn
+          @click="navigateToAddUser"
+          color="success"
+          class="ml-2 mt-2 mb-2">
+          <v-icon>mdi-plus</v-icon> Add User
+        </v-btn>
+      </v-col>
+    </v-row>
+
+    <v-data-table
+      :headers="headers"
+      :items="users"
+      :loading="isLoading"
+      item-key="_id"
+      class="elevation-1"
+      :items-per-page="10"
+      v-if="users.length > 0 && !isLoading"
+    >
+      <template v-slot:item="{ item }">
+        <tr @click="viewUserDetail(item._id)" style="cursor: pointer">
+          <td>{{ item._id }}</td>
+          <td>{{ item.emailid }}</td>
+          <td>
+            <v-btn small icon @click.stop="editUserDetail(item._id)">
+              <v-icon>mdi-pencil</v-icon>
+            </v-btn>
+          </td>
+        </tr>
+      </template>
+    </v-data-table>
+    <v-row v-if="isLoading" class="d-flex justify-center align-center">
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="50"
+      ></v-progress-circular>
+    </v-row>
+    <!-- Display message if no users found -->
+    <p v-else-if="this.users === 0">No users found.</p>
+    <!-- Display error message -->
+    <v-row v-if="error" class="error-message">
+      <p>{{ error }}</p>
+    </v-row>
+  </v-container>
+</template>
+
+<script>
+import { mapGetters, mapActions } from "vuex";
+
+export default {
+  name: "UserList",
+  data() {
+    return {
+      error: null, // To store any error messages
+      headers: [
+        { text: "User ID", value: "_id" },
+        { text: "Email", value: "emailid" },
+        { text: "Actions", value: "actions", sortable: false },
+      ],
+    };
+  },
+  computed: {
+    ...mapGetters("users", ["allUsers", "isLoading"]), // Correctly reference the namespaced module
+    users() {
+      return this.allUsers; // Get all users from Vuex store
     },
-    computed: {
-      ...mapGetters('users', ['allUsers', 'isLoading']), // Correctly reference the namespaced module
-  
-      users() {
-        return this.allUsers; // Get all users from Vuex store
-      },
+  },
+  methods: {
+    ...mapActions("users", ["fetchUsers", "deleteUser"]), // Correctly reference the namespaced module
+
+    // Method to navigate to the user's detail page
+    async viewUserDetail(userId) {
+      this.$router.push(`/user/${userId}`);
     },
-    methods: {
-      ...mapActions('users', ['fetchUsers', 'deleteUser']), // Correctly reference the namespaced module
-  
-      async viewUserDetail(userId) {
-        // Navigate to the user detail page
-        this.$router.push(`/user/${userId}`);
-      },
-  
-      async deleteUser(userId) {
-        try {
-          if (confirm('Are you sure you want to delete this user?')) {
-            await this.deleteUser(userId); // Call delete action
-            alert('User deleted successfully.');
-          }
-        } catch (error) {
-          console.error('Error deleting user:', error);
-          alert('Failed to delete user.');
-        }
-      },
+    // Method to edit the user's detail page
+    async editUserDetail(userId) {
+      this.$router.push(`/adduser/${userId}`);
     },
-    async created() {
+
+    // Method to delete a user
+    async removeUser(userId) {
       try {
-        console.log('Fetching users...');
-        await this.fetchUsers();
-        console.log('Users fetched:', this.users);
+        if (confirm("Are you sure you want to delete this user?")) {
+          await this.deleteUser(userId); // Call delete action
+          alert("User deleted successfully.");
+        }
       } catch (error) {
-        console.error('Error fetching users:', error);
-        this.error = 'Failed to load users. Please try again later.';
+        console.error("Error deleting user:", error);
+        alert("Failed to delete user.");
       }
     },
-  };
-  </script>
-  
-  <style scoped>
-  .user-list {
-    margin: 20px;
-  }
-  
-  .user-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-  }
-  
-  .user-table th,
-  .user-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-  }
-  
-  .user-table th {
-    background-color: #f4f4f4;
-  }
-  
-  .loading-spinner,
-  .error-message {
-    text-align: center;
-    margin: 20px;
-  }
-  </style>
-  
+    navigateToAddUser() {
+      // Navigate to the add user page
+      this.$router.push("/adduser");
+    },
+  },
+  async created() {
+    try {
+      console.log("Fetching users...");
+      await this.fetchUsers(); // Fetch users when the component is created
+      console.log("Users fetched:", this.users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      this.error = "Failed to load users. Please try again later.";
+    }
+  },
+};
+</script>
+
+<style scoped>
+.user-list {
+  margin: 20px;
+}
+
+.loading-spinner,
+.error-message {
+  text-align: center;
+  margin: 20px;
+}
+</style>
