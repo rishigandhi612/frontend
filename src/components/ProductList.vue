@@ -1,21 +1,14 @@
 <template>
-  <v-container>
-      <v-row>
-      <v-col>
-        <h1>Products List</h1>
+  <v-container fluid>
+    <v-row>
+      <v-col md="2" cols="12">
+        <v-btn @click="goBack" block>
+          <v-icon left>mdi-arrow-left</v-icon> Back
+        </v-btn>
       </v-col>
-      <v-col justify="end" align="end">
-        <v-btn @click="fetchProducts" color="primary">
-          <v-icon>mdi-refresh</v-icon>
-          Refresh
-        </v-btn>
-        <!-- Add User Button -->
-        <v-btn
-          @click="goToAddProduct"
-          color="success"
-          class="ml-2 mt-2 mb-2">
-          <v-icon>mdi-plus</v-icon> Add Product
-        </v-btn>
+      <v-col md="8" cols="12">     <v-row>
+      <v-col>
+        <h1 class="text-center">Products List</h1>
       </v-col>
     </v-row>
     <v-data-table
@@ -37,7 +30,27 @@
           <td>{{ formatDate(item.updatedAt) }}</td>
         </tr>
       </template>
-    </v-data-table>
+    </v-data-table></v-col>
+      <v-col md="2" cols="12">
+        <v-row>
+          <v-col cols="12" md="12">
+            <v-btn @click="fetchProducts" color="primary" block>
+          <v-icon>mdi-refresh</v-icon>
+          Refresh
+        </v-btn>
+          </v-col>
+          <v-col cols="12" md="12">
+             <!-- Add User Button -->
+        <v-btn
+          @click="goToAddProduct"
+          color="success" block>
+          <v-icon>mdi-plus</v-icon> Add Product
+        </v-btn>
+          </v-col>
+        </v-row>
+      </v-col>
+    </v-row>
+ 
   </v-container>
 </template>
 
@@ -95,6 +108,9 @@ export default {
     },
     goToAddProduct() {
       this.$router.push({ name: "addProduct" }); // Navigate to the Add Product page
+    },
+    goBack() {
+      this.$router.go(-1); // Go back to the previous page
     },
   },
 };

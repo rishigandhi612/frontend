@@ -1,45 +1,53 @@
 <template>
-  <v-container>
+  <v-container fluid>
     <v-row>
-      <v-col>
-        <h1>Users List</h1>
+      <v-col md="2" cols="12">
+        <v-btn @click="goBack" block>
+          <v-icon left>mdi-arrow-left</v-icon> Back
+        </v-btn></v-col
+      >
+      <v-col md="8" cols="12">
+        <h1 class="text-center">Users List</h1>
+        <v-data-table
+          :headers="headers"
+          :items="users"
+          :loading="isLoading"
+          item-key="_id"
+          class="elevation-1"
+          :items-per-page="10"
+          v-if="users.length > 0 && !isLoading"
+        >
+          <template v-slot:item="{ item }">
+            <tr @click="viewUserDetail(item._id)" style="cursor: pointer">
+              <td>{{ item._id }}</td>
+              <td>{{ item.emailid }}</td>
+              <td>
+                <v-btn small icon @click.stop="editUserDetail(item._id)">
+                  <v-icon>mdi-pencil</v-icon>
+                </v-btn>
+              </td>
+            </tr>
+          </template>
+        </v-data-table>
       </v-col>
-      <v-col justify="end" align="end">
-        <v-btn @click="fetchUsers" color="primary">
-          <v-icon>mdi-refresh</v-icon>
-          Refresh
-        </v-btn>
-        <!-- Add User Button -->
-        <v-btn
-          @click="navigateToAddUser"
-          color="success"
-          class="ml-2 mt-2 mb-2">
-          <v-icon>mdi-plus</v-icon> Add User
-        </v-btn>
+      <v-col md="2" cols="12">
+        <v-row>
+          <v-col md="12" cols="12">
+            <v-btn @click="fetchUsers" color="primary" block>
+              <v-icon>mdi-refresh</v-icon>
+              Refresh
+            </v-btn></v-col
+          >
+          <v-col md="12" cols="12"
+            ><!-- Add User Button -->
+            <v-btn @click="navigateToAddUser" color="success" block>
+              <v-icon>mdi-plus</v-icon> Add User
+            </v-btn></v-col
+          >
+        </v-row>
       </v-col>
     </v-row>
 
-    <v-data-table
-      :headers="headers"
-      :items="users"
-      :loading="isLoading"
-      item-key="_id"
-      class="elevation-1"
-      :items-per-page="10"
-      v-if="users.length > 0 && !isLoading"
-    >
-      <template v-slot:item="{ item }">
-        <tr @click="viewUserDetail(item._id)" style="cursor: pointer">
-          <td>{{ item._id }}</td>
-          <td>{{ item.emailid }}</td>
-          <td>
-            <v-btn small icon @click.stop="editUserDetail(item._id)">
-              <v-icon>mdi-pencil</v-icon>
-            </v-btn>
-          </td>
-        </tr>
-      </template>
-    </v-data-table>
     <v-row v-if="isLoading" class="d-flex justify-center align-center">
       <v-progress-circular
         indeterminate
@@ -104,6 +112,9 @@ export default {
     navigateToAddUser() {
       // Navigate to the add user page
       this.$router.push("/adduser");
+    },
+    goBack() {
+      this.$router.go(-1); // Go back to the previous page
     },
   },
   async created() {

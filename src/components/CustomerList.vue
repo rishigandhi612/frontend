@@ -7,13 +7,7 @@
         </v-btn>
       </v-col>
       <v-col md="8" cols="12">
-        <v-row>
-          <v-col cols="6">
-            <v-row>
-              <v-col> <h1>Customers List</h1> </v-col>
-            </v-row>
-          </v-col>
-        </v-row>
+        <h1 class="text-center">Customers List</h1>
 
         <v-data-table
           :headers="headers"

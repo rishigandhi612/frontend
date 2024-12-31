@@ -1,44 +1,56 @@
 <template>
-  <v-container>
+  <v-container fluid>
     <v-row>
-      <v-col>
-        <h1>Invoice List</h1>
+      <v-col md="2" cols="12">
+        <v-btn @click="goBack" block>
+          <v-icon left>mdi-arrow-left</v-icon> Back
+        </v-btn></v-col
+      >
+      <v-col md="8" cols="12">
+        <h1 class="text-center">Invoice List</h1>
+
+        <v-data-table
+          :headers="headers"
+          :items="sortedInvoices"
+          class="elevation-1"
+          :items-per-page="10"
+          :loading="loading"
+        >
+          <template v-slot:item="{ item }">
+            <tr
+              @click="navigateToInvoiceDetail(item._id)"
+              style="cursor: pointer"
+            >
+              <td>{{ item._id }}</td>
+              <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
+              <td>{{ formatDate(item.createdAt) }}</td>
+              <td>₹ {{ item.grandTotal }}</td>
+              <td>
+                <v-btn small icon @click.stop="navigateToEditInvoice(item._id)">
+                  <v-icon>mdi-pencil</v-icon>
+                </v-btn>
+              </td>
+            </tr>
+          </template>
+        </v-data-table>
       </v-col>
-      <v-col justify="end" align="end">
-        <!-- Refresh Button -->
-        <v-btn @click="fetchInvoices" color="primary">
-          <v-icon>mdi-refresh</v-icon> Refresh
-        </v-btn>
-
-        <!-- Add Invoice Button -->
-        <v-btn @click="navigateToAddInvoice" color="success" class="ml-2 mt-2 mb-2">
-          <v-icon>mdi-plus</v-icon> Add Invoice
-        </v-btn>
-      </v-col>
-    </v-row>
-
-    <v-data-table
-      :headers="headers"
-      :items="sortedInvoices"
-      class="elevation-1"
-      :items-per-page="10"
-      :loading="loading"
-    >
-
-      <template v-slot:item="{ item }">
-        <tr @click="navigateToInvoiceDetail(item._id)" style="cursor: pointer">
-          <td>{{ item._id }}</td>
-          <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
-          <td>{{ formatDate(item.createdAt) }}</td>
-          <td>₹ {{ item.grandTotal }}</td>
-          <td>
-            <v-btn small icon @click.stop="navigateToEditInvoice(item._id)">
-              <v-icon>mdi-pencil</v-icon>
+      <v-col md="2" cols="12">
+        <v-row>
+          <v-col md="12" cols="12">
+            <!-- Refresh Button -->
+            <v-btn @click="fetchInvoices" color="primary" block>
+              <v-icon>mdi-refresh</v-icon> Refresh
             </v-btn>
-          </td>
-        </tr>
-      </template>
-    </v-data-table>
+          </v-col>
+          <v-col md="12" cols="12">
+            <!-- Add Invoice Button -->
+            <v-btn @click="navigateToAddInvoice" color="success" block>
+              <v-icon>mdi-plus</v-icon> Add Invoice
+            </v-btn>
+          </v-col></v-row
+        ></v-col
+      >
+    </v-row>
   </v-container>
 </template>
 
@@ -107,6 +119,9 @@ export default {
     navigateToAddInvoice() {
       // Navigate to the add invoice page
       this.$router.push("/addinvoice");
+    },
+    goBack() {
+      this.$router.go(-1); // Go back to the previous page
     },
   },
 };
