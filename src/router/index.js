@@ -15,6 +15,7 @@ import AddInvoice from '@/components/AddInvoice.vue';
 import UserList from '@/components/UserList.vue';
 import UserDetail from '@/components/UserDetail.vue';
 import AddUser from '@/components/AddUser.vue'
+import AddCustomer from '@/components/AddCustomer.vue'
 import NotFound from '@/components/NotFound.vue';
 
 Vue.use(Router);
@@ -87,13 +88,25 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/addcustomer',
+    component: AddCustomer,
+    name: 'editCustomer',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addcustomer/:id?',
+    component: AddCustomer,
+    name: 'addCustomer',
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/user',
     component: UserList,
     name: 'UserList',
     meta: { requiresAuth: true },
   },
   {
-    path: '/user/:id',
+    path: '/user/:id?',
     component: UserDetail,
     name: 'UserDetail',
     meta: { requiresAuth: true },
