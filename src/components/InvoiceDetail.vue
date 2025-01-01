@@ -35,7 +35,7 @@
                 <v-card-subtitle>
                   <v-row>
                     <v-col cols="12" md="8" class="d-flex justify-start">
-                      <h2>Invoice #{{ invoiceDetail?._id }}</h2>
+                      <h2>Invoice #{{ invoiceDetail?.invoiceNumber }}</h2>
                     </v-col>
                     <v-col cols="12" md="4" class="d-flex justify-end">
                       <h3>Date: {{ formatDate(invoiceDetail?.createdAt) }}</h3>
