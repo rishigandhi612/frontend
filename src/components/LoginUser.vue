@@ -1,6 +1,6 @@
 <template>
-  <v-main fluid class="fill-height">
-    <v-container class="login-container">
+  <v-main fluid class="fill-height mt-n16">
+    <v-container class="login-container mt-n16">
       <v-form v-if="!isAuthenticated" @submit.prevent="login">
         <v-row>
           <v-col cols="12" md="6" sm="12" xl="12">
@@ -173,4 +173,5 @@ export default {
   display: block;
   margin: 20px auto;
 }
+
 </style>
