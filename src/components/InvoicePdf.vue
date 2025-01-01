@@ -54,7 +54,7 @@ export default {
       doc.setLineWidth(0.5);
       doc.line(0, 36, 210, 36);
 
-      // Add Dealer Details
+      // Dealer Details
       doc.text(
         "Dealers in BOPP, POLYESTER, PVC, THERMAL Films",
         105,
@@ -132,12 +132,12 @@ export default {
 
       // Add Products Table with HSN Code
       const products = this.invoiceDetail.products.map((product) => [
-        product.name,
+        product.product.name,
         product.product.hsn_code || "N/A", // Include HSN code here
         product.quantity.toFixed(3) + " Kgs", // Format quantity to 2 decimal places if necessary
         product.width + (product.width > 70 ? " mm " : "''"),
-        `Rs.${product.unit_price.toFixed(2)}`, // Format unit price to 2 decimal places
-        `Rs.${(product.quantity * product.unit_price).toFixed(2)}`, // Format amount to 2 decimal places
+        `Rs.${product.product.price}`, // Format unit price to 2 decimal places
+        `Rs.${(product.quantity * product.product.price).toFixed(2)}`, // Format amount to 2 decimal places
       ]);
 
       // Add Total Rows with formatted values
@@ -226,10 +226,9 @@ export default {
               sgst: 0,
             };
           }
-          const amount = product.quantity * product.unit_price;
-          const cgst = (amount * 9) / 100; // Assuming 9% CGST
-          const sgst = (amount * 9) / 100; // Assuming 9% SGST
-
+          const amount = parseFloat(product.quantity * product.product.price);
+          const cgst = parseFloat((amount * 9) / 100); // Assuming 9% CGST
+          const sgst =  parseFloat((amount * 9) / 100); // Assuming 9% SGST
           summary[hsn].amount += amount;
           summary[hsn].cgst += cgst;
           summary[hsn].sgst += sgst;
@@ -245,7 +244,6 @@ export default {
         `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
         `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
       ]);
-
       // Add Grand Total in Words
       const grandTotalInWords = toWords(
         Math.round(this.invoiceDetail.grandTotal)
@@ -262,7 +260,6 @@ export default {
         14,
         doc.lastAutoTable.finalY + 14 // Place the text below the table
       );
-
       // Add HSN Summary Table
       doc.autoTable({
         startY: doc.lastAutoTable.finalY + 18, // Place it below the main table
@@ -322,10 +319,29 @@ export default {
         pageHeight - 25,
         "left"
       );
-      // Save the PDF
-      doc.save(`Invoice_${this.invoiceDetail._id}.pdf`);
-    },
-  },
+      // Create a Blob object
+  const blob = doc.output("blob");
+
+// Generate a URL for the Blob
+const pdfUrl = URL.createObjectURL(blob);
+
+// Open the PDF in a new window
+const newWindow = window.open(pdfUrl, "_blank");
+
+if (!newWindow) {
+  // Handle cases where window.open is blocked
+  alert("Please allow pop-ups to view and print the PDF.");
+} else {
+  newWindow.onload = function () {
+    if (!/Mobi|Android/i.test(navigator.userAgent)) {
+      // Auto-print only on non-mobile devices
+      newWindow.focus();
+      newWindow.print();
+    } else {
+      alert("PDF opened in a new tab. Use your device's options to print.");
+    }
+  };
+}}}
 };
 </script>
 

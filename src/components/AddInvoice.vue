@@ -363,7 +363,7 @@ export default {
         customer: this.selectedCustomerId,
         products: this.invoiceProducts.map((product, index) => ({
           product: product.productId,
-          width: parseInt(product.width),
+          width: parseFloat(product.width),
           quantity: parseFloat(product.quantity),
           unitPrice: parseFloat(product.unitPrice),
           totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
@@ -418,8 +418,8 @@ export default {
         customer: this.selectedCustomerId,
         products: this.invoiceProducts.map((product, index) => ({
           product: product.productId,
-          width: parseInt(product.width),
-          quantity: parseInt(product.quantity),
+          width: parseFloat(product.width),
+          quantity: parseFloat(product.quantity),
           unitPrice: parseFloat(product.unitPrice),
           totalPrice: parseFloat(this.getTotalPrice(index)),
         })),
@@ -442,6 +442,11 @@ export default {
         this.error = "Please fill out all required fields correctly.";
         return;
       }
+
+  if (JSON.stringify(payload) === JSON.stringify(this.originalInvoice)) {
+    this.error = "No changes detected.";
+    return;
+  }
 
       try {
         await this.updateInvoiceInStore({ id: this.invoiceId, data: payload });
