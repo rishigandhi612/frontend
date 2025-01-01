@@ -101,8 +101,7 @@ export default {
       doc.setFont("helvetica", "normal");
       doc.text(
         `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-          this.invoiceDetail.customer?.address?.city?.pincode || "N/A"
-        }`,
+          this.invoiceDetail.customer?.address?.city || "N/A"},${this.invoiceDetail.customer?.address?.pincode || "N/A"}`,
         105,
         75,
         "center"
