@@ -278,7 +278,7 @@ export default {
             productId: product.product._id,
             width: product.width,
             quantity: product.quantity,
-            unitPrice: product.unit_price,
+            unitPrice: product.product.price || 0,
             totalPrice: (product.unit_price * product.quantity).toFixed(2), // Calculate total price
           }));
           this.otherCharges = invoice.otherCharges || 0; // Set otherCharges
