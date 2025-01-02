@@ -86,8 +86,8 @@
                         <td>{{ product.product?.hsn_code || "N/A" }}</td>
                         <td>{{ product.width }} {{ product.width > 70 ? "mm" : "inches" }}</td>
                         <td>{{ product.quantity }} Kgs</td>
-                        <td>₹{{ product.product?.price }}</td>
-                        <td>₹{{ product.quantity * product.product?.price }}</td>
+                        <td>₹{{ product.unit_price }}</td>
+                        <td>₹{{ product.quantity * product.unit_price }}</td>
                       </tr>
                     </tbody>
                   </v-simple-table>

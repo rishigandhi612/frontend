@@ -24,6 +24,194 @@ export default {
     downloadPdf() {
       const doc = new jsPDF();
 
+      // Add Products Table with HSN Code
+      const aggregatedProducts = this.invoiceDetail.products.reduce(
+        (acc, product) => {
+          const key = `${product.product.name}-${product.product.hsn_code}-${product.width}`;
+          if (!acc[key]) {
+            acc[key] = { ...product, quantity: 0 }; // Initialize the quantity
+          }
+          acc[key].quantity += product.quantity; // Add quantity for matching products
+          return acc;
+        },
+        {}
+      );
+
+      const products = Object.values(aggregatedProducts).map((product) => [
+        product.product.name,
+        product.product.hsn_code || "N/A",
+        product.width + (product.width > 70 ? " mm " : "''"),
+        `${product.quantity.toFixed(3)} Kgs`,
+        `Rs.${product.unit_price.toFixed(2)}`,
+        `Rs.${(product.quantity * product.unit_price).toFixed(2)}`,
+      ]);
+
+      // Calculate total quantity
+      const totalQuantity = Object.values(aggregatedProducts)
+        .reduce((total, product) => total + product.quantity, 0)
+        .toFixed(3);
+
+      // Add Total Rows with formatted values
+      products.push(["", "", "", "", "", ""]);
+      products.push([
+        "",
+        "",
+        "",
+        "",
+        "Sub Total",
+        `Rs.${this.invoiceDetail.totalAmount.toFixed(2)}`, // Format to 2 decimal places
+      ]);
+      products.push([
+        "add:",
+        "",
+        "",
+        "",
+        "Other Charges",
+        `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`, // Format to 2 decimal places
+      ]);
+      products.push([
+        "add:",
+        "",
+        "",
+        "",
+        "CGST @ 9%",
+        `Rs.${this.invoiceDetail.cgst.toFixed(2)}`, // Format to 2 decimal places
+      ]);
+      products.push([
+        "add:",
+        "",
+        "",
+        "",
+        "SGST @ 9%",
+        `Rs.${this.invoiceDetail.sgst.toFixed(2)}`, // Format to 2 decimal places
+      ]);
+      products.push([
+        "Grand Total",
+        "",
+        "",
+        `${totalQuantity} Kgs`,
+        "",
+        `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`, // Format to 2 decimal places
+      ]);
+
+      // Render the product table
+      doc.autoTable({
+        startY: 100,
+        head: [
+          ["Product Name", "HSN/SAC", "Width", "Quantity", "Rate", "Amount"],
+        ],
+        body: products,
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+        didDrawPage: () => {
+          this.addHeader(doc);
+          this.addFooter(doc, doc.internal.pageSize.height);
+        },
+      });
+
+      doc.setFontSize(10);
+
+      // Handle new page addition properly
+      let amountTextY = doc.lastAutoTable.finalY + 7;
+
+      // Check if a new page is added due to lack of space
+      const availableHeight =
+        doc.internal.pageSize.height - doc.lastAutoTable.finalY - 40; // Approximate space needed for footnotes
+      let newPageAddedForHSN = false;
+
+      if (availableHeight < 50) {
+        doc.addPage();
+        this.addHeader(doc);
+        newPageAddedForHSN = true;
+        amountTextY = 20; // Adjust the Y position for the new page (or any appropriate value)
+      }
+
+      // Print the "AMOUNT CHARGEABLE (in words)"
+      const amountText = "AMOUNT CHARGEABLE (in words):";
+      doc.text(amountText, 14, amountTextY);
+
+      // Group by HSN Code
+      const hsnSummary = this.invoiceDetail.products.reduce(
+        (summary, product) => {
+          const hsn = product.product.hsn_code || "N/A";
+          if (!summary[hsn]) {
+            summary[hsn] = { cgst: 0, sgst: 0 };
+          }
+          const amount = parseFloat(product.quantity * product.product.price);
+          const cgst = parseFloat((amount * 9) / 100);
+          const sgst = parseFloat((amount * 9) / 100);
+          summary[hsn].amount += amount;
+          summary[hsn].cgst += cgst;
+          summary[hsn].sgst += sgst;
+          return summary;
+        },
+        {}
+      );
+
+      const hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
+        hsn,
+        `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
+        `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
+      ]);
+
+      const grandTotalInWords = toWords(
+        Math.round(this.invoiceDetail.grandTotal)
+      ).toUpperCase();
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `INR ${grandTotalInWords} Only`,
+        14,
+        doc.lastAutoTable.finalY + 14
+      );
+
+      // Render the HSN Summary Table
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + (availableHeight < 50 ? 10 : 18),
+        head: [["HSN/SAC", "Central Tax", "State Tax"]],
+        body: hsnSummaryData,
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+        didDrawPage: () => {
+          if (newPageAddedForHSN) {
+            this.addFooter(doc, doc.internal.pageSize.height);
+          }
+        },
+      });
+
+      const totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
+      const totalTaxInWords = toWords(Math.round(totalTaxAmount)).toUpperCase();
+
+      // Print "Tax Amount(in words)" text and total tax amount in words
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Tax Amount(in words):`, 14, doc.lastAutoTable.finalY + 7);
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `INR ${totalTaxInWords} Only`,
+        14,
+        doc.lastAutoTable.finalY + 14
+      );
+
+      // Create the PDF blob and open it
+      const blob = doc.output("blob");
+      const pdfUrl = URL.createObjectURL(blob);
+      const newWindow = window.open(pdfUrl, "_blank");
+      if (!newWindow) {
+        alert("Please allow pop-ups to view and print the PDF.");
+      } else {
+        newWindow.onload = function () {
+          if (!/Mobi|Android/i.test(navigator.userAgent)) {
+            newWindow.focus();
+            newWindow.print();
+          } else {
+            alert(
+              "PDF opened in a new tab. Use your device's options to print."
+            );
+          }
+        };
+      }
+    },
+    addHeader(doc) {
       // Add Logo
       const logoPath = require("@/assets/HoloLogo.png"); // Ensure the correct path to your logo file
       const imgWidth = 25; // Adjust the width of the logo
@@ -101,7 +289,8 @@ export default {
       doc.setFont("helvetica", "normal");
       doc.text(
         `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-          this.invoiceDetail.customer?.address?.city || "N/A"},${this.invoiceDetail.customer?.address?.pincode || "N/A"}`,
+          this.invoiceDetail.customer?.address?.city || "N/A"
+        },${this.invoiceDetail.customer?.address?.pincode || "N/A"}`,
         105,
         75,
         "center"
@@ -124,177 +313,11 @@ export default {
         90,
         "center"
       );
+    },
 
-      // Calculate total quantity
-      const totalQuantity = this.invoiceDetail.products
-        .reduce((total, product) => total + product.quantity, 0)
-        .toFixed(3); // Total quantity formatted to 2 decimal places
-
-      // Add Products Table with HSN Code
-      const products = this.invoiceDetail.products.map((product) => [
-        product.product.name,
-        product.product.hsn_code || "N/A", // Include HSN code here
-        product.quantity.toFixed(3) + " Kgs", // Format quantity to 2 decimal places if necessary
-        product.width + (product.width > 70 ? " mm " : "''"),
-        `Rs.${product.product.price}`, // Format unit price to 2 decimal places
-        `Rs.${(product.quantity * product.product.price).toFixed(2)}`, // Format amount to 2 decimal places
-      ]);
-
-      // Add Total Rows with formatted values
-      products.push(["", "", "", "", "", ""]);
-      products.push([
-        "",
-        "",
-        "",
-        "",
-        "Sub Total",
-        `Rs.${this.invoiceDetail.totalAmount.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-      products.push([
-        "add:",
-        "",
-        "",
-        "",
-        "Other Charges",
-        `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-      products.push([
-        "add:",
-        "",
-        "",
-        "",
-        "CGST @ 9%",
-        `Rs.${this.invoiceDetail.cgst.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-      products.push([
-        "add:",
-        "",
-        "",
-        "",
-        "SGST @ 9%",
-        `Rs.${this.invoiceDetail.sgst.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-      products.push([
-        "Grand Total",
-        "",
-        `${totalQuantity} Kgs`,
-        "",
-        "",
-        `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-
-      doc.autoTable({
-        startY: 100,
-        head: [
-          [
-            "Product Name",
-            "HSN/SAC",
-            "Quantity",
-            "Width",
-            "Rate",
-            "Amount",
-          ],
-        ],
-        body: products,
-        styles: {
-          fontSize: 10,
-        },
-        headStyles: {
-          fillColor: [0, 0, 0], // Black background for the header
-          textColor: [255, 255, 255], // White text color for visibility
-        },
-        footStyles: {
-          fontStyle: "bold",
-        },
-        didParseCell: function (data) {
-          if (data.section === "body") {
-            // Bold Quantity Column (index 2) and Amount Column (index 5)
-            if (data.column.index === 2 || data.column.index === 5) {
-              data.cell.styles.fontStyle = "bold";
-            }
-          }
-        },
-      });
-
-      // Group by HSN Code
-      const hsnSummary = this.invoiceDetail.products.reduce(
-        (summary, product) => {
-          const hsn = product.product.hsn_code || "N/A";
-          if (!summary[hsn]) {
-            summary[hsn] = {
-              cgst: 0,
-              sgst: 0,
-            };
-          }
-          const amount = parseFloat(product.quantity * product.product.price);
-          const cgst = parseFloat((amount * 9) / 100); // Assuming 9% CGST
-          const sgst =  parseFloat((amount * 9) / 100); // Assuming 9% SGST
-          summary[hsn].amount += amount;
-          summary[hsn].cgst += cgst;
-          summary[hsn].sgst += sgst;
-
-          return summary;
-        },
-        {}
-      );
-
-      // Prepare data for the HSN Summary table
-      const hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
-        hsn,
-        `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
-        `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
-      ]);
-      // Add Grand Total in Words
-      const grandTotalInWords = toWords(
-        Math.round(this.invoiceDetail.grandTotal)
-      ).toUpperCase(); // Convert to words and uppercase
-      doc.setFontSize(10);
-      doc.text(
-        `AMOUNT CHARGEABLE (in words):`,
-        14,
-        doc.lastAutoTable.finalY + 7 // Place the text below the table
-      );
-      doc.setFont("helvetica", "bold");
-      doc.text(
-        `INR ${grandTotalInWords} Only`,
-        14,
-        doc.lastAutoTable.finalY + 14 // Place the text below the table
-      );
-      // Add HSN Summary Table
-      doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 18, // Place it below the main table
-        head: [["HSN/SAC", "Central Tax", "State Tax"]],
-        body: hsnSummaryData,
-        styles: {
-          fontSize: 10,
-        },
-        headStyles: {
-          fillColor: [0, 0, 0],
-          textColor: [255, 255, 255],
-        },
-      });
-      // Calculate Total Tax
-      const totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
-
-      // Convert Total Tax Amount to Words
-      const totalTaxInWords = toWords(Math.round(totalTaxAmount)).toUpperCase(); // Convert to words and uppercase
-
-      // Add Total Tax Amount in Words to the bottom
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `Tax Amount(in words):`,
-        14,
-        doc.lastAutoTable.finalY + 7 // Adjust position below the HSN summary table
-      );
-      doc.setFont("helvetica", "bold");
-      doc.text(
-        `INR ${totalTaxInWords} Only`,
-        14,
-        doc.lastAutoTable.finalY + 14 // Adjust position below the numeric tax amount
-      );
-      // Footer Note
+    addFooter(doc) {
       const pageHeight = doc.internal.pageSize.height;
+
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.text(
@@ -305,11 +328,10 @@ export default {
 *Goods once sold will not be taken back.
 *Interest @24% will be charged if payments are not made before due date.`,
         14,
-        pageHeight - 25,
+        pageHeight - 25
       );
+      doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.text(`This is a computer-generated document and does not require any signature(s).`,105,pageHeight-3,"center")
-
       doc.text(
         `        Company's Bank Details
         Bank Name: Bank Of Maharashtra
@@ -319,29 +341,16 @@ export default {
         pageHeight - 25,
         "left"
       );
-      // Create a Blob object
-  const blob = doc.output("blob");
-
-// Generate a URL for the Blob
-const pdfUrl = URL.createObjectURL(blob);
-
-// Open the PDF in a new window
-const newWindow = window.open(pdfUrl, "_blank");
-
-if (!newWindow) {
-  // Handle cases where window.open is blocked
-  alert("Please allow pop-ups to view and print the PDF.");
-} else {
-  newWindow.onload = function () {
-    if (!/Mobi|Android/i.test(navigator.userAgent)) {
-      // Auto-print only on non-mobile devices
-      newWindow.focus();
-      newWindow.print();
-    } else {
-      alert("PDF opened in a new tab. Use your device's options to print.");
-    }
-  };
-}}}
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `This is a computer-generated document and does not require any signature(s).`,
+        105,
+        pageHeight - 3,
+        "center"
+      );
+    },
+  },
 };
 </script>
 

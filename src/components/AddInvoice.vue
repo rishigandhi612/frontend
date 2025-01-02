@@ -85,7 +85,7 @@
           <!-- Unit Price Column -->
           <v-col cols="12" md="2" class="mt-0 py-0 pa-n ma-n">
             <v-text-field
-              v-model="product.unitPrice"
+              v-model="product.unit_price"
               label="Unit Price"
               :rules="[rules.required, rules.numeric]"
               required
@@ -278,7 +278,7 @@ export default {
             productId: product.product._id,
             width: product.width,
             quantity: product.quantity,
-            unitPrice: product.product.price || 0,
+            unit_price: product.unit_price || 0,
             totalPrice: (product.unit_price * product.quantity).toFixed(2), // Calculate total price
           }));
           this.otherCharges = invoice.otherCharges || 0; // Set otherCharges
@@ -294,7 +294,7 @@ export default {
 
     getTotalPrice(index) {
       const product = this.invoiceProducts[index];
-      return (product.quantity * product.unitPrice).toFixed(2);
+      return (product.quantity * product.unit_price).toFixed(2);
     },
 
     addProduct() {
@@ -302,7 +302,7 @@ export default {
         productId: null,
         width: 0,
         quantity: 1, // Default quantity to 1
-        unitPrice: 0,
+        unit_price: 0,
         totalPrice: 0, // This will be dynamically updated
       });
     },
@@ -314,7 +314,7 @@ export default {
       return this.invoiceProducts
         .reduce((sum, product) => {
           const totalPrice =
-            parseFloat(product.quantity * product.unitPrice) || 0;
+            parseFloat(product.quantity * product.unit_price) || 0;
           return sum + totalPrice;
         }, 0)
         .toFixed(2); // Calculate total items price and format to 2 decimal places
@@ -322,7 +322,7 @@ export default {
     calculateGrandTotal() {
       const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
         const totalPrice =
-          parseFloat(product.quantity * product.unitPrice) || 0;
+          parseFloat(product.quantity * product.unit_price) || 0;
         return sum + totalPrice;
       }, 0);
 
@@ -347,7 +347,7 @@ export default {
       // Calculate CGST, SGST, and grand total
       const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
         const totalPrice =
-          parseFloat(product.quantity * product.unitPrice) || 0;
+          parseFloat(product.quantity * product.unit_price) || 0;
         return sum + totalPrice;
       }, 0);
 
@@ -365,7 +365,7 @@ export default {
           product: product.productId,
           width: parseFloat(product.width),
           quantity: parseFloat(product.quantity),
-          unitPrice: parseFloat(product.unitPrice),
+          unit_price: parseFloat(product.unit_price),
           totalPrice: parseFloat(this.getTotalPrice(index)), // Calculate totalPrice
         })),
         otherCharges, // Include other charges
@@ -382,7 +382,7 @@ export default {
             !product.product ||
             isNaN(product.width) ||
             isNaN(product.quantity) ||
-            isNaN(product.unitPrice)
+            isNaN(product.unit_price)
         )
       ) {
         this.error = "Please fill out all required fields correctly.";
@@ -399,63 +399,66 @@ export default {
     },
 
     async updateInvoice() {
-      this.error = null;
+  this.error = null;
 
-      // The same calculations as in addInvoice
-      const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
-        const totalPrice =
-          parseFloat(product.quantity * product.unitPrice) || 0;
-        return sum + totalPrice;
-      }, 0);
+  // The same calculations as addInvoice
+  const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
+    const totalPrice =
+      parseFloat(product.quantity * product.unit_price) || 0;
+    return sum + totalPrice;
+  }, 0);
 
-      const otherCharges = parseFloat(this.otherCharges) || 0;
-      const totalWithOtherCharges = totalItemsPrice + otherCharges;
-      const cgst = totalWithOtherCharges * 0.09;
-      const sgst = totalWithOtherCharges * 0.09;
-      const grandTotal = Math.round(totalWithOtherCharges + cgst + sgst);
+  const otherCharges = parseFloat(this.otherCharges) || 0;
+  const totalWithOtherCharges = totalItemsPrice + otherCharges;
+  const cgst = totalWithOtherCharges * 0.09;
+  const sgst = totalWithOtherCharges * 0.09;
+  const grandTotal = Math.round(totalWithOtherCharges + cgst + sgst);
 
-      const payload = {
-        customer: this.selectedCustomerId,
-        products: this.invoiceProducts.map((product, index) => ({
-          product: product.productId,
-          width: parseFloat(product.width),
-          quantity: parseFloat(product.quantity),
-          unitPrice: parseFloat(product.unitPrice),
-          totalPrice: parseFloat(this.getTotalPrice(index)),
-        })),
-        otherCharges, // Include other charges
-        cgst: cgst, // CGST
-        sgst: sgst, // SGST
-        grandTotal, // Include the rounded grand total
-      };
-      console.log(payload);
-      if (
-        !payload.customer ||
-        payload.products.some(
-          (product) =>
-            !product.product ||
-            isNaN(product.width) ||
-            isNaN(product.quantity) ||
-            isNaN(product.unitPrice)
-        )
-      ) {
-        this.error = "Please fill out all required fields correctly.";
-        return;
-      }
+  const payload = {
+    customer: this.selectedCustomerId,
+    products: this.invoiceProducts.map((product, index) => ({
+      product: product.productId,
+      width: parseFloat(product.width).toFixed(2), // Round to 2 decimals if needed
+      quantity: parseFloat(product.quantity).toFixed(3), // Round to 3 decimals if needed
+      unit_price: parseFloat(product.unit_price).toFixed(2), // Ensure 2 decimal places
+      totalPrice: parseFloat(this.getTotalPrice(index)).toFixed(2), // Round total price to 2 decimals
+    })),
+    otherCharges: otherCharges.toFixed(2), // Round other charges
+    cgst: cgst.toFixed(2), // Round CGST
+    sgst: sgst.toFixed(2), // Round SGST
+    grandTotal: grandTotal, // Already rounded
+  };
 
+  console.log(payload);
+
+  if (
+    !payload.customer ||
+    payload.products.some(
+      (product) =>
+        !product.product ||
+        isNaN(product.width) ||
+        isNaN(product.quantity) ||
+        isNaN(product.unit_price)
+    )
+  ) {
+    this.error = "Please fill out all required fields correctly.";
+    return;
+  }
+
+  // Prevent update if no changes detected
   if (JSON.stringify(payload) === JSON.stringify(this.originalInvoice)) {
     this.error = "No changes detected.";
     return;
   }
 
-      try {
-        await this.updateInvoiceInStore({ id: this.invoiceId, data: payload });
-        this.$router.push("/invoice");
-      } catch (err) {
-        console.error("API Error:", err);
-        this.error = "Error updating invoice.";
-      }
-    },
+  try {
+    await this.updateInvoiceInStore({ id: this.invoiceId, data: payload });
+    this.$router.push("/invoice");
+  } catch (err) {
+    console.error("API Error:", err);
+    this.error = "Error updating invoice.";
+  }
+},
 
     goBack() {
       this.$router.go(-1); // Go back to the previous page
