@@ -96,18 +96,49 @@ export default {
 
       // Render the product table
       doc.autoTable({
-        startY: 100,
-        head: [
-          ["Product Name", "HSN/SAC", "Width", "Quantity", "Rate", "Amount"],
-        ],
-        body: products,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
-        didDrawPage: () => {
-          this.addHeader(doc);
-          this.addFooter(doc, doc.internal.pageSize.height);
-        },
-      });
+    startY: 100,
+    head: [
+        ["Product Name", "HSN/SAC", "Width", "Quantity", "Rate", "Amount"],
+    ],
+    body: products,
+    styles: { 
+        fontSize: 10,
+        cellPadding: 2,  // Adds some space inside the cells for a cleaner look
+    },
+    headStyles: { 
+        fillColor: [255, 255, 255], // Lighter gray background for header
+        textColor: [0, 0, 0],  // Black text
+        fontStyle: 'bold',
+        halign: 'center', // Center-align header text
+        valign: 'middle', // Center-align vertically
+        border: true,  // Border for header cells
+        lineWidth: 0.2,  // Slightly thicker line for the header
+        lineColor: [0, 0, 0],  // Black border for header
+    },
+    bodyStyles: {
+      fillColor: [255, 255, 255], // Lighter gray background for header
+      textColor: [0, 0, 0],  // Black text
+        halign: 'center', // Left-align body text
+        valign: 'middle', // Center-align vertically
+        border: false,  // Border for body cells
+        // lineWidth: 0.1,  // Thin line for body cells
+        // lineColor: [0, 0, 0], // Black border for body
+    },
+    didDrawPage: () => {
+        this.addHeader(doc);
+        this.addFooter(doc, doc.internal.pageSize.height);
+    },
+    didParseCell: function (data) {
+        if (data.section === "body") {
+            // Bold Quantity Column (index 3) and Amount Column (index 5)
+            if (data.column.index === 3 || data.column.index === 5) {
+                data.cell.styles.fontStyle = "bold";
+            }
+        }
+    },
+    tableLineWidth: 0.1,  // Adding fine line for the entire table
+    tableLineColor: [0, 0, 0], // Line color for the whole table
+});
 
       doc.setFontSize(10);
 
@@ -167,10 +198,30 @@ export default {
       // Render the HSN Summary Table
       doc.autoTable({
         startY: doc.lastAutoTable.finalY + (availableHeight < 50 ? 10 : 18),
-        head: [["HSN/SAC", "Central Tax", "State Tax"]],
+        head: [["HSN/SAC", "Central Tax ", "State Tax "]],
         body: hsnSummaryData,
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+        styles: { cellPadding: 1,  // Adds some space inside the cells for a cleaner look
+    },
+    headStyles: { 
+        fillColor: [255, 255, 255], // Lighter gray background for header
+        textColor: [0, 0, 0],  // Black text
+        fontStyle: 'bold',
+        halign: 'right', // Center-align header text
+        valign: 'middle', // Center-align vertically
+        border: true,  // Border for header cells
+        lineWidth: 0.2,  // Slightly thicker line for the header
+        lineColor: [0, 0, 0],  // Black border for header
+    },
+    bodyStyles: {
+      fillColor: [255, 255, 255], // Lighter gray background for header
+      textColor: [0, 0, 0],  // Black text
+        halign: 'right', // Left-align body text
+        valign: 'middle', // Center-align vertically
+        border: false,  // Border for body cells
+        lineWidth: 0.1,  // Thin line for body cells
+        lineColor: [0, 0, 0], // Black border for body
+    },
+      
         didDrawPage: () => {
           if (newPageAddedForHSN) {
             this.addFooter(doc, doc.internal.pageSize.height);
