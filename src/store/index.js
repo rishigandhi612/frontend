@@ -7,11 +7,12 @@ import products from './products';
 import invoices from './invoice';
 import users from './users'
 import auth from './apiClient'
+import store from './index'; 
+import router from '@/router';
 
 Vue.use(Vuex);
 
 const BASE_URL = process.env.VUE_APP_API_BASE_URL || 'http://localhost:3001';
-// console.log('Environment Base URL:', process.env);
 
 export default new Vuex.Store({
   modules: {
@@ -20,7 +21,7 @@ export default new Vuex.Store({
     customers,
     products,
     invoices,
-    users
+    users,
   },
   state: {
     user: null,
@@ -46,7 +47,6 @@ export default new Vuex.Store({
   actions: {
     async loginUser({ commit }, credentials) {
       try {
-        console.log('Base URL:', BASE_URL); // Debugging
         const response = await axios.post(`${BASE_URL}/auth/login`, credentials);
         const { user, token, refreshToken } = response.data;
 
@@ -94,3 +94,22 @@ export default new Vuex.Store({
     currentUser: state => state.user,
   },
 });
+
+// Axios Response Interceptor for invalid token
+axios.interceptors.response.use(
+  response => response,  // Return the response if it's valid
+  error => {
+    if (error.response && error.response.status === 401) {
+      // Handle 401 Unauthorized error (invalid token)
+      console.error('Invalid token, logging out...');
+      
+      // Log out the user and redirect to home page
+      store.dispatch('logoutUser');
+      router.push('/');  // Redirect to the root route
+
+      return Promise.reject(error);
+    }
+    
+    return Promise.reject(error);
+  }
+);
