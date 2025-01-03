@@ -67,21 +67,28 @@ export default new Vuex.Store({
         const response = await axios.post(`${BASE_URL}/auth/refresh`, {
           refreshToken: state.refreshToken || localStorage.getItem('refreshToken'),
         });
-
+    
         const newToken = response.data.token;
-
+    
         commit('SET_TOKEN', newToken);
         localStorage.setItem('token', newToken);
-
+    
         return newToken;
       } catch (error) {
         console.error('Error refreshing token:', error.response?.data || error.message);
         commit('CLEAR_USER');
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
-        throw error;
+    
+        // Redirect to login or home page before throwing the error
+        if (this.$router) {
+          this.$router.push('/');
+        }
+    
+        throw error; // Rethrow the error for upstream handling
       }
     },
+    
 
     logoutUser({ commit }) {
       localStorage.removeItem('token');
