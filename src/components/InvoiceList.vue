@@ -21,7 +21,7 @@
               @click="navigateToInvoiceDetail(item._id)"
               style="cursor: pointer"
             >
-              <td>{{ item._id }}</td>
+              <td>{{ item.invoiceNumber ? item.invoiceNumber : "N/A" }}</td>
               <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
               <td>{{ formatDate(item.createdAt) }}</td>
               <td>₹ {{ item.grandTotal }}</td>
@@ -62,7 +62,7 @@ export default {
   data() {
     return {
       headers: [
-        { text: "Invoice ID", value: "_id" },
+        { text: "Invoice No.", value: "invoiceNumber" },
         { text: "Customer Name", value: "customerName" },
         { text: "Date", value: "date" },
         { text: "Total Amount", value: "totalAmount" },
