@@ -23,13 +23,13 @@
       <v-row v-if="!loading">
         <v-col>
 
-          <!-- Title centered in the same column -->
-          <div class="flex-grow-1 text-center">
-            <h1>
+      <!-- Title centered in the same column -->
+      <div class="flex-grow-1 text-center">
+        <h1>
               {{ isEditing ? "Edit Invoice" : "Add Invoice" }}
-            </h1>
-          </div>
-        </v-col>
+       </h1>
+      </div>
+      </v-col>
       </v-row>
          <!-- Form -->
          <v-form ref="form" v-model="valid">
@@ -119,16 +119,24 @@
             </v-btn>
           </v-col>
         </v-row>
-        <!-- Add Product and Submit Button -->
+        <!-- Add Product and Batch Add Product Buttons -->
         <v-row class="mt-3">
-          <v-col cols="12" class="d-flex justify-center">
+          <v-col cols="6" class="d-flex justify-end">
             <v-btn
               color="primary"
               @click="addProduct"
-              icon
               aria-label="Add Product"
             >
-              <v-icon>mdi-plus</v-icon> Add Product
+              <v-icon left>mdi-plus</v-icon> Add Product
+            </v-btn>
+          </v-col>
+          <v-col cols="6" class="d-flex justify-start">
+            <v-btn
+              color="info"
+              @click="openBatchDialog"
+              aria-label="Batch Add Product"
+            >
+              <v-icon left>mdi-playlist-plus</v-icon> Batch Add Product
             </v-btn>
           </v-col>
 
@@ -171,6 +179,14 @@
               />
             </v-col>
 
+            <!-- Total IGST -->
+            <v-col cols="12" md="3">
+              <v-text-field
+                :value="calculateTax(0.18)"
+                label="Total IGST (18%)"
+                readonly
+              />
+            </v-col>
             <!-- Grand Total -->
             <v-col cols="12" md="4" class="mt-3">
               <v-text-field
@@ -198,9 +214,111 @@
       <v-alert v-if="error" type="error" dismissible>
         {{ error }}
       </v-alert>
-
-   
     </v-row>
+
+    <!-- Batch Add Dialog -->
+    <v-dialog v-model="batchDialog" max-width="800px">
+      <v-card>
+        <v-card-title class="headline">Batch Add Product</v-card-title>
+        <v-card-text>
+          <v-row>
+            <v-col cols="12">
+              <v-select
+                v-model="batchProduct.productId"
+                :items="allProducts"
+                item-text="name"
+                item-value="_id"
+                label="Select Product"
+                return-object
+                required
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-text-field
+                v-model="batchProduct.unit_price"
+                label="Unit Price"
+                type="number"
+                :rules="[rules.required, rules.numeric]"
+                required
+                min="0"
+              />
+            </v-col>
+          </v-row>
+          
+          <!-- Batch Items Table -->
+          <v-simple-table>
+            <template v-slot:default>
+              <thead>
+                <tr>
+                  <th>Width</th>
+                  <th>Quantity</th>
+                  <th>Total</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, i) in batchItems" :key="i">
+                  <td>
+                    <v-text-field
+                      v-model="item.width"
+                      type="number"
+                      dense
+                      min="1"
+                      hide-details
+                      :rules="[rules.required, rules.numeric]"
+                    />
+                  </td>
+                  <td>
+                    <v-text-field
+                      v-model="item.quantity"
+                      type="number" 
+                      dense
+                      min="1"
+                      hide-details
+                      :rules="[rules.required, rules.numeric]"
+                    />
+                  </td>
+                  <td>
+                    {{ calculateBatchItemTotal(item) }}
+                  </td>
+                  <td>
+                    <v-btn 
+                      icon 
+                      color="error" 
+                      @click="removeBatchItem(i)"
+                      small
+                    >
+                      <v-icon>mdi-delete</v-icon>
+                    </v-btn>
+                  </td>
+                </tr>
+              </tbody>
+            </template>
+          </v-simple-table>
+          
+          <v-row class="mt-3">
+            <v-col cols="12" class="d-flex justify-center">
+              <v-btn color="primary" @click="addBatchItem">
+                <v-icon left>mdi-plus</v-icon> Add Item
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey darken-1" text @click="closeBatchDialog">
+            Cancel
+          </v-btn>
+          <v-btn 
+            color="primary" 
+            @click="addBatchProducts" 
+            :disabled="!isBatchValid"
+          >
+            Add to Invoice
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -223,12 +341,28 @@ export default {
         required: (value) => !!value || "Required.",
         numeric: (value) => !isNaN(value) || "Must be a number.",
       },
+      // Batch add dialog data
+      batchDialog: false,
+      batchProduct: {
+        productId: null,
+        unit_price: 0
+      },
+      batchItems: []
     };
   },
 
   computed: {
     ...mapGetters("customers", ["allCustomers"]),
     ...mapGetters("products", ["allProducts"]),
+    isBatchValid() {
+      return this.batchProduct.productId && 
+             this.batchProduct.unit_price > 0 && 
+             this.batchItems.length > 0 &&
+             !this.batchItems.some(item => 
+               !item.width || isNaN(item.width) || 
+               !item.quantity || isNaN(item.quantity)
+             );
+    }
   },
 
   async created() {
@@ -310,6 +444,7 @@ export default {
     removeProduct(index) {
       this.invoiceProducts.splice(index, 1);
     },
+    
     calculateTotalItemsPrice() {
       return this.invoiceProducts
         .reduce((sum, product) => {
@@ -319,6 +454,7 @@ export default {
         }, 0)
         .toFixed(2); // Calculate total items price and format to 2 decimal places
     },
+    
     calculateGrandTotal() {
       const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
         const totalPrice =
@@ -334,11 +470,62 @@ export default {
 
       return Math.round(totalWithOtherCharges + cgst + sgst); // Use Math.round for rounding
     },
+    
     calculateTax(rate) {
       const totalItemsPrice = parseFloat(this.calculateTotalItemsPrice());
       const totalWithOtherCharges =
         totalItemsPrice + (parseFloat(this.otherCharges) || 0);
       return (totalWithOtherCharges * rate).toFixed(2); // Calculate tax on total including other charges
+    },
+
+    // Batch dialog methods
+    openBatchDialog() {
+      this.batchProduct = {
+        productId: null,
+        unit_price: 0
+      };
+      this.batchItems = [
+        { width: 0, quantity: 1 } // Start with one item
+      ];
+      this.batchDialog = true;
+    },
+    
+    closeBatchDialog() {
+      this.batchDialog = false;
+    },
+    
+    addBatchItem() {
+      this.batchItems.push({ width: 0, quantity: 1 });
+    },
+    
+    removeBatchItem(index) {
+      this.batchItems.splice(index, 1);
+    },
+    
+    calculateBatchItemTotal(item) {
+      const width = parseFloat(item.width) || 0;
+      const quantity = parseFloat(item.quantity) || 0;
+      const unitPrice = parseFloat(this.batchProduct.unit_price) || 0;
+      return (width * quantity * unitPrice).toFixed(2);
+    },
+    
+    addBatchProducts() {
+      if (!this.batchProduct.productId || this.batchItems.length === 0) {
+        return;
+      }
+      
+      // Add each batch item as a separate product entry
+      this.batchItems.forEach(item => {
+        this.invoiceProducts.push({
+          productId: this.batchProduct.productId,
+          width: parseFloat(item.width),
+          quantity: parseFloat(item.quantity),
+          unit_price: parseFloat(this.batchProduct.unit_price),
+          // The totalPrice will be calculated by getTotalPrice method
+        });
+      });
+      
+      this.closeBatchDialog();
     },
 
     async addInvoice() {
@@ -399,66 +586,66 @@ export default {
     },
 
     async updateInvoice() {
-  this.error = null;
+      this.error = null;
 
-  // The same calculations as addInvoice
-  const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
-    const totalPrice =
-      parseFloat(product.quantity * product.unit_price) || 0;
-    return sum + totalPrice;
-  }, 0);
+      // The same calculations as addInvoice
+      const totalItemsPrice = this.invoiceProducts.reduce((sum, product) => {
+        const totalPrice =
+          parseFloat(product.quantity * product.unit_price) || 0;
+        return sum + totalPrice;
+      }, 0);
 
-  const otherCharges = parseFloat(this.otherCharges) || 0;
-  const totalWithOtherCharges = totalItemsPrice + otherCharges;
-  const cgst = totalWithOtherCharges * 0.09;
-  const sgst = totalWithOtherCharges * 0.09;
-  const grandTotal = Math.round(totalWithOtherCharges + cgst + sgst);
+      const otherCharges = parseFloat(this.otherCharges) || 0;
+      const totalWithOtherCharges = totalItemsPrice + otherCharges;
+      const cgst = totalWithOtherCharges * 0.09;
+      const sgst = totalWithOtherCharges * 0.09;
+      const grandTotal = Math.round(totalWithOtherCharges + cgst + sgst);
 
-  const payload = {
-    customer: this.selectedCustomerId,
-    products: this.invoiceProducts.map((product, index) => ({
-      product: product.productId,
-      width: parseFloat(product.width).toFixed(2), // Round to 2 decimals if needed
-      quantity: parseFloat(product.quantity).toFixed(3), // Round to 3 decimals if needed
-      unit_price: parseFloat(product.unit_price).toFixed(2), // Ensure 2 decimal places
-      totalPrice: parseFloat(this.getTotalPrice(index)).toFixed(2), // Round total price to 2 decimals
-    })),
-    otherCharges: otherCharges.toFixed(2), // Round other charges
-    cgst: cgst.toFixed(2), // Round CGST
-    sgst: sgst.toFixed(2), // Round SGST
-    grandTotal: grandTotal, // Already rounded
-  };
+      const payload = {
+        customer: this.selectedCustomerId,
+        products: this.invoiceProducts.map((product, index) => ({
+          product: product.productId,
+          width: parseFloat(product.width).toFixed(2), // Round to 2 decimals if needed
+          quantity: parseFloat(product.quantity).toFixed(3), // Round to 3 decimals if needed
+          unit_price: parseFloat(product.unit_price).toFixed(2), // Ensure 2 decimal places
+          totalPrice: parseFloat(this.getTotalPrice(index)).toFixed(2), // Round total price to 2 decimals
+        })),
+        otherCharges: otherCharges.toFixed(2), // Round other charges
+        cgst: cgst.toFixed(2), // Round CGST
+        sgst: sgst.toFixed(2), // Round SGST
+        grandTotal: grandTotal, // Already rounded
+      };
 
-  console.log(payload);
+      console.log(payload);
 
-  if (
-    !payload.customer ||
-    payload.products.some(
-      (product) =>
-        !product.product ||
-        isNaN(product.width) ||
-        isNaN(product.quantity) ||
-        isNaN(product.unit_price)
-    )
-  ) {
-    this.error = "Please fill out all required fields correctly.";
-    return;
-  }
+      if (
+        !payload.customer ||
+        payload.products.some(
+          (product) =>
+            !product.product ||
+            isNaN(product.width) ||
+            isNaN(product.quantity) ||
+            isNaN(product.unit_price)
+        )
+      ) {
+        this.error = "Please fill out all required fields correctly.";
+        return;
+      }
 
-  // Prevent update if no changes detected
-  if (JSON.stringify(payload) === JSON.stringify(this.originalInvoice)) {
-    this.error = "No changes detected.";
-    return;
-  }
+      // Prevent update if no changes detected
+      if (JSON.stringify(payload) === JSON.stringify(this.originalInvoice)) {
+        this.error = "No changes detected.";
+        return;
+      }
 
-  try {
-    await this.updateInvoiceInStore({ id: this.invoiceId, data: payload });
-    this.$router.push("/invoice");
-  } catch (err) {
-    console.error("API Error:", err);
-    this.error = "Error updating invoice.";
-  }
-},
+      try {
+        await this.updateInvoiceInStore({ id: this.invoiceId, data: payload });
+        this.$router.push("/invoice");
+      } catch (err) {
+        console.error("API Error:", err);
+        this.error = "Error updating invoice.";
+      }
+    },
 
     goBack() {
       this.$router.go(-1); // Go back to the previous page
@@ -485,7 +672,7 @@ export default {
 }
 
 .back-btn:hover {
-  background-color: #bdbdbd !important; /* Slightly darker grey when hovered */
+  background-color: #bdbdbd !important; 
 }
 
 h1 {
