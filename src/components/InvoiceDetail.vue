@@ -153,9 +153,22 @@
             </v-btn>
           </v-col>
         </v-row>
+        <!-- New Challan Download Button -->
+        <v-row>
+          <v-col cols="12">
+            <v-btn color="info" @click="downloadDeliveryChallan" block>
+              <v-icon left>mdi-truck-delivery</v-icon> Download Challan
+            </v-btn>
+          </v-col>
+        </v-row>
       </v-col>
 
+
       <InvoicePdf :invoiceDetail="invoiceDetail" ref="invoicePdfComponent" />
+      <DeliveryChallan 
+        :invoiceDetail="invoiceDetail" 
+        ref="deliveryChallanComponent" 
+      />
     </v-row>
   </v-app>
 </template>
@@ -163,10 +176,13 @@
 <script>
 import { mapState, mapActions } from "vuex";
 import InvoicePdf from "@/components/InvoicePdf.vue";
+import DeliveryChallan from "@/components/DeliveryChallan.vue";
+
 
 export default {
   components: {
     InvoicePdf,
+    DeliveryChallan,
   },
   data() {
     return {
@@ -221,6 +237,13 @@ export default {
 
     downloadInvoicePdf() {
       this.$refs.invoicePdfComponent.downloadPdf();
+    },
+    downloadDeliveryChallan() {
+      if (this.$refs.deliveryChallanComponent) {
+        this.$refs.deliveryChallanComponent.downloadPdf();
+      } else {
+        alert('Challan component not loaded');
+      }
     },
   },
 
