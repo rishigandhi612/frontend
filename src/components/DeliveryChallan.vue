@@ -1,3 +1,8 @@
+<template>
+    <div v-if="invoiceDetail">
+      <div>Delivery Challan for Invoice #{{ invoiceDetail.invoiceNumber }}</div>
+    </div>
+  </template>
 <script>
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -6,12 +11,14 @@ export default {
   props: {
     invoiceDetail: {
       type: Object,
-      required: true,
-    },
+      default: () => null, // Provide a default value
+      validator: (value) => value === null || typeof value === 'object'
+    }
   },
 
   methods: {
     formatDate(dateString) {
+      if (!dateString) return 'N/A';
       const date = new Date(dateString);
       const day = String(date.getDate()).padStart(2, "0");
       const month = date.toLocaleString("default", { month: "short" });
@@ -47,6 +54,10 @@ export default {
     },
 
     downloadPdf() {
+        if (!this.invoiceDetail) {
+        alert('Invoice details are not available.');
+        return;
+      }
       const doc = new jsPDF();
       const groupedProducts = this.groupProducts();
 
