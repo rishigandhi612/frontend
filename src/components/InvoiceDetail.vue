@@ -152,12 +152,18 @@
               <v-icon left>mdi-download</v-icon> Download Invoice
             </v-btn>
           </v-col>
-        </v-row>
-        <!-- New Challan Download Button -->
+        </v-row> 
         <v-row>
           <v-col cols="12">
             <v-btn color="info" @click="downloadDeliveryChallan" block>
               <v-icon left>mdi-truck-delivery</v-icon> Download Challan
+            </v-btn>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col cols="12">
+            <v-btn color="lime" @click="sendemail" block>
+              <v-icon left>mdi-mail</v-icon> Send E-Mail
             </v-btn>
           </v-col>
         </v-row>
@@ -169,6 +175,9 @@
         :invoiceDetail="invoiceDetail" 
         ref="deliveryChallanComponent" 
       />
+
+      <!-- <SendEmail :invoiceDetail="invoiceDetail" /> -->
+
     </v-row>
   </v-app>
 </template>
@@ -177,12 +186,13 @@
 import { mapState, mapActions } from "vuex";
 import InvoicePdf from "@/components/InvoicePdf.vue";
 import DeliveryChallan from "@/components/DeliveryChallan.vue";
-
+// import SendEmail from "./SendEmail.vue";
 
 export default {
   components: {
     InvoicePdf,
     DeliveryChallan,
+    // SendEmail
   },
   data() {
     return {
@@ -245,6 +255,14 @@ export default {
         alert('Challan component not loaded');
       }
     },
+    
+    sendemail() {
+    if (this.$refs.sendEmailComponent) {
+      this.$refs.sendEmailComponent.sendEmail();
+    } else {
+      alert("Email component not loaded!");
+    }
+  }
   },
 
   watch: {
