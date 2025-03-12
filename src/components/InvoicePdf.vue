@@ -61,7 +61,7 @@ export default {
         "Sub Total",
         `Rs.${this.invoiceDetail.totalAmount.toFixed(2)}`, // Format to 2 decimal places
       ]);
-      products.push([
+      if (this.invoiceDetail.otherCharges !== 0) { products.push([
         "add:",
         "",
         "",
@@ -69,22 +69,40 @@ export default {
         "Other Charges",
         `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`, // Format to 2 decimal places
       ]);
-      products.push([
-        "add:",
-        "",
-        "",
-        "",
-        "CGST @ 9%",
-        `Rs.${this.invoiceDetail.cgst.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-      products.push([
-        "add:",
-        "",
-        "",
-        "",
-        "SGST @ 9%",
-        `Rs.${this.invoiceDetail.sgst.toFixed(2)}`, // Format to 2 decimal places
-      ]);
+    }
+      
+      // Conditionally add tax rows based on what's in the invoice
+      if (this.invoiceDetail.cgst > 0 || this.invoiceDetail.sgst > 0) {
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "CGST @ 9%",
+          `Rs.${this.invoiceDetail.cgst.toFixed(2)}`, // Format to 2 decimal places
+        ]);
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "SGST @ 9%",
+          `Rs.${this.invoiceDetail.sgst.toFixed(2)}`, // Format to 2 decimal places
+        ]);
+      }
+      
+      // Add IGST if present
+      if (this.invoiceDetail.igst > 0) {
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "IGST @ 18%",
+          `Rs.${this.invoiceDetail.igst.toFixed(2)}`, // Format to 2 decimal places
+        ]);
+      }
+      
       products.push([
         "Grand Total",
         "",
@@ -96,49 +114,49 @@ export default {
 
       // Render the product table
       doc.autoTable({
-    startY: 100,
-    head: [
-        ["Product Name", "HSN/SAC", "Width", "Quantity", "Rate", "Amount"],
-    ],
-    body: products,
-    styles: { 
-        fontSize: 10,
-        cellPadding: 2,  // Adds some space inside the cells for a cleaner look
-    },
-    headStyles: { 
-        fillColor: [255, 255, 255], // Lighter gray background for header
-        textColor: [0, 0, 0],  // Black text
-        fontStyle: 'bold',
-        halign: 'center', // Center-align header text
-        valign: 'middle', // Center-align vertically
-        border: true,  // Border for header cells
-        lineWidth: 0.2,  // Slightly thicker line for the header
-        lineColor: [0, 0, 0],  // Black border for header
-    },
-    bodyStyles: {
-      fillColor: [255, 255, 255], // Lighter gray background for header
-      textColor: [0, 0, 0],  // Black text
-        halign: 'center', // Left-align body text
-        valign: 'middle', // Center-align vertically
-        border: false,  // Border for body cells
-        // lineWidth: 0.1,  // Thin line for body cells
-        // lineColor: [0, 0, 0], // Black border for body
-    },
-    didDrawPage: () => {
-        this.addHeader(doc);
-        this.addFooter(doc, doc.internal.pageSize.height);
-    },
-    didParseCell: function (data) {
-        if (data.section === "body") {
-            // Bold Quantity Column (index 3) and Amount Column (index 5)
-            if (data.column.index === 3 || data.column.index === 5) {
-                data.cell.styles.fontStyle = "bold";
+        startY: 100,
+        head: [
+            ["Product Name", "HSN/SAC", "Width", "Quantity", "Rate", "Amount"],
+        ],
+        body: products,
+        styles: { 
+            fontSize: 10,
+            cellPadding: 2,  // Adds some space inside the cells for a cleaner look
+        },
+        headStyles: { 
+            fillColor: [255, 255, 255], // Lighter gray background for header
+            textColor: [0, 0, 0],  // Black text
+            fontStyle: 'bold',
+            halign: 'center', // Center-align header text
+            valign: 'middle', // Center-align vertically
+            border: true,  // Border for header cells
+            lineWidth: 0.2,  // Slightly thicker line for the header
+            lineColor: [0, 0, 0],  // Black border for header
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255], // Lighter gray background for header
+          textColor: [0, 0, 0],  // Black text
+            halign: 'center', // Left-align body text
+            valign: 'middle', // Center-align vertically
+            border: false,  // Border for body cells
+            // lineWidth: 0.1,  // Thin line for body cells
+            // lineColor: [0, 0, 0], // Black border for body
+        },
+        didDrawPage: () => {
+            this.addHeader(doc);
+            this.addFooter(doc, doc.internal.pageSize.height);
+        },
+        didParseCell: function (data) {
+            if (data.section === "body") {
+                // Bold Quantity Column (index 3) and Amount Column (index 5)
+                if (data.column.index === 3 || data.column.index === 5) {
+                    data.cell.styles.fontStyle = "bold";
+                }
             }
-        }
-    },
-    tableLineWidth: 0.1,  // Adding fine line for the entire table
-    tableLineColor: [0, 0, 0], // Line color for the whole table
-});
+        },
+        tableLineWidth: 0.1,  // Adding fine line for the entire table
+        tableLineColor: [0, 0, 0], // Line color for the whole table
+      });
 
       doc.setFontSize(10);
 
@@ -161,29 +179,55 @@ export default {
       const amountText = "AMOUNT CHARGEABLE (in words):";
       doc.text(amountText, 14, amountTextY);
 
-      // Group by HSN Code
+      // Group by HSN Code and handle both CGST/SGST and IGST scenarios
       const hsnSummary = this.invoiceDetail.products.reduce(
         (summary, product) => {
           const hsn = product.product.hsn_code || "N/A";
           if (!summary[hsn]) {
-            summary[hsn] = { cgst: 0, sgst: 0 };
+            // Initialize with all tax types
+            summary[hsn] = { amount: 0, cgst: 0, sgst: 0, igst: 0 };
           }
-          const amount = parseFloat(product.quantity * product.product.price);
-          const cgst = parseFloat((amount * 9) / 100);
-          const sgst = parseFloat((amount * 9) / 100);
+          const amount = parseFloat(product.quantity * product.unit_price);
           summary[hsn].amount += amount;
-          summary[hsn].cgst += cgst;
-          summary[hsn].sgst += sgst;
+          
+          // Calculate taxes based on what's in the invoice
+          if (this.invoiceDetail.igst > 0) {
+            // For inter-state: calculate IGST
+            const igstRate = 0.18; // 18%
+            summary[hsn].igst += amount * igstRate;
+          } else {
+            // For intra-state: calculate CGST and SGST
+            const cgstRate = 0.09; // 9%
+            const sgstRate = 0.09; // 9%
+            summary[hsn].cgst += amount * cgstRate;
+            summary[hsn].sgst += amount * sgstRate;
+          }
+          
           return summary;
         },
         {}
       );
 
-      const hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
-        hsn,
-        `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
-        `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
-      ]);
+      // Prepare HSN summary data based on which taxes are present
+      let hsnSummaryData = [];
+      let hsnTableHeaders = [];
+      
+      if (this.invoiceDetail.igst > 0) {
+        // Inter-state transaction: Show IGST column only
+        hsnTableHeaders = [["HSN/SAC", "Integrated Tax"]];
+        hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
+          hsn,
+          `Rs.${hsnSummary[hsn].igst.toFixed(2)}`,
+        ]);
+      } else {
+        // Intra-state transaction: Show CGST and SGST columns
+        hsnTableHeaders = [["HSN/SAC", "Central Tax", "State Tax"]];
+        hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
+          hsn,
+          `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
+          `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
+        ]);
+      }
 
       const grandTotalInWords = toWords(
         Math.round(this.invoiceDetail.grandTotal)
@@ -195,33 +239,33 @@ export default {
         doc.lastAutoTable.finalY + 14
       );
 
-      // Render the HSN Summary Table
+      // Render the HSN Summary Table with dynamic headers
       doc.autoTable({
         startY: doc.lastAutoTable.finalY + (availableHeight < 50 ? 10 : 18),
-        head: [["HSN/SAC", "Central Tax ", "State Tax "]],
+        head: hsnTableHeaders,
         body: hsnSummaryData,
-        styles: { cellPadding: 1,  // Adds some space inside the cells for a cleaner look
-    },
-    headStyles: { 
-        fillColor: [255, 255, 255], // Lighter gray background for header
-        textColor: [0, 0, 0],  // Black text
-        fontStyle: 'bold',
-        halign: 'right', // Center-align header text
-        valign: 'middle', // Center-align vertically
-        border: true,  // Border for header cells
-        lineWidth: 0.2,  // Slightly thicker line for the header
-        lineColor: [0, 0, 0],  // Black border for header
-    },
-    bodyStyles: {
-      fillColor: [255, 255, 255], // Lighter gray background for header
-      textColor: [0, 0, 0],  // Black text
-        halign: 'right', // Left-align body text
-        valign: 'middle', // Center-align vertically
-        border: false,  // Border for body cells
-        lineWidth: 0.1,  // Thin line for body cells
-        lineColor: [0, 0, 0], // Black border for body
-    },
-      
+        styles: { 
+          cellPadding: 1,  // Adds some space inside the cells for a cleaner look
+        },
+        headStyles: { 
+          fillColor: [255, 255, 255], // Lighter gray background for header
+          textColor: [0, 0, 0],  // Black text
+          fontStyle: 'bold',
+          halign: 'right', // Center-align header text
+          valign: 'middle', // Center-align vertically
+          border: true,  // Border for header cells
+          lineWidth: 0.2,  // Slightly thicker line for the header
+          lineColor: [0, 0, 0],  // Black border for header
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255], // Lighter gray background for header
+          textColor: [0, 0, 0],  // Black text
+          halign: 'right', // Left-align body text
+          valign: 'middle', // Center-align vertically
+          border: false,  // Border for body cells
+          lineWidth: 0.1,  // Thin line for body cells
+          lineColor: [0, 0, 0], // Black border for body
+        },
         didDrawPage: () => {
           if (newPageAddedForHSN) {
             this.addFooter(doc, doc.internal.pageSize.height);
@@ -229,7 +273,14 @@ export default {
         },
       });
 
-      const totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
+      // Calculate total tax amount based on tax type
+      let totalTaxAmount = 0;
+      if (this.invoiceDetail.igst > 0) {
+        totalTaxAmount = this.invoiceDetail.igst;
+      } else {
+        totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
+      }
+      
       const totalTaxInWords = toWords(Math.round(totalTaxAmount)).toUpperCase();
 
       // Print "Tax Amount(in words)" text and total tax amount in words
@@ -384,7 +435,9 @@ export default {
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text(
-        `        Company's Bank Details
+        `        Company's GSTIN: 27AAVPG7824M1ZX
+        
+        Company's Bank Details
         Bank Name: Bank Of Maharashtra
         A/C No. 60038479763
         Branch & IFS Code: Bajirao Rd, Pune - 411030 & MAHB0000001`,
