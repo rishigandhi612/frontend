@@ -95,32 +95,37 @@
                 </v-card-text>
 
                 <!-- Charges Section -->
-                <v-card-text>
-                  <v-simple-table>
-                    <tbody>
-                      <tr>
-                        <td class="text-right">Sub Total</td>
-                        <td class="text-center">₹{{ invoiceDetail.totalAmount }}</td>
-                      </tr>
-                      <tr>
-                        <td class="text-right">Other Charges</td>
-                        <td class="text-center">₹{{ invoiceDetail.otherCharges }}</td>
-                      </tr>
-                      <tr>
-                        <td class="text-right">CGST</td>
-                        <td class="text-center">₹{{ invoiceDetail.cgst }}</td>
-                      </tr>
-                      <tr>
-                        <td class="text-right">SGST</td>
-                        <td class="text-center">₹{{ invoiceDetail.sgst }}</td>
-                      </tr>
-                      <tr>
-                        <td class="text-right"><strong>Grand Total</strong></td>
-                        <td class="text-center"><strong style="font-size: 1.2em;">₹{{ invoiceDetail.grandTotal }}</strong></td>
-                      </tr>
-                    </tbody>
-                  </v-simple-table>
-                </v-card-text>
+                <!-- Charges Section -->
+<v-card-text>
+  <v-simple-table>
+    <tbody>
+      <tr>
+        <td class="text-right">Sub Total</td>
+        <td class="text-center">₹{{ invoiceDetail.totalAmount }}</td>
+      </tr>
+      <tr>
+        <td class="text-right">Other Charges</td>
+        <td class="text-center">₹{{ invoiceDetail.otherCharges }}</td>
+      </tr>
+      <tr v-if="invoiceDetail.cgst > 0 || invoiceDetail.sgst > 0">
+        <td class="text-right">CGST</td>
+        <td class="text-center">₹{{ invoiceDetail.cgst }}</td>
+      </tr>
+      <tr v-if="invoiceDetail.cgst > 0 || invoiceDetail.sgst > 0">
+        <td class="text-right">SGST</td>
+        <td class="text-center">₹{{ invoiceDetail.sgst }}</td>
+      </tr>
+      <tr v-if="invoiceDetail.igst > 0">
+        <td class="text-right">IGST</td>
+        <td class="text-center">₹{{ invoiceDetail.igst }}</td>
+      </tr>
+      <tr>
+        <td class="text-right"><strong>Grand Total</strong></td>
+        <td class="text-center"><strong style="font-size: 1.2em;">₹{{ invoiceDetail.grandTotal }}</strong></td>
+      </tr>
+    </tbody>
+  </v-simple-table>
+</v-card-text>
               </v-card>
             </v-col>
           </v-row>
