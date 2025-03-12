@@ -435,7 +435,9 @@ export default {
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text(
-        `        Company's Bank Details
+        `        Company's GSTIN: 27AAVPG7824M1ZX
+        
+        Company's Bank Details
         Bank Name: Bank Of Maharashtra
         A/C No. 60038479763
         Branch & IFS Code: Bajirao Rd, Pune - 411030 & MAHB0000001`,
