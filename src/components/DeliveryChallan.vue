@@ -1,6 +1,6 @@
 <template>
     <div v-if="invoiceDetail">
-      <div>Delivery Challan for Invoice #{{ invoiceDetail.invoiceNumber }}</div>
+     
     </div>
   </template>
 <script>
