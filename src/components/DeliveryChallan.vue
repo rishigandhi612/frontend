@@ -81,14 +81,42 @@ methods: {
     }
     const doc = new jsPDF();
     const groupedProducts = this.groupProducts();
+    
+    // Generate first copy (Original For Recipient)
+    this.generateInvoiceCopy(doc, groupedProducts, "Original For Recipient");
+    
+    // Add a page break
+    doc.addPage();
+    
+    // Generate second copy (Duplicate For Supplier)
+    this.generateInvoiceCopy(doc, groupedProducts, "Duplicate For Supplier");
+    
+    const blob = doc.output("blob");
+    const pdfUrl = URL.createObjectURL(blob);
+    const newWindow = window.open(pdfUrl, "_blank");
 
-    let startY = this.addHeader(doc); // Ensure header appears first
+    if (!newWindow) {
+      alert("Please allow pop-ups to view and print the PDF.");
+    } else {
+      newWindow.onload = function () {
+        if (!/Mobi|Android/i.test(navigator.userAgent)) {
+          newWindow.focus();
+          newWindow.print();
+        } else {
+          alert("PDF opened in a new tab. Use your device's options to print.");
+        }
+      };
+    }
+  },
+  
+  generateInvoiceCopy(doc, groupedProducts, copyType) {
+    let startY = this.addHeader(doc, copyType);
     let grandTotal = 0;
 
     groupedProducts.forEach((group, index) => {
       if (index !== 0 && startY + 50 > doc.internal.pageSize.height - 50) {
         doc.addPage();
-        startY = this.addHeader(doc); // Ensure header appears on new pages
+        startY = this.addHeader(doc, copyType);
       }
 
       // Create table header
@@ -140,7 +168,7 @@ methods: {
         margin: { bottom: 30, top: 90 },
         pageBreak: "auto",
         didDrawPage: (data) => {
-          this.addHeader(doc); // Ensure header appears on every page
+          this.addHeader(doc, copyType); // Ensure header appears on every page
           this.addFooter(doc, doc.internal.pageSize.height, data.pageNumber, data.table.pageCount);
         },
       });
@@ -154,23 +182,6 @@ methods: {
     doc.text(`Overall Total: ${grandTotal.toFixed(3)} Kgs`, 105, startY, "center");
 
     this.addSignatureLines(doc, doc.internal.pageSize.height);
-    
-    const blob = doc.output("blob");
-    const pdfUrl = URL.createObjectURL(blob);
-    const newWindow = window.open(pdfUrl, "_blank");
-
-    if (!newWindow) {
-      alert("Please allow pop-ups to view and print the PDF.");
-    } else {
-      newWindow.onload = function () {
-        if (!/Mobi|Android/i.test(navigator.userAgent)) {
-          newWindow.focus();
-          newWindow.print();
-        } else {
-          alert("PDF opened in a new tab. Use your device's options to print.");
-        }
-      };
-    }
   },
 
   addSignatureLines(doc, pageHeight) {
@@ -182,7 +193,7 @@ methods: {
     doc.line(140, pageHeight - 15, 200, pageHeight - 15);
   },
 
-  addHeader(doc) {
+  addHeader(doc, copyType) {
     const logoPath = require("@/assets/HoloLogo.png");
     doc.addImage(logoPath, "PNG", 5, 8, 25, 25);
     doc.setFontSize(36);
@@ -197,7 +208,7 @@ methods: {
     doc.text("Adhesives for Lamination, Bookbinding, and Pasting, UV Coats", 105, 48, "center");
     doc.line(0, 51, 210, 51);
     doc.setFontSize(10);
-    doc.text("(Original For Recipient)", 105, 56, "center");
+    doc.text(`(${copyType})`, 105, 56, "center");
 
     doc.setFontSize(12);
     doc.text(`DELIVERY CHALLAN #${this.invoiceDetail.invoiceNumber}`, 14, 62);
