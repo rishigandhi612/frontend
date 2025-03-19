@@ -176,10 +176,12 @@ export default {
     },
     
     addBatchItem() {
-      this.batchItems.push({ width: 0, quantity: 1 });
-    },
-    
-    removeBatchItem(index) {
+  const lastItem = this.batchItems[this.batchItems.length - 1];
+  const lastWidth = lastItem ? parseFloat(lastItem.width) || 0 : 0;
+  const lastQty = lastItem ? parseFloat(lastItem.quantity) || 1 : 1;
+  this.batchItems.push({ width: lastWidth, quantity: lastQty });
+  },
+  removeBatchItem(index) {
       this.batchItems.splice(index, 1);
     },
     
