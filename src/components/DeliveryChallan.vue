@@ -121,13 +121,13 @@ methods: {
 
       // Create table header
       const tableData = [
-        [{ content: `${group.name} - (${group.hsn_code})`, colSpan: 2, styles: { halign: "center", fontStyle: "bold", fillColor: [255, 255, 255],
-        textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, lineColor: [0, 0, 0] } }],
+        [{ content: `${group.name} - (${group.hsn_code})`, colSpan: 2, styles: { halign: "center", fontStyle: "bold",
+        textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } }],
         [
-          { content: `Width`, styles: { halign: "center", fontStyle: "bold", fillColor: [255, 255, 255],
-          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, lineColor: [0, 0, 0]} },
-          { content: `Net Wt`, styles: { halign: "center", fontStyle: "bold", fillColor: [255, 255, 255],
-          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, lineColor: [0, 0, 0] } },
+          { content: `Width`, styles: { halign: "center", fontStyle: "bold",
+          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } },
+          { content: `Net Wt`, styles: { halign: "center", fontStyle: "bold",
+          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } },
         ]
       ];
 
@@ -135,28 +135,28 @@ methods: {
       Object.entries(group.widths).forEach(([width, data]) => {
         // Add the width in the first row of this section
         tableData.push([
-          { content: width, rowSpan: data.rolls.length, styles: { valign: "middle", halign: "center" } },
-          { content: `${data.rolls[0].quantity} Kgs`, styles: { halign: "center" } }
+          { content: width, rowSpan: data.rolls.length, styles: { valign: "middle", halign: "center", fillColor: null } },
+          { content: `${data.rolls[0].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
         ]);
         
         // Add remaining rolls for this width (starting from index 1)
         for (let i = 1; i < data.rolls.length; i++) {
           tableData.push([
-            { content: `${data.rolls[i].quantity} Kgs`, styles: { halign: "center" } }
+            { content: `${data.rolls[i].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
           ]);
         }
         
         // Add width subtotal
         tableData.push([
-          { content: `Total for ${width}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: [240, 240, 240] } },
-          { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: [240, 240, 240] } }
+          { content: `Total for ${width}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+          { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
         ]);
       });
       
       // Add product grand total
       tableData.push([
-        { content: `Total ${group.name}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: [220, 220, 220] } },
-        { content: `${group.totalQuantity} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: [220, 220, 220] } }
+        { content: `Total ${group.name}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+        { content: `${group.totalQuantity} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
       ]);
 
       grandTotal += parseFloat(group.totalQuantity);
@@ -164,13 +164,28 @@ methods: {
       doc.autoTable({
         body: tableData,
         startY: startY,
-        styles: { fontSize: 10, cellPadding: 2, halign: "center", lineWidth: 0.2, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+        styles: { 
+          fontSize: 10, 
+          cellPadding: 2, 
+          halign: "center", 
+          lineWidth: 0.2, 
+          textColor: [0, 0, 0],
+          fillColor: null  // Explicitly set background color to null
+        },
         margin: { bottom: 30, top: 90 },
         pageBreak: "auto",
         didDrawPage: (data) => {
           this.addHeader(doc, copyType); // Ensure header appears on every page
           this.addFooter(doc, doc.internal.pageSize.height, data.pageNumber, data.table.pageCount);
         },
+        // Ensure no alternating row colors
+        tableLineColor: [0, 0, 0],
+        alternateRowStyles: {
+          fillColor: null  // Remove alternating row colors
+        },
+        headerStyles: {
+          fillColor: null  // Remove header background color
+        }
       });
 
       startY = doc.lastAutoTable.finalY + 10;

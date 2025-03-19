@@ -31,7 +31,6 @@
                 <v-text-field
                   label="GSTIN"
                   v-model="customer.gstin"
-                  :rules="[rules.required]"
                   required
                 ></v-text-field>
               </v-col>
@@ -116,8 +115,8 @@
           phone_no: "",
           email_id: "",
         },
-        isFormValid: false, // To track the form validity
-        isEditMode: false, // To check if we're editing an existing customer
+        isFormValid: false,
+        isEditMode: false,
         rules: {
           required: (value) => !!value || "This field is required.",
         },
