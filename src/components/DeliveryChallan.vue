@@ -31,7 +31,10 @@ methods: {
     
     this.invoiceDetail.products.forEach(product => {
       const productName = product.product.name;
-      const widthStr = product.width.toFixed(2) + (product.width > 70 ? " mm" : " ''");
+      
+      // Handle width = 0 case differently - don't include width info
+      const widthStr = product.width === 0 ? "no-width" : 
+                      (product.width.toFixed(2) + (product.width > 70 ? " mm" : " ''"));
       
       if (!organizedProducts[productName]) {
         organizedProducts[productName] = {
@@ -44,7 +47,8 @@ methods: {
       if (!organizedProducts[productName].widths[widthStr]) {
         organizedProducts[productName].widths[widthStr] = {
           rolls: [],
-          total: 0
+          total: 0,
+          hasZeroWidth: product.width === 0
         };
       }
       
@@ -65,9 +69,16 @@ methods: {
         totalQuantity += width.total;
       });
       
+      // Count valid widths (non-zero)
+      const validWidthCount = Object.values(product.widths).filter(width => !width.hasZeroWidth).length;
+      
       return {
         ...product,
-        totalQuantity: totalQuantity.toFixed(3)
+        totalQuantity: totalQuantity.toFixed(3),
+        // Count how many widths exist for this product (excluding 0 width entries)
+        widthCount: validWidthCount,
+        // Count total number of rolls for this product
+        rollCount: Object.values(product.widths).reduce((sum, width) => sum + width.rolls.length, 0)
       };
     });
     
@@ -112,6 +123,9 @@ methods: {
   generateInvoiceCopy(doc, groupedProducts, copyType) {
     let startY = this.addHeader(doc, copyType);
     let grandTotal = 0;
+    
+    // Count how many unique product types there are
+    const uniqueProductCount = groupedProducts.length;
 
     groupedProducts.forEach((group, index) => {
       if (index !== 0 && startY + 50 > doc.internal.pageSize.height - 50) {
@@ -122,42 +136,76 @@ methods: {
       // Create table header
       const tableData = [
         [{ content: `${group.name} - (${group.hsn_code})`, colSpan: 2, styles: { halign: "center", fontStyle: "bold",
-        textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } }],
-        [
+        textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } }]
+      ];
+      
+      // Only add width/net wt header row if there are non-zero width entries
+      if (Object.values(group.widths).some(width => !width.hasZeroWidth)) {
+        tableData.push([
           { content: `Width`, styles: { halign: "center", fontStyle: "bold",
           textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } },
           { content: `Net Wt`, styles: { halign: "center", fontStyle: "bold",
-          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } },
-        ]
-      ];
+          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } }
+        ]);
+      } else {
+        tableData.push([
+          { content: `Net Wt`, colSpan: 2, styles: { halign: "center", fontStyle: "bold",
+          textColor: [0, 0, 0], valign: 'middle', border: true, lineWidth: 0.2, fillColor: null } }
+        ]);
+      }
 
-      // For each width, add individual rolls followed by subtotal
+      // For each width, add individual rolls followed by subtotal (if needed)
       Object.entries(group.widths).forEach(([width, data]) => {
-        // Add the width in the first row of this section
-        tableData.push([
-          { content: width, rowSpan: data.rolls.length, styles: { valign: "middle", halign: "center", fillColor: null } },
-          { content: `${data.rolls[0].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
-        ]);
-        
-        // Add remaining rolls for this width (starting from index 1)
-        for (let i = 1; i < data.rolls.length; i++) {
+        if (data.hasZeroWidth) {
+          // For zero width items, only show quantity without width column
+          for (let i = 0; i < data.rolls.length; i++) {
+            tableData.push([
+              { content: `${data.rolls[i].quantity} Kgs`, colSpan: 2, styles: { halign: "center", fillColor: null } }
+            ]);
+          }
+          
+          // Add width subtotal only if there are multiple rolls
+          if (data.rolls.length > 1) {
+            tableData.push([
+              { content: `Total:`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } }
+            ]);
+            tableData.push([
+              { content: `${data.total.toFixed(3)} Kgs`, colSpan: 2, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
+            ]);
+          }
+        } else {
+          // For normal width items, show both width and quantity
+          // Add the width in the first row of this section
           tableData.push([
-            { content: `${data.rolls[i].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
+            { content: width, rowSpan: data.rolls.length, styles: { valign: "middle", halign: "center", fillColor: null } },
+            { content: `${data.rolls[0].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
           ]);
+          
+          // Add remaining rolls for this width (starting from index 1)
+          for (let i = 1; i < data.rolls.length; i++) {
+            tableData.push([
+              { content: `${data.rolls[i].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
+            ]);
+          }
+          
+          // Add width subtotal only if there are multiple rolls for this width
+          if (data.rolls.length > 1) {
+            tableData.push([
+              { content: `Total for ${width}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
+            ]);
+          }
         }
-        
-        // Add width subtotal
-        tableData.push([
-          { content: `Total for ${width}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
-          { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
-        ]);
       });
       
-      // Add product grand total
-      tableData.push([
-        { content: `Total ${group.name}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
-        { content: `${group.totalQuantity} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
-      ]);
+      // Add product grand total only if there are multiple product types
+      // This addresses requirement #3
+      if (uniqueProductCount > 1) {
+        tableData.push([
+          { content: `Total ${group.name}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+          { content: `${group.totalQuantity} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
+        ]);
+      }
 
       grandTotal += parseFloat(group.totalQuantity);
 
@@ -170,12 +218,12 @@ methods: {
           halign: "center", 
           lineWidth: 0.2, 
           textColor: [0, 0, 0],
-          fillColor: null  // Explicitly set background color to null
+          fillColor: null 
         },
         margin: { bottom: 30, top: 90 },
         pageBreak: "auto",
         didDrawPage: (data) => {
-          this.addHeader(doc, copyType); // Ensure header appears on every page
+          this.addHeader(doc, copyType);
           this.addFooter(doc, doc.internal.pageSize.height, data.pageNumber, data.table.pageCount);
         },
         // Ensure no alternating row colors
@@ -200,7 +248,7 @@ methods: {
   },
 
   addSignatureLines(doc, pageHeight) {
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.text("Receiver's Signature", 14, pageHeight - 25);
     doc.line(14, pageHeight - 15, 80, pageHeight - 15);
@@ -222,7 +270,7 @@ methods: {
     doc.text("Dealers in BOPP, POLYESTER, PVC, THERMAL Films", 105, 42, "center");
     doc.text("Adhesives for Lamination, Bookbinding, and Pasting, UV Coats", 105, 48, "center");
     doc.line(0, 51, 210, 51);
-    doc.setFontSize(10);
+    doc.setFontSize(12);
     doc.text(`(${copyType})`, 105, 56, "center");
 
     doc.setFontSize(12);
