@@ -213,14 +213,14 @@ methods: {
         body: tableData,
         startY: startY,
         styles: { 
-          fontSize: 10, 
+          fontSize: 12, 
           cellPadding: 2, 
           halign: "center", 
           lineWidth: 0.2, 
           textColor: [0, 0, 0],
           fillColor: null 
         },
-        margin: { bottom: 30, top: 90 },
+        margin: { bottom: 0, top: 0 }, // Remove vertical margins
         pageBreak: "auto",
         didDrawPage: (data) => {
           this.addHeader(doc, copyType);
@@ -236,13 +236,14 @@ methods: {
         }
       });
 
-      startY = doc.lastAutoTable.finalY + 10;
+      // Removed the +10 spacing between tables
+      startY = doc.lastAutoTable.finalY;
     });
 
     // Add overall grand total of all products
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text(`Overall Total: ${grandTotal.toFixed(3)} Kgs`, 105, startY, "center");
+    doc.text(`Overall Total: ${grandTotal.toFixed(3)} Kgs`, 105, startY + 10, "center");
 
     this.addSignatureLines(doc, doc.internal.pageSize.height);
   },
