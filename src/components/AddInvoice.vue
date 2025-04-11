@@ -31,7 +31,7 @@
         
         <!-- Form -->
         <v-form ref="form" v-model="valid">
-          <v-select
+          <v-autocomplete
             v-model="selectedCustomerId"
             :items="allCustomers"
             item-text="name"
