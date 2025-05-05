@@ -29,6 +29,21 @@
           </v-col>
         </v-row>
         
+        <!-- Invoice Number - Show for both add and edit modes -->
+        <v-row class="mt-3">
+          <v-col cols="12" md="6" offset-md="3">
+            <v-text-field
+              v-model="invoiceNumber"
+              label="Invoice Number"
+              :rules="[rules.required]"
+              required
+              :disabled="isEditing && !canEditInvoiceNumber"
+              :hint="isEditing && !canEditInvoiceNumber ? 'Invoice number cannot be modified' : ''"
+              persistent-hint
+            />
+          </v-col>
+        </v-row>
+        
         <!-- Form -->
         <v-form ref="form" v-model="valid">
           <v-autocomplete
@@ -66,12 +81,12 @@
 
           <!-- Invoice Totals Component -->
           <invoice-totals
-  :invoice-products="invoiceProducts"
-  :other-charges="otherCharges"
-  :selected-customer="getSelectedCustomerObject"
-  @update:other-charges="otherCharges = $event"
-  @intra-state-update="handleGstTypeChange"
-/>
+            :invoice-products="invoiceProducts"
+            :other-charges="otherCharges"
+            :selected-customer="getSelectedCustomerObject"
+            @update:other-charges="otherCharges = $event"
+            @intra-state-update="handleGstTypeChange"
+          />
 
           <v-col cols="12" class="d-flex justify-end mt-3">
             <v-btn
@@ -94,12 +109,12 @@
 
     <!-- Batch Dialog Component -->
     <batch-dialog
-  :show="batchDialog"
-  @update:show="batchDialog = $event"
-  :all-products="allProducts"
-  :rules="rules"
-  @batch-products-added="addBatchProductsToInvoice"
-/>
+      :show="batchDialog"
+      @update:show="batchDialog = $event"
+      :all-products="allProducts"
+      :rules="rules"
+      @batch-products-added="addBatchProductsToInvoice"
+    />
   </v-container>
 </template>
 
@@ -131,6 +146,8 @@ export default {
       cgst: 0,
       sgst: 0,
       igst: 0,
+      invoiceNumber: '',
+      canEditInvoiceNumber: true, // You can control this with a permission flag if needed
       rules: {
         required: (value) => !!value || "Required.",
         numeric: (value) => !isNaN(value) || "Must be a number.",
@@ -207,6 +224,8 @@ export default {
             totalPrice: (product.unit_price * product.quantity).toFixed(2),
           }));
           this.otherCharges = invoice.otherCharges || 0;
+          this.invoiceNumber = invoice.invoiceNumber || '';
+          this.isIntraStateTransaction = invoice.igst === 0; // Determine transaction type
           this.originalInvoice = { ...invoice };
         } else {
           throw new Error("Failed to load invoice details for edit.");
@@ -309,9 +328,10 @@ export default {
 
       return {
         customer: this.selectedCustomerId,
+        invoiceNumber: this.invoiceNumber,
         products: this.invoiceProducts.map((product) => ({
           product: product.productId,
-          width: parseFloat(product.width),
+          width: parseFloat(product.width || 0), // Default to 0 if width is not entered
           quantity: parseFloat(product.quantity),
           unit_price: parseFloat(product.unit_price),
           totalPrice: parseFloat(product.quantity * product.unit_price),
@@ -327,10 +347,10 @@ export default {
     validateInvoicePayload(payload) {
       if (
         !payload.customer ||
+        !payload.invoiceNumber ||
         payload.products.some(
           (product) =>
             !product.product ||
-            isNaN(product.width) ||
             isNaN(product.quantity) ||
             isNaN(product.unit_price)
         )
