@@ -1,5 +1,5 @@
+//  Updated Vuex store module for invoices with pagination
 import apiClient from './apiClient';
-
 const state = {
   invoices: [],
   invoiceDetail: null,
@@ -9,21 +9,75 @@ const state = {
     deleteInvoice: false,
     // other actions...
   },
+  pagination: {
+    page: 1,
+    itemsPerPage: 10,
+    totalItems: 0,
+    totalPages: 0
+  },
+  sortBy: 'createdAt',
+  sortDesc: true,
+  search: ''
 };
 
 const getters = {
   allInvoices: (state) => state.invoices,
   invoiceDetail: (state) => state.invoiceDetail,
   isLoading: (state) => state.loading,
+  pagination: (state) => state.pagination,
+  sortBy: (state) => state.sortBy,
+  sortDesc: (state) => state.sortDesc,
+  search: (state) => state.search
 };
 
 const actions = {
-  async fetchInvoices({ commit }) {
+  // Modified to accept a skipFetch parameter to prevent automatic data fetching
+  setPage({ commit }, page) {
+    commit('SET_PAGE', page);
+  },
+  
+  setItemsPerPage({ commit }, itemsPerPage) {
+    commit('SET_ITEMS_PER_PAGE', itemsPerPage);
+    commit('SET_PAGE', 1); // Reset to first page when changing items per page
+  },
+  
+  setSorting({ commit }, { sortBy, sortDesc }) {
+    commit('SET_SORTING', { sortBy, sortDesc });
+  },
+  
+  setSearch({ commit }, search) {
+    commit('SET_SEARCH', search);
+    commit('SET_PAGE', 1); // Reset to first page when searching
+  },
+
+  async fetchInvoices({ commit, state }) {
     commit('SET_LOADING', true);
     try {
-      const response = await apiClient.get('/custprod');
+      // Build query parameters for pagination and sorting
+      const params = {
+        page: state.pagination.page,
+        itemsPerPage: state.pagination.itemsPerPage,
+        sortBy: state.sortBy,
+        sortDesc: state.sortDesc
+      };
+      
+      // Only add search parameter if it's not empty
+      if (state.search && state.search.trim() !== '') {
+        params.search = state.search.trim();
+      }
+      
+      // Convert params object to query string
+      const queryString = Object.keys(params)
+        .map(key => `${key}=${encodeURIComponent(params[key])}`)
+        .join('&');
+      
+      console.log('Fetching with query:', queryString);
+      
+      const response = await apiClient.get(`/custprod?${queryString}`);
+      
       if (response.data.success) {
         commit('SET_INVOICES', response.data.data);
+        commit('SET_PAGINATION', response.data.pagination);
       } else {
         console.error('Failed to fetch invoices.');
       }
@@ -35,20 +89,15 @@ const actions = {
     }
   },
 
+  // Keep existing actions...
   async fetchInvoiceDetail({ commit, dispatch }, id) {
     commit('SET_LOADING', true);
     try {
-      // Fetch invoice by ID using a helper action
       const response = await dispatch('fetchInvoiceById', id);
 
-      // Check if the response was successful
       if (response.success) {
-        const invoice = response.data;  // Extract invoice data
-
-        // Commit to Vuex store
+        const invoice = response.data;
         commit('SET_INVOICE_DETAIL', invoice);
-
-        // Commit other necessary data such as customer ID and product IDs
         commit('SET_CUSTOMER_ID', invoice.customer ? invoice.customer._id : null);
         invoice.products.forEach(product => {
           commit('SET_PRODUCT_ID', product._id);
@@ -66,9 +115,8 @@ const actions = {
 
   async fetchInvoiceById(_, id ) {
     try {
-      // API call to fetch invoice by ID
       const response = await apiClient.get(`/custprod/${id}`);
-      return response.data;  // Return the response data
+      return response.data;
     } catch (error) {
       console.error('Error fetching invoice:', error);
       throw new Error('Failed to load invoice details.');
@@ -121,19 +169,34 @@ const actions = {
     } finally {
       commit("SET_LOADING", false);
     }
-  },
+  }
 };
 
 const mutations = {
   SET_INVOICES(state, invoices) {
     state.invoices = invoices;
   },
+  SET_PAGINATION(state, pagination) {
+    state.pagination = pagination;
+  },
+  SET_PAGE(state, page) {
+    state.pagination.page = page;
+  },
+  SET_ITEMS_PER_PAGE(state, itemsPerPage) {
+    state.pagination.itemsPerPage = itemsPerPage;
+  },
+  SET_SORTING(state, { sortBy, sortDesc }) {
+    state.sortBy = sortBy;
+    state.sortDesc = sortDesc;
+  },
+  SET_SEARCH(state, search) {
+    state.search = search;
+  },
   ADD_INVOICE(state, invoice) {
     state.invoices.push(invoice);
   },
   SET_INVOICE_DETAIL(state, invoice) {
-    // Clear the previous detail before setting the new one to avoid stale data
-    state.invoiceDetail = { ...invoice };  // Clone the invoice data
+    state.invoiceDetail = { ...invoice };
   },
   UPDATE_INVOICE(state, updatedInvoice) {
     const index = state.invoices.findIndex((invoice) => invoice._id === updatedInvoice._id);
@@ -145,10 +208,8 @@ const mutations = {
     }
   },
   REMOVE_INVOICE(state, invoiceId) {
-    // Filter out the deleted invoice from the list
     state.invoices = state.invoices.filter((invoice) => invoice._id !== invoiceId);
   
-    // Clear invoiceDetail only if it matches the deleted invoice
     if (state.invoiceDetail && state.invoiceDetail._id === invoiceId) {
       state.invoiceDetail = null;
     }
@@ -168,7 +229,7 @@ const mutations = {
       }
       state.invoiceDetail.productIds.push(productId);
     }
-  },
+  }
 };
 
 export default {
@@ -176,5 +237,5 @@ export default {
   state,
   getters,
   actions,
-  mutations,
+  mutations
 };
