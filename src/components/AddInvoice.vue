@@ -91,12 +91,24 @@
 
           <v-col cols="12" class="d-flex justify-end mt-3">
             <v-btn
-              :disabled="!valid || invoiceProducts.length === 0"
+              :disabled="!valid || invoiceProducts.length === 0 || isSubmitting"
               color="success"
               @click="isEditing ? updateInvoice() : addInvoice()"
               aria-label="Submit Invoice"
             >
-              {{ isEditing ? "Update Invoice" : "Add Invoice" }}
+              <template v-if="isSubmitting">
+                <v-progress-circular
+                  indeterminate
+                  size="20"
+                  width="2"
+                  color="white"
+                  class="mr-2"
+                ></v-progress-circular>
+                {{ isEditing ? "Updating..." : "Adding..." }}
+              </template>
+              <template v-else>
+                {{ isEditing ? "Update Invoice" : "Add Invoice" }}
+              </template>
             </v-btn>
           </v-col>
         </v-form>
@@ -120,7 +132,7 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters, mapState } from "vuex";
 import ProductList from './addInvoiceProductList.vue';
 import InvoiceTotals from './InvoiceTotals.vue';
 import BatchDialog from './BatchDialog.vue';
@@ -160,6 +172,9 @@ export default {
   computed: {
     ...mapGetters("customers", ["allCustomers"]),
     ...mapGetters("products", ["allProducts"]),
+    ...mapState("invoices", {
+      isSubmitting: state => state.loadingState.createUpdateInvoice
+    }),
     getSelectedCustomerObject() {
       console.log("Selected customer ID:", this.selectedCustomerId);
       

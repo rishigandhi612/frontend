@@ -1,4 +1,4 @@
-//  Updated Vuex store module for invoices with pagination
+//  Updated Vuex store module for invoices with loading states
 import apiClient from './apiClient';
 const state = {
   invoices: [],
@@ -7,7 +7,8 @@ const state = {
   loadingState: {
     fetchInvoices: false,
     deleteInvoice: false,
-    // other actions...
+    createUpdateInvoice: false, // Added loading state for create/update operations
+    fetchInvoiceDetail: false
   },
   pagination: {
     page: 1,
@@ -51,7 +52,7 @@ const actions = {
   },
 
   async fetchInvoices({ commit, state }) {
-    commit('SET_LOADING', true);
+    commit('SET_LOADING_STATE', { type: 'fetchInvoices', value: true });
     try {
       // Build query parameters for pagination and sorting
       const params = {
@@ -85,13 +86,13 @@ const actions = {
       console.error('Error fetching invoices:', error);
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit('SET_LOADING_STATE', { type: 'fetchInvoices', value: false });
     }
   },
 
   // Keep existing actions...
   async fetchInvoiceDetail({ commit, dispatch }, id) {
-    commit('SET_LOADING', true);
+    commit('SET_LOADING_STATE', { type: 'fetchInvoiceDetail', value: true });
     try {
       const response = await dispatch('fetchInvoiceById', id);
 
@@ -109,7 +110,7 @@ const actions = {
       console.error('Error fetching invoice details:', err);
       throw new Error('Failed to fetch invoice details.');
     } finally {
-      commit('SET_LOADING', false);
+      commit('SET_LOADING_STATE', { type: 'fetchInvoiceDetail', value: false });
     }
   },
 
@@ -124,7 +125,7 @@ const actions = {
   },
 
   async createInvoiceInStore({ commit }, invoiceData) {
-    commit('SET_LOADING', true);
+    commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: true });
     try {
       const response = await apiClient.post('/custprod', invoiceData);
       if (response.data.success) {
@@ -136,12 +137,12 @@ const actions = {
       console.error('Error creating invoice:', error);
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: false });
     }
   },
 
   async updateInvoiceInStore({ commit }, { id, data }) {
-    commit('SET_LOADING', true);
+    commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: true });
     try {
       const response = await apiClient.put(`/custprod/${id}`, data);
       commit('UPDATE_INVOICE', response.data.data);
@@ -149,13 +150,13 @@ const actions = {
       console.error('Error updating invoice:', error);
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: false });
     }
   },
 
   async deleteInvoiceDetail({ commit }, invoiceId) {
     console.log("deleteInvoiceDetail action called with ID:", invoiceId);
-    commit("SET_LOADING", true);
+    commit('SET_LOADING_STATE', { type: 'deleteInvoice', value: true });
     try {
       const response = await apiClient.delete(`/custprod/${invoiceId}`);
       if (response.data.success) {
@@ -167,7 +168,7 @@ const actions = {
       console.error("Error deleting invoice:", error);
       throw new Error(error.response?.data?.message || "Failed to delete the invoice.");
     } finally {
-      commit("SET_LOADING", false);
+      commit('SET_LOADING_STATE', { type: 'deleteInvoice', value: false });
     }
   }
 };
@@ -216,6 +217,9 @@ const mutations = {
   },  
   SET_LOADING(state, loading) {
     state.loading = loading;
+  },
+  SET_LOADING_STATE(state, { type, value }) {
+    state.loadingState[type] = value;
   },
   SET_CUSTOMER_ID(state, customerId) {
     if (state.invoiceDetail) {
