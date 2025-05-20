@@ -120,6 +120,34 @@ export default {
       }
     },
     
+    calculateItemCounts(groupedProducts) {
+  let rollCount = 0;
+  let drumCount = 0;
+  let canCount = 0;
+
+ groupedProducts.forEach(product => {
+  Object.values(product.widths).forEach(data => {
+    if (data.hasZeroWidth) {
+      data.rolls.forEach(roll => {
+        const quantity = parseFloat(roll.quantity);
+        if (quantity === 50) {
+          drumCount++;
+        } else if (quantity === 5) {
+          canCount++;
+        } else {
+          rollCount++;
+        }
+      });
+    } else {
+      rollCount += data.rolls.length;
+    }
+  });
+});
+
+return { rollCount, drumCount, canCount };
+
+},
+    
     generateInvoiceCopy(doc, groupedProducts, copyType) {
       let startY = this.addHeader(doc, copyType);
       let grandTotal = 0;
@@ -224,7 +252,7 @@ export default {
           alternateRowStyles: {
             fillColor: null
           },
-          headerStyles: {
+          headStyles : {
             fillColor: null
           }
         };
@@ -248,9 +276,23 @@ export default {
         isLastPage = true;
       }
       
+      // Calculate counts for overall total
+      const { rollCount, drumCount, canCount } = this.calculateItemCounts(groupedProducts);
+      
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(`Overall Total: ${grandTotal.toFixed(3)} Kgs`, 105, startY + 10, "center");
+       // Add the overall total in kgs  
+      let overallTotalText = '';
+      overallTotalText += `Overall Total: ${grandTotal.toFixed(3)} Kgs FOR `; 
+      // Format the overall total string with rolls, drums, and cans
+    
+      if (rollCount > 0) overallTotalText += `${rollCount} Roll(s)`;
+      if (drumCount > 0) overallTotalText += `${rollCount > 0 ? ', ' : ''}${drumCount} Drum(s)`;
+      if (canCount > 0) overallTotalText += `${rollCount > 0 || drumCount > 0 ? ', ' : ''}${canCount} Can(s)`;
+      
+     
+      
+      doc.text(overallTotalText, 105, startY + 10, "center");
 
       this.addSignatureLines(doc, doc.internal.pageSize.height);
       
@@ -295,23 +337,15 @@ export default {
           // Add width subtotal only if there are multiple rolls
           if (data.rolls.length > 1) {
             tableData.push([
-              { content: `Total:`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } }
-            ]);
-            tableData.push([
-              { content: `${data.total.toFixed(3)} Kgs`, colSpan: 2, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
+              { content: `Total (${data.rolls.length})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
             ]);
           }
         } else {
-          // For normal width items, show both width and quantity
-          // Add the width in the first row of this section
-          tableData.push([
-            { content: width, rowSpan: data.rolls.length, styles: { valign: "middle", halign: "center", fillColor: null } },
-            { content: `${data.rolls[0].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
-          ]);
-          
-          // Add remaining rolls for this width (starting from index 1)
-          for (let i = 1; i < data.rolls.length; i++) {
+          // For normal width items, show both width and quantity for EACH roll
+          for (let i = 0; i < data.rolls.length; i++) {
             tableData.push([
+              { content: width, styles: { halign: "center", fillColor: null } },
               { content: `${data.rolls[i].quantity} Kgs`, styles: { halign: "center", fillColor: null } }
             ]);
           }
@@ -319,7 +353,7 @@ export default {
           // Add width subtotal only if there are multiple rolls for this width
           if (data.rolls.length > 1) {
             tableData.push([
-              { content: `Total for ${width}:`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `Total ${width} (${data.rolls.length})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
               { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
             ]);
           }
