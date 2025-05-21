@@ -17,6 +17,8 @@ import UserDetail from '@/components/UserDetail.vue';
 import AddUser from '@/components/AddUser.vue'
 import AddCustomer from '@/components/AddCustomer.vue'
 import NotFound from '@/components/NotFound.vue';
+import InventoryList from '@/components/InventoryList.vue';
+import InventoryDetail from '@/components/InventoryDetail.vue';
 
 Vue.use(Router);
 
@@ -52,9 +54,21 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/inventory',
+    component: InventoryList,
+    name: 'inventoryList',
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/product/:id',
     component: ProductDetail,
     name: 'productDetail',
+    meta: { requiresAuth: true },
+  },
+   {
+    path: '/inventory/:id',
+    component: InventoryDetail,
+    name: 'inventoryDetail',
     meta: { requiresAuth: true },
   },
   {
