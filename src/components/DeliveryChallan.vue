@@ -121,32 +121,37 @@ export default {
     },
     
     calculateItemCounts(groupedProducts) {
-  let rollCount = 0;
-  let drumCount = 0;
-  let canCount = 0;
+      let rollCount = 0;
+      let drumCount = 0;
+      let canCount = 0;
 
- groupedProducts.forEach(product => {
-  Object.values(product.widths).forEach(data => {
-    if (data.hasZeroWidth) {
-      data.rolls.forEach(roll => {
-        const quantity = parseFloat(roll.quantity);
-        if (quantity === 50) {
-          drumCount++;
-        } else if (quantity === 5) {
-          canCount++;
-        } else {
-          rollCount++;
-        }
+      groupedProducts.forEach(product => {
+        Object.values(product.widths).forEach(data => {
+          if (data.hasZeroWidth) {
+            data.rolls.forEach(roll => {
+              const quantity = parseFloat(roll.quantity);
+              if (quantity === 50) {
+                drumCount++;
+              } else if (quantity === 5) {
+                canCount++;
+              } else {
+                rollCount++;
+              }
+            });
+          } else {
+            rollCount += data.rolls.length;
+          }
+        });
       });
-    } else {
-      rollCount += data.rolls.length;
-    }
-  });
-});
 
-return { rollCount, drumCount, canCount };
+      return { rollCount, drumCount, canCount };
+    },
 
-},
+    // Helper method to format singular/plural text
+    formatItemCount(count, singular, plural) {
+      if (count === 0) return '';
+      return `${count} ${count === 1 ? singular : plural}`;
+    },
     
     generateInvoiceCopy(doc, groupedProducts, copyType) {
       let startY = this.addHeader(doc, copyType);
@@ -268,8 +273,9 @@ return { rollCount, drumCount, canCount };
       }
 
       // Add overall grand total of all products
-      // Check if there's enough space for the grand total (needs about 15mm)
-      if (doc.internal.pageSize.height - startY < 20) {
+      // Check if there's enough space for the grand total (needs about 25mm for proper visibility)
+      const spaceNeeded = 35; // Increased space for better visibility
+      if (doc.internal.pageSize.height - startY < spaceNeeded) {
         doc.addPage();
         startY = this.addHeader(doc, copyType);
         // We're definitely on the last page now
@@ -279,25 +285,48 @@ return { rollCount, drumCount, canCount };
       // Calculate counts for overall total
       const { rollCount, drumCount, canCount } = this.calculateItemCounts(groupedProducts);
       
-      doc.setFontSize(12);
+      // Create the item count text with proper singular/plural
+      const itemTexts = [];
+      if (rollCount > 0) {
+        itemTexts.push(this.formatItemCount(rollCount, 'Roll', 'Rolls'));
+      }
+      if (drumCount > 0) {
+        itemTexts.push(this.formatItemCount(drumCount, 'Drum', 'Drums'));
+      }
+      if (canCount > 0) {
+        itemTexts.push(this.formatItemCount(canCount, 'Can', 'Cans'));
+      }
+      
+      const itemCountText = itemTexts.join(', ');
+      
+      // Add some spacing before the total
+      startY += 8;
+      
+      // Add a border around the total for better visibility
+      const boxX = 20;
+      const boxY = startY;
+      const boxWidth = 170;
+      const boxHeight = 16;
+      
+      // Draw background box
+      doc.setFillColor(255,255,255); // Light gray background
+      doc.rect(boxX, boxY, boxWidth, boxHeight, 'F');
+      
+      // Draw border
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(boxX, boxY, boxWidth, boxHeight, 'S');
+      
+      // Add the text
+      doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
-       // Add the overall total in kgs  
-      let overallTotalText = '';
-      overallTotalText += `Overall Total: ${grandTotal.toFixed(3)} Kgs FOR `; 
-      // Format the overall total string with rolls, drums, and cans
-    
-      if (rollCount > 0) overallTotalText += `${rollCount} Roll(s)`;
-      if (drumCount > 0) overallTotalText += `${rollCount > 0 ? ', ' : ''}${drumCount} Drum(s)`;
-      if (canCount > 0) overallTotalText += `${rollCount > 0 || drumCount > 0 ? ', ' : ''}${canCount} Can(s)`;
+      doc.setTextColor(0, 0, 0);
       
-     
-      
+      const overallTotalText = `Overall Total: ${grandTotal.toFixed(3)} Kgs FOR ${itemCountText}`;
       doc.text(overallTotalText, 105, startY + 10, "center");
 
+      // Add signature lines with proper spacing
       this.addSignatureLines(doc, doc.internal.pageSize.height);
-      
-      // const currentPage = doc.internal.getNumberOfPages();
-      // this.addFooter(doc, doc.internal.pageSize.height, currentPage, currentPage, true, true);
     },
     
     createProductTableData(group, uniqueProductCount) {
@@ -334,10 +363,11 @@ return { rollCount, drumCount, canCount };
             ]);
           }
           
-          // Add width subtotal only if there are multiple rolls
+          // Add width subtotal with proper singular/plural
           if (data.rolls.length > 1) {
+            const rollText = data.rolls.length === 1 ? 'roll' : 'rolls';
             tableData.push([
-              { content: `Total (${data.rolls.length})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `Total (${data.rolls.length} ${rollText})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
               { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
             ]);
           }
@@ -350,10 +380,11 @@ return { rollCount, drumCount, canCount };
             ]);
           }
           
-          // Add width subtotal only if there are multiple rolls for this width
+          // Add width subtotal with proper singular/plural
           if (data.rolls.length > 1) {
+            const rollText = data.rolls.length === 1 ? 'roll' : 'rolls';
             tableData.push([
-              { content: `Total ${width} (${data.rolls.length})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `Total ${width} (${data.rolls.length} ${rollText})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
               { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
             ]);
           }
