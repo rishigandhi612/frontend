@@ -9,6 +9,7 @@ import CustomerDetail from '@/components/CustomerDetail.vue';
 import ProductList from '@/components/ProductList.vue';
 import ProductDetail from '@/components/ProductDetail.vue';
 import AddProduct from '@/components/AddProduct.vue';
+import AddInventory from '@/components/AddInventory.vue';
 import InvoiceList from '@/components/InvoiceList.vue';
 import InvoiceDetail from '@/components/InvoiceDetail.vue';
 import AddInvoice from '@/components/AddInvoice.vue';
@@ -81,6 +82,18 @@ const routes = [
     path: '/addproduct/:id?',
     component: AddProduct,
     name: 'editProduct',
+    meta: { requiresAuth: true },
+  },
+    {
+    path: '/addinventory',
+    component: AddInventory,
+    name: 'addInventory',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addinventory/:id?',
+    component: AddInventory,
+    name: 'editInventory',
     meta: { requiresAuth: true },
   },
   {

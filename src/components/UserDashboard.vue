@@ -116,6 +116,14 @@ export default {
           buttonText: "View Users",
           route: "/user",
         },
+        totalInventory: {
+          title: "Total Inventory",
+          icon: "mdi-store-check",
+          iconColor: "white",
+          color: "violet",
+          buttonText: "View Inventory",
+          route: "/inventory",
+        },
       },
     };
   },

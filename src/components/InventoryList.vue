@@ -33,7 +33,7 @@
               <td>{{ item.rollId }}</td>
               <td>{{ item.width }}</td>
               <td>{{ item.micron }}</td>
-              <td>{{ item.netWeight || 'N/A' }}</td>
+              <td>{{ item.netWeight}}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.status }}</td>
               <td>{{ formatDate(item.updatedAt) }}</td>
