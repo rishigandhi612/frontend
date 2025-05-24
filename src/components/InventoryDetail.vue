@@ -8,14 +8,10 @@
 
     <v-row v-if="!loading">
       <!-- Left Column -->
-      <v-col cols="12" md="2" class="d-flex justify-start align-start pt-5">
-        <v-row class="d-flex justify-space-between align-center">
-          <v-col>
-            <v-btn @click="goBack" class="ml-2" block>
-              <v-icon left>mdi-arrow-left</v-icon> Back
-            </v-btn>
-          </v-col>
-        </v-row>
+       <v-col md="2" cols="12">
+        <v-btn @click="goBack" block>
+          <v-icon left>mdi-arrow-left</v-icon> Back
+        </v-btn>
       </v-col>
 
       <!-- Main Content -->
@@ -27,7 +23,7 @@
                 <!-- Title -->
                 <v-row>
                   <v-col cols="12" class="d-flex justify-center align-center">
-                    <h2>{{ capitalizeFirstLetter(inventoryItem.product_name) }} Details</h2>
+                    <h2>{{ capitalizeFirstLetter(productName) }} Details</h2>
                   </v-col>
                 </v-row>
                 <v-divider class="mt-2"></v-divider>
@@ -104,12 +100,12 @@
 
 <script>
 export default {
-  props: {},
   data() {
     return {
       confirmDelete: false,
       loading: false,
-      inventoryItem: null, // to be fetched
+      inventoryItem: null,
+      products: [],
       error: null,
     };
   },
@@ -126,10 +122,36 @@ export default {
         "Last Updated": this.formatDate(this.inventoryItem?.updatedAt),
       };
     },
+    productName() {
+      if (!this.inventoryItem || !this.inventoryItem.productId) {
+        return "Unknown Product";
+      }
+      
+      // Try multiple ways to access products from store
+      let allProducts = [];
+      
+      // Try different possible store structures
+      if (this.$store.getters['products/getAllProducts']) {
+        allProducts = this.$store.getters['products/getAllProducts'];
+      } else if (this.$store.state.products && this.$store.state.products.products) {
+        allProducts = this.$store.state.products.products;
+      } else if (this.$store.state.products && this.$store.state.products.data) {
+        allProducts = this.$store.state.products.data;
+      } else if (this.$store.state.products && Array.isArray(this.$store.state.products)) {
+        allProducts = this.$store.state.products;
+      } else if (this.products && Array.isArray(this.products)) {
+        allProducts = this.products;
+      }
+    
+      const product = allProducts.find((p) => p._id === this.inventoryItem.productId);      
+      const productName = product ? product.name : `Unknown Product (ID: ${this.inventoryItem.productId})`;
+      return String(productName);
+    }
   },
   methods: {
     capitalizeFirstLetter(text) {
-      return text?.charAt(0).toUpperCase() + text?.slice(1) || "";
+      if (!text || typeof text !== 'string') return "";
+      return text.charAt(0).toUpperCase() + text.slice(1);
     },
     formatDate(dateString) {
       if (!dateString) return "N/A";
@@ -143,17 +165,40 @@ export default {
       try {
         this.loading = true;
         const id = this.$route.params.id;
-        // Replace this with your actual API call or Vuex action
         const response = await this.$store.dispatch("inventory/fetchInventoryDetail", id);
         this.inventoryItem = response;
       } catch (err) {
         this.error = "Failed to load inventory item.";
+        console.error("Error fetching inventory item:", err);
       } finally {
         this.loading = false;
       }
     },
+    async fetchProducts() {
+      try {
+        const response = await this.$store.dispatch("products/fetchProducts");        
+        // Store products in local data as fallback
+        if (response && response.data && Array.isArray(response.data)) {
+          this.products = response.data;
+        } else if (response && Array.isArray(response)) {
+          this.products = response;
+        } else {
+          // Try to get from store state after dispatch
+          if (this.$store.state.products) {
+            this.products = this.$store.state.products.data || this.$store.state.products.products || this.$store.state.products;
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        this.products = [];
+        // Show user-friendly error message
+        this.$toast?.error?.(
+          "Failed to load products. Product names may not display correctly."
+        );
+      }
+    },
     editInventory() {
-      this.$router.push(`/addinventory/${this.inventoryItem.id}`);    
+      this.$router.push(`/addinventory/${this.inventoryItem.id}`);
     },
     async deleteInventory() {
       try {
@@ -161,6 +206,7 @@ export default {
         this.$router.push("/inventory");
       } catch (err) {
         this.error = "Failed to delete inventory item.";
+        console.error("Error deleting inventory item:", err);
       } finally {
         this.confirmDelete = false;
       }
@@ -169,8 +215,13 @@ export default {
       this.$router.go(-1);
     },
   },
-  mounted() {
-    this.fetchInventoryItem();
+  async mounted() {
+    this.loading = true;
+    await Promise.all([
+      this.fetchInventoryItem(),
+      this.fetchProducts()
+    ]);
+    this.loading = false;
   },
 };
 </script>

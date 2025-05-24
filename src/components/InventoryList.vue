@@ -25,7 +25,7 @@
           <template v-slot:item="{ item }">
             <tr @click="handleRowClick(item.id)">
               <td>{{ item.rollId }}</td>
-              <td>{{ item.productName || 'Unknown Product' }}</td>
+              <td>{{ item.productName || "Unknown Product" }}</td>
               <td>{{ item.width }}</td>
               <td>{{ item.netWeight }}</td>
               <td>{{ item.type }}</td>
@@ -86,51 +86,45 @@ export default {
     totalItems() {
       return this.getTotalCount || 0;
     },
- inventoryWithProductNames() {
-  return this.allInventory.map(item => {
-    console.log('inventory item:', item);
-
-    const productId = item.productId;
-    console.log('productId', productId);
-
-    const product = this.allProducts.find(p => p._id === productId);
-    console.log('product', product);
-
-    return {
-      ...item,
-      productName: product ? product.name : `Unknown Product (ID: ${productId})`
-    };
-  });
-},
+    inventoryWithProductNames() {
+      return this.allInventory.map((item) => {
+        const productId = item.productId;
+        const product = this.allProducts.find((p) => p._id === productId);
+        return {
+          ...item,
+          productName: product
+            ? product.name
+            : `Unknown Product (ID: ${productId})`,
+        };
+      });
+    },
     isTableLoading() {
-      return this.isLoading || (this.allProducts.length === 0 && this.allInventory.length > 0);
+      return (
+        this.isLoading ||
+        (this.allProducts.length === 0 && this.allInventory.length > 0)
+      );
     },
   },
   async created() {
-    console.log('Component created - fetching data...');
     try {
       // First fetch products to have the product names available
-      console.log('Fetching products...');
       await this.fetchProducts();
-      console.log('Products fetched, now loading inventory...');
       // Then load inventory items
       await this.loadItems();
-      console.log('Both products and inventory loaded');
     } catch (error) {
-      console.error('Error in created hook:', error);
+      console.error("Error in created hook:", error);
     }
   },
   methods: {
     async fetchProducts() {
       try {
-        console.log('Dispatching products/fetchProducts...');
-        await this.$store.dispatch('products/fetchProducts');
-        console.log('Products dispatch completed');
-        console.log('Products in store:', this.allProducts);
+        await this.$store.dispatch("products/fetchProducts");
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error("Error fetching products:", error);
         // Show user-friendly error message
-        this.$toast?.error?.('Failed to load products. Product names may not display correctly.');
+        this.$toast?.error?.(
+          "Failed to load products. Product names may not display correctly."
+        );
       }
     },
     async loadItems() {
