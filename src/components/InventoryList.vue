@@ -12,38 +12,29 @@
             <h1 class="text-center">Inventory List</h1>
           </v-col>
         </v-row>
-        
-        <!-- Debug info -->
-        <v-alert v-if="debugMode" type="info" dense>
-          Items: {{ allInventory.length }}
-          <pre>{{ JSON.stringify(allInventory[0], null, 2) }}</pre>
-        </v-alert>
-        
+
         <v-data-table
           :headers="headers"
-          :items="allInventory"
+          :items="inventoryWithProductNames"
           :options.sync="options"
-          :loading="isLoading"
-          :items-per-page="options.itemsPerPage"
+          :loading="isTableLoading"
+          :server-items-length="totalItems"
           class="elevation-1"
           @update:options="handleTableOptions"
         >
           <template v-slot:item="{ item }">
             <tr @click="handleRowClick(item.id)">
               <td>{{ item.rollId }}</td>
+              <td>{{ item.productName || 'Unknown Product' }}</td>
               <td>{{ item.width }}</td>
-              <td>{{ item.micron }}</td>
-              <td>{{ item.netWeight}}</td>
+              <td>{{ item.netWeight }}</td>
               <td>{{ item.type }}</td>
               <td>{{ item.status }}</td>
-              <td>{{ formatDate(item.updatedAt) }}</td>
             </tr>
           </template>
-          
+
           <template v-slot:no-data>
-            <v-alert type="info" dense>
-              No inventory data available
-            </v-alert>
+            <v-alert type="info" dense> No inventory data available </v-alert>
           </template>
         </v-data-table>
       </v-col>
@@ -56,16 +47,9 @@
             </v-btn>
           </v-col>
           <v-col cols="12" md="12">
-            <v-btn
-              @click="goToAddInventory"
-              color="success" 
-              block
-            >
+            <v-btn @click="goToAddInventory" color="success" block>
               <v-icon>mdi-plus</v-icon> Add Inventory
             </v-btn>
-          </v-col>
-          <v-col cols="12" md="12">
-            <v-switch v-model="debugMode" label="Debug Mode"></v-switch>
           </v-col>
         </v-row>
       </v-col>
@@ -80,86 +64,117 @@ export default {
   name: "InventoryList",
   data() {
     return {
-      debugMode: false,
       options: {
         page: 1,
         itemsPerPage: 10,
         sortBy: ["rollId"],
-        sortDesc: [false]
+        sortDesc: [false],
       },
       headers: [
         { text: "Roll ID", value: "rollId", sortable: true },
+        { text: "Product", value: "productName", sortable: true },
         { text: "Width", value: "width", sortable: true },
-        { text: "Micron", value: "micron", sortable: true },
         { text: "Net Weight", value: "netWeight", sortable: true },
         { text: "Type", value: "type", sortable: true },
         { text: "Status", value: "status", sortable: true },
-        { text: "Last Updated", value: "updatedAt", sortable: true },
-      ]
+      ],
     };
   },
   computed: {
     ...mapGetters("inventory", ["allInventory", "isLoading", "getTotalCount"]),
+    ...mapGetters("products", ["allProducts"]),
     totalItems() {
       return this.getTotalCount || 0;
+    },
+ inventoryWithProductNames() {
+  return this.allInventory.map(item => {
+    console.log('inventory item:', item);
+
+    const productId = item.productId;
+    console.log('productId', productId);
+
+    const product = this.allProducts.find(p => p._id === productId);
+    console.log('product', product);
+
+    return {
+      ...item,
+      productName: product ? product.name : `Unknown Product (ID: ${productId})`
+    };
+  });
+},
+    isTableLoading() {
+      return this.isLoading || (this.allProducts.length === 0 && this.allInventory.length > 0);
+    },
+  },
+  async created() {
+    console.log('Component created - fetching data...');
+    try {
+      // First fetch products to have the product names available
+      console.log('Fetching products...');
+      await this.fetchProducts();
+      console.log('Products fetched, now loading inventory...');
+      // Then load inventory items
+      await this.loadItems();
+      console.log('Both products and inventory loaded');
+    } catch (error) {
+      console.error('Error in created hook:', error);
     }
   },
-  created() {
-    this.loadItems();
-    console.log("Component created");
-  },
-  mounted() {
-    console.log("Component mounted, inventory:", this.allInventory);
-  },
   methods: {
+    async fetchProducts() {
+      try {
+        console.log('Dispatching products/fetchProducts...');
+        await this.$store.dispatch('products/fetchProducts');
+        console.log('Products dispatch completed');
+        console.log('Products in store:', this.allProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        // Show user-friendly error message
+        this.$toast?.error?.('Failed to load products. Product names may not display correctly.');
+      }
+    },
     async loadItems() {
-      console.log("Loading inventory items");
       try {
         // Create a query object based on current options
         const params = {
           page: this.options.page,
           limit: this.options.itemsPerPage,
-          sortBy: this.options.sortBy[0] || 'rollId',
-          sortOrder: this.options.sortDesc[0] ? 'desc' : 'asc'
+          sortBy: this.options.sortBy[0] || "rollId",
+          sortOrder: this.options.sortDesc[0] ? "desc" : "asc",
         };
-        
-        console.log("Fetching with params:", params);
-        
         // Dispatch action to fetch inventory with pagination/sorting
         await this.$store.dispatch("inventory/fetchInventory", params);
-        
-        console.log("Inventory fetched:", this.allInventory);
       } catch (error) {
         console.error("Error loading inventory items:", error);
       }
     },
     handleTableOptions(options) {
-      console.log("Table options updated:", options);
       this.options = options;
       this.loadItems();
     },
     refreshInventory() {
-      console.log("Refreshing inventory");
       // Reset pagination to first page when refreshing
       this.options.page = 1;
       this.loadItems();
     },
     formatDate(dateString) {
-      if (!dateString) return 'N/A';
+      if (!dateString) return "N/A";
       const options = { year: "numeric", month: "2-digit", day: "2-digit" };
       const date = new Date(dateString);
       return date.toLocaleDateString(undefined, options);
     },
     handleRowClick(inventoryId) {
-      console.log("Row clicked:", inventoryId);
-      this.$router.push({ name: "inventoryDetail", params: { id: inventoryId } });
+      this.$router.push({
+        name: "inventoryDetail",
+        params: { id: inventoryId },
+      });
     },
     goToAddInventory() {
-      this.$router.push({ name: "addInventory" }); 
+      this.$router.push({ name: "addInventory" });
     },
     goBack() {
       this.$router.go(-1);
-    }
+    },
   },
 };
 </script>

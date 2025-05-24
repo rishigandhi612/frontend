@@ -25,27 +25,58 @@ const actions = {
       // Build query parameters for server-side pagination and sorting
       const queryParams = new URLSearchParams();
       
-      if (params.page) queryParams.append('page', params.page);
-      if (params.limit) queryParams.append('limit', params.limit);
-      if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-      if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+      // Set default values if not provided
+      const page = params.page || 1;
+      const limit = params.limit || 10;
+      const sortBy = params.sortBy || 'rollId';
+      const sortOrder = params.sortOrder || 'asc';
+      
+      queryParams.append('page', page);
+      queryParams.append('limit', limit);
+      queryParams.append('sortBy', sortBy);
+      queryParams.append('sortOrder', sortOrder);
+      
+      // Add any additional filters if provided
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.type) queryParams.append('type', params.type);
       
       // Make the API call with query parameters
       const queryString = queryParams.toString();
-      const url = `/inventory${queryString ? '?' + queryString : ''}`;
+      const url = `/inventory?${queryString}`;
       
       const response = await apiClient.get(url);
       
-      // Set the inventory data and total count
-      commit('SET_INVENTORY', response.data.data);
+      // Handle different response structures
+      let inventoryData = [];
+      let totalCount = 0;
       
-      // Assuming the API returns total count in the response
-      if (response.data.total !== undefined) {
-        commit('SET_TOTAL_COUNT', response.data.total);
+      if (response.data.success && response.data.data) {
+        // If API returns success wrapper
+        inventoryData = Array.isArray(response.data.data) ? response.data.data : response.data.data.items || [];
+        totalCount = response.data.total || response.data.data.total || inventoryData.length;
+      } else if (Array.isArray(response.data)) {
+        // If API returns array directly
+        inventoryData = response.data;
+        totalCount = response.headers['x-total-count'] || inventoryData.length;
+      } else {
+        // If API returns object with items array
+        inventoryData = response.data.items || response.data.data || [];
+        totalCount = response.data.total || response.data.totalCount || inventoryData.length;
       }
+      
+      // Set the inventory data and total count
+      commit('SET_INVENTORY', inventoryData);
+      commit('SET_TOTAL_COUNT', totalCount);
+      
     } catch (error) {
       console.error("Error fetching inventory:", error);
       commit('SET_ERROR', 'Error fetching inventory.');
+      
+      // Set empty data on error
+      commit('SET_INVENTORY', []);
+      commit('SET_TOTAL_COUNT', 0);
+      
       throw error;
     } finally {
       commit('SET_LOADING', false);
@@ -105,11 +136,16 @@ const actions = {
       commit('SET_LOADING', false);
     }
   },
+
+  // Action to refresh current page
+  async refreshInventory({ dispatch }, currentOptions) {
+    return dispatch('fetchInventory', currentOptions);
+  },
 };
 
 const mutations = {
   SET_INVENTORY(state, inventory) {
-    state.inventory = inventory;
+    state.inventory = Array.isArray(inventory) ? inventory : [];
   },
   SET_INVENTORY_DETAIL(state, inventoryDetail) {
     state.inventoryDetail = inventoryDetail;
@@ -119,6 +155,7 @@ const mutations = {
   },
   ADD_INVENTORY(state, inventoryItem) {
     state.inventory.push(inventoryItem);
+    state.totalCount += 1;
   },
   UPDATE_INVENTORY(state, updatedInventory) {
     const index = state.inventory.findIndex((item) => item.id === updatedInventory.id);
@@ -128,6 +165,7 @@ const mutations = {
   },
   REMOVE_INVENTORY_FROM_LIST(state, inventoryId) {
     state.inventory = state.inventory.filter((item) => item.id !== inventoryId);
+    state.totalCount = Math.max(0, state.totalCount - 1);
   },
   SET_ERROR(state, errorMessage) {
     state.error = errorMessage;
@@ -140,7 +178,10 @@ const mutations = {
     state.totalCount = 0;
   },
   SET_TOTAL_COUNT(state, count) {
-    state.totalCount = count;
+    state.totalCount = parseInt(count) || 0;
+  },
+  CLEAR_ERROR(state) {
+    state.error = null;
   },
 };
 

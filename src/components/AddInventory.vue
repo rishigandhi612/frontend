@@ -42,14 +42,14 @@
                 </v-col>
                 
                 <!-- Roll ID (Required) -->
-                <v-col cols="12" sm="6">
+                <!-- <v-col cols="12" sm="6">
                   <v-text-field
                     v-model="form.rollId"
                     label="Roll ID"
                     :rules="[v => !!v || 'Roll ID is required']"
                     placeholder="Enter unique roll identifier"
                   ></v-text-field>
-                </v-col>
+                </v-col> -->
                 
                 <!-- Net Weight (Required) -->
                 <v-col cols="12" sm="6">
@@ -195,7 +195,7 @@ export default {
         width: null,
         netWeight: null,
         grossWeight: null,
-        rollId: '',
+    //    rollId: '',
         micron: null,
         mtr: null,
         type: 'film',
@@ -266,7 +266,7 @@ export default {
           width: inventoryItem.width,
           netWeight: inventoryItem.netWeight,
           grossWeight: inventoryItem.grossWeight,
-          rollId: inventoryItem.rollId,
+          // rollId: inventoryItem.rollId,
           micron: inventoryItem.micron,
           mtr: inventoryItem.mtr,
           type: inventoryItem.type || 'film',
@@ -307,7 +307,7 @@ export default {
           width: this.form.width || null,
           netWeight: Number(this.form.netWeight),
           grossWeight: this.form.grossWeight ? Number(this.form.grossWeight) : null,
-          rollId: this.form.rollId ,
+          // rollId: this.form.rollId ,
           micron: this.form.micron || null,
           mtr: this.form.mtr || null,
           type: this.form.type,
@@ -330,7 +330,7 @@ export default {
             width: null,
             netWeight: null,
             grossWeight: null,
-            rollId: '',
+       //     rollId: '',
             micron: null,
             mtr: null,
             type: 'film',

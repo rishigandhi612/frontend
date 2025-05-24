@@ -2,16 +2,16 @@
   <v-container>
     <h1 class="text-center my-4">User Dashboard</h1>
 
-    <!-- Show loader if data is loading -->
+    <!-- Loading Spinner -->
     <v-row
       v-if="loading"
       class="d-flex justify-center align-center"
       style="height: 80vh"
     >
-      <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
+      <v-progress-circular indeterminate color="primary" size="50" />
     </v-row>
 
-    <!-- Show dashboard stats -->
+    <!-- Dashboard Stats Cards -->
     <v-row v-else>
       <v-col
         v-for="(value, key) in dashboardStats"
@@ -31,7 +31,10 @@
           hover
         >
           <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2" :color="config[key]?.iconColor || 'white'">
+            <v-icon
+              class="mr-2"
+              :color="config[key]?.iconColor || 'white'"
+            >
               {{ config[key]?.icon || 'mdi-help-circle-outline' }}
             </v-icon>
             {{ config[key]?.title || formatTitle(key) }}
@@ -55,21 +58,23 @@
       </v-col>
     </v-row>
 
-    <!-- Show fallback message for no data -->
-    <div
-      v-if="
-        !loading &&
-        Object.keys(dashboardStats).length &&
-        Object.values(dashboardStats).every((value) => value === 0)
-      "
+    <!-- No Data Message -->
+    <v-alert
+      v-if="!loading && hasNoData"
+      type="error"
+      border="left"
+      colored-border
     >
-      <v-alert type="error" border="left" colored-border>
-        No data available.
-      </v-alert>
-    </div>
+      No data available.
+    </v-alert>
 
-    <!-- Show error message -->
-    <v-alert v-if="error" type="error" border="left" colored-border>
+    <!-- Error Message -->
+    <v-alert
+      v-if="error"
+      type="error"
+      border="left"
+      colored-border
+    >
       Error loading dashboard stats: {{ error }}. Please try again later.
     </v-alert>
   </v-container>
@@ -81,8 +86,8 @@ import { mapGetters } from "vuex";
 export default {
   data() {
     return {
-      loading: true, // Loading state
-      error: null, // Error state
+      loading: true,
+      error: null,
       config: {
         totalCustProd: {
           title: "Total Invoices",
@@ -129,21 +134,25 @@ export default {
   },
   computed: {
     ...mapGetters("dashboard", ["dashboardStats"]),
+    hasNoData() {
+      return (
+        Object.keys(this.dashboardStats).length &&
+        Object.values(this.dashboardStats).every((val) => val === 0)
+      );
+    },
   },
   created() {
     this.fetchStats();
   },
   methods: {
-    fetchStats() {
-      this.$store
-        .dispatch("dashboard/fetchDashboardStats")
-        .then(() => {
-          this.loading = false;
-        })
-        .catch((error) => {
-          this.loading = false;
-          this.error = error.message || "Unable to fetch stats";
-        });
+    async fetchStats() {
+      try {
+        await this.$store.dispatch("dashboard/fetchDashboardStats");
+      } catch (error) {
+        this.error = error.message || "Unable to fetch stats";
+      } finally {
+        this.loading = false;
+      }
     },
     formatTitle(key) {
       return key
@@ -151,21 +160,19 @@ export default {
         .replace(/^./, (str) => str.toUpperCase());
     },
     handleAction(key) {
-  const route = this.config[key]?.route;
-  if (route) {
-    if (this.$route.path !== route) {
-      this.$router.push(route).catch((err) => {
-        if (err.name !== 'NavigationDuplicated') {
-          console.error(`Navigation error: ${err.message}`);
+      const route = this.config[key]?.route;
+      if (route) {
+        if (this.$route.path !== route) {
+          this.$router.push(route).catch((err) => {
+            if (err.name !== "NavigationDuplicated") {
+              console.error(`Navigation error: ${err.message}`);
+            }
+          });
         }
-      });
-    } else {
-      console.log(`Already on route: ${route}`);
-    }
-  } else {
-    console.warn(`No route defined for key: ${key}`);
-  }
-},
+      } else {
+        console.warn(`No route defined for key: ${key}`);
+      }
+    },
   },
 };
 </script>
@@ -174,7 +181,6 @@ export default {
 .v-card {
   transition: transform 0.3s ease;
 }
-
 .v-card:hover {
   transform: translateY(-5px);
 }
@@ -182,12 +188,7 @@ export default {
 .v-btn {
   transition: background-color 0.2s ease;
 }
-
 .v-btn:hover {
   background-color: #3f51b5 !important;
-}
-
-.v-row {
-  justify-content: center;
 }
 </style>

@@ -153,7 +153,7 @@ export default {
       }
     },
     editInventory() {
-      this.$router.push(`/inventory/edit/${this.inventoryItem._id}`);
+      this.$router.push(`/addinventory/${this.inventoryItem.id}`);    
     },
     async deleteInventory() {
       try {
