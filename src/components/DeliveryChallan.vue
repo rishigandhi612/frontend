@@ -357,17 +357,27 @@ export default {
       Object.entries(group.widths).forEach(([width, data]) => {
         if (data.hasZeroWidth) {
           // For zero width items, only show quantity without width column
-          for (let i = 0; i < data.rolls.length; i++) {
-            tableData.push([
-              { content: `${data.rolls[i].quantity} Kgs`, colSpan: 2, styles: { halign: "center", fillColor: null } }
-            ]);
-          }
+     for (let i = 0; i < data.rolls.length; i++) {
+  const isSingleRoll = data.rolls.length === 1;
+  const cellStyle = {
+    halign: "center",
+    fillColor: null,
+    ...(isSingleRoll ? { fontStyle: "bold", textColor: [0, 0, 0] } : {})
+  };
+
+  tableData.push([
+    { content: `${data.rolls[i].quantity} Kgs`, colSpan: 2, styles: cellStyle }
+  ]);
+}
+
+
           
           // Add width subtotal with proper singular/plural
           if (data.rolls.length > 1) {
-            const rollText = data.rolls.length === 1 ? 'roll' : 'rolls';
+            // const rollText = data.rolls.length === 1 ? 'roll' : 'rolls';
+         
             tableData.push([
-              { content: `Total (${data.rolls.length} ${rollText})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `Total (${data.rolls.length})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
               { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
             ]);
           }
