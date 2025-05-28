@@ -2,13 +2,16 @@
   <v-app>
     <v-row v-if="loading">
       <v-col class="d-flex justify-center align-center">
-        <v-progress-circular indeterminate color="primary"></v-progress-circular>
+        <v-progress-circular
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
       </v-col>
     </v-row>
 
     <v-row v-if="!loading">
       <!-- Left Column -->
-       <v-col md="2" cols="12">
+      <v-col md="2" cols="12">
         <v-btn @click="goBack" block>
           <v-icon left>mdi-arrow-left</v-icon> Back
         </v-btn>
@@ -35,7 +38,9 @@
                       <h2>Roll ID : {{ inventoryItem.rollId || "N/A" }}</h2>
                     </v-col>
                     <v-col cols="12" md="4" class="d-flex justify-end">
-                      <h3>Product ID : {{ inventoryItem.productId || "N/A" }}</h3>
+                      <h3>
+                        Product ID : {{ inventoryItem.productId || "N/A" }}
+                      </h3>
                     </v-col>
                   </v-row>
                 </v-card-subtitle>
@@ -43,11 +48,20 @@
                 <!-- Attributes Grid -->
                 <v-card-text>
                   <v-row>
-                    <v-col cols="12" sm="6" v-for="(value, label) in itemDetails" :key="label">
+                    <v-col
+                      cols="12"
+                      sm="6"
+                      v-for="(value, label) in itemDetails"
+                      :key="label"
+                    >
                       <v-list-item>
                         <v-list-item-content>
-                          <v-list-item-subtitle>{{ label }}</v-list-item-subtitle>
-                          <v-list-item-title class="font-weight-bold">{{ value }}</v-list-item-title>
+                          <v-list-item-subtitle>{{
+                            label
+                          }}</v-list-item-subtitle>
+                          <v-list-item-title class="font-weight-bold">{{
+                            value
+                          }}</v-list-item-title>
                         </v-list-item-content>
                       </v-list-item>
                     </v-col>
@@ -58,7 +72,9 @@
           </v-row>
 
           <v-row v-if="!inventoryItem" class="d-flex justify-center">
-            <v-alert type="info">Inventory item details are unavailable.</v-alert>
+            <v-alert type="info"
+              >Inventory item details are unavailable.</v-alert
+            >
           </v-row>
         </v-container>
       </v-col>
@@ -69,6 +85,13 @@
           <v-col cols="12">
             <v-btn color="primary" @click="editInventory" block>
               <v-icon left>mdi-pencil</v-icon> Update Item
+            </v-btn>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col cols="12">
+            <v-btn color="success" @click="showSticker = true" block>
+              <v-icon left>mdi-printer</v-icon> Print Sticker
             </v-btn>
           </v-col>
         </v-row>
@@ -95,14 +118,38 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Sticker Dialog -->
+    <v-dialog v-model="showSticker" max-width="800">
+      <v-card>
+        <v-card-title class="text-h5">Inventory Sticker Preview</v-card-title>
+        <v-card-text>
+          <InventorySticker
+            v-if="inventoryItem && showSticker"
+            :inventoryItem="inventoryItem"
+            :productName="productName"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="grey" text @click="showSticker = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
 <script>
+import InventorySticker from "./InventorySticker.vue";
+
 export default {
+  components: {
+    InventorySticker,
+  },
+  props: {},
   data() {
     return {
       confirmDelete: false,
+      showSticker: false,
       loading: false,
       inventoryItem: null,
       products: [],
@@ -126,32 +173,44 @@ export default {
       if (!this.inventoryItem || !this.inventoryItem.productId) {
         return "Unknown Product";
       }
-      
+
       // Try multiple ways to access products from store
       let allProducts = [];
-      
+
       // Try different possible store structures
-      if (this.$store.getters['products/getAllProducts']) {
-        allProducts = this.$store.getters['products/getAllProducts'];
-      } else if (this.$store.state.products && this.$store.state.products.products) {
+      if (this.$store.getters["products/getAllProducts"]) {
+        allProducts = this.$store.getters["products/getAllProducts"];
+      } else if (
+        this.$store.state.products &&
+        this.$store.state.products.products
+      ) {
         allProducts = this.$store.state.products.products;
-      } else if (this.$store.state.products && this.$store.state.products.data) {
+      } else if (
+        this.$store.state.products &&
+        this.$store.state.products.data
+      ) {
         allProducts = this.$store.state.products.data;
-      } else if (this.$store.state.products && Array.isArray(this.$store.state.products)) {
+      } else if (
+        this.$store.state.products &&
+        Array.isArray(this.$store.state.products)
+      ) {
         allProducts = this.$store.state.products;
       } else if (this.products && Array.isArray(this.products)) {
         allProducts = this.products;
       }
-    
-      const product = allProducts.find((p) => p._id === this.inventoryItem.productId);      
-      const productName = product ? product.name : `Unknown Product (ID: ${this.inventoryItem.productId})`;
+
+      const product = allProducts.find(
+        (p) => p._id === this.inventoryItem.productId
+      );
+      const productName = product
+        ? product.name
+        : `Unknown Product (ID: ${this.inventoryItem.productId})`;
       return String(productName);
-    }
+    },
   },
   methods: {
     capitalizeFirstLetter(text) {
-      if (!text || typeof text !== 'string') return "";
-      return text.charAt(0).toUpperCase() + text.slice(1);
+      return text?.charAt(0).toUpperCase() + text?.slice(1) || "";
     },
     formatDate(dateString) {
       if (!dateString) return "N/A";
@@ -165,7 +224,10 @@ export default {
       try {
         this.loading = true;
         const id = this.$route.params.id;
-        const response = await this.$store.dispatch("inventory/fetchInventoryDetail", id);
+        const response = await this.$store.dispatch(
+          "inventory/fetchInventoryDetail",
+          id
+        );
         this.inventoryItem = response;
       } catch (err) {
         this.error = "Failed to load inventory item.";
@@ -176,7 +238,7 @@ export default {
     },
     async fetchProducts() {
       try {
-        const response = await this.$store.dispatch("products/fetchProducts");        
+        const response = await this.$store.dispatch("products/fetchProducts");
         // Store products in local data as fallback
         if (response && response.data && Array.isArray(response.data)) {
           this.products = response.data;
@@ -185,7 +247,10 @@ export default {
         } else {
           // Try to get from store state after dispatch
           if (this.$store.state.products) {
-            this.products = this.$store.state.products.data || this.$store.state.products.products || this.$store.state.products;
+            this.products =
+              this.$store.state.products.data ||
+              this.$store.state.products.products ||
+              this.$store.state.products;
           }
         }
       } catch (error) {
@@ -202,7 +267,10 @@ export default {
     },
     async deleteInventory() {
       try {
-        await this.$store.dispatch("inventory/deleteInventory", this.inventoryItem._id);
+        await this.$store.dispatch(
+          "inventory/deleteInventory",
+          this.inventoryItem._id
+        );
         this.$router.push("/inventory");
       } catch (err) {
         this.error = "Failed to delete inventory item.";
@@ -217,10 +285,7 @@ export default {
   },
   async mounted() {
     this.loading = true;
-    await Promise.all([
-      this.fetchInventoryItem(),
-      this.fetchProducts()
-    ]);
+    await Promise.all([this.fetchInventoryItem(), this.fetchProducts()]);
     this.loading = false;
   },
 };
