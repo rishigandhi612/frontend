@@ -4,23 +4,22 @@
       <div class="product-name-header">
         <h1 class="product-name">
           {{
-            capitalizeFirstLetter(inventoryItem.product_name) || "Product Name"
+            capitalizeFirstLetter(productName) || "Product Name"
           }}
         </h1>
       </div>
 
-      <div class="info-row">Roll No: {{ inventoryItem.rollId || "N/A" }}</div>
+      <div class="info-row">Roll No: <strong>{{ inventoryItem.rollId || "N/A" }} </strong></div>
       <div class="info-row">
-        Thickness: {{ inventoryItem.micron || "N/A" }} micron
+        Thickness:  <strong>{{ inventoryItem.micron || "N/A" }}</strong> µm
       </div>
-      <div class="info-row">Size: {{ displaySizeInInches() }}</div>
+      <div class="info-row">Size: <strong>{{ displaySizeInInches() }} </strong></div>
       <div class="info-row">Size: {{ displaySizeInMm() }}</div>
-      <div class="info-row">
-        Gross Weight: {{ inventoryItem.grossWeight || "N/A" }} kg
+      <div class="info-row">Gross Weight: {{ inventoryItem.grossWeight || "N/A" }} kg
       </div>
       <div class="info-row">Core Weight: {{ calculateCoreWeight() }} kg</div>
       <div class="info-row">
-        Net Weight: {{ inventoryItem.netWeight || "N/A" }} kg
+       Net Weight:  <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg
       </div>
 
       <div class="barcode-section">
@@ -41,7 +40,7 @@
          <p class="address">Marketed By:</p>
         <h2 class="company-name">HEMANT TRADERS</h2>
         <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
-        <p class="contact-web">Contact: (+91) 9422080922 / 9420699675 <br> Web: hemanttraders.vercel.app</p>
+        <p class="contact-web">Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br> Web: hemanttraders.vercel.app</p>
         <div class="separator-line"></div>
         <h2 class="product-line1">Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong> </h2>
         <h2 class="product-line2"><strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong></h2>
@@ -64,6 +63,7 @@ export default {
   name: "InventorySticker",
   props: {
     inventoryItem: Object,
+     productName: String,
   },
   data() {
     return {
@@ -101,7 +101,7 @@ export default {
         JsBarcode(this.$refs.barcodeCanvas, this.inventoryItem.rollId, {
           format: "CODE128",
           displayValue: true,
-          fontSize: 14,
+          fontSize: 18,
           height: 50,
         });
         
@@ -141,7 +141,7 @@ export default {
   if (canvas && barcodeImageData) {
     const img = document.createElement('img');
     img.src = barcodeImageData;
-    img.style.cssText = 'max-width: 200px; height: 50px;';
+    img.style.cssText = 'max-width: 300px; height: 75px;';
     img.alt = 'Barcode';
     canvas.parentNode.replaceChild(img, canvas);
   }
@@ -210,8 +210,8 @@ export default {
           text-align: center;
         }
         .barcode-section img {
-          max-width: 300px;
-          height: 200px;
+          max-width: 200px;
+          height: 50px;
         }
         .footer {
           text-align: center;
@@ -326,7 +326,7 @@ export default {
 .barcode-canvas,
 .barcode-image {
   max-width: 200px;
-  height: 50px;
+  height: 100px;
 }
 
 .footer {
