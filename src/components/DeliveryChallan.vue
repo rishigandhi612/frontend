@@ -392,9 +392,9 @@ export default {
           
           // Add width subtotal with proper singular/plural
           if (data.rolls.length > 1) {
-            const rollText = data.rolls.length === 1 ? 'roll' : 'rolls';
+            // const rollText = data.rolls.length === 1 ? 'roll' : 'rolls';
             tableData.push([
-              { content: `Total ${width} (${data.rolls.length} ${rollText})`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
+              { content: `Total ${width} (${data.rolls.length} )`, styles: { halign: 'center', fontStyle: 'bold', textColor: [0, 0, 0], fillColor: null } },
               { content: `${data.total.toFixed(3)} Kgs`, styles: { halign: "center", fontStyle: "bold", textColor: [0, 0, 0], fillColor: null } }
             ]);
           }

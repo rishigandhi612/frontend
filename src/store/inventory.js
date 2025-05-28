@@ -1,4 +1,4 @@
-import apiClient from './apiClient'; // Import the Axios instance
+import apiClient from "./apiClient"; // Import the Axios instance
 
 const state = {
   inventory: [],
@@ -20,171 +20,183 @@ const getters = {
 
 const actions = {
   async fetchInventory({ commit }, params = {}) {
-    commit('SET_LOADING', true);
-    commit('CLEAR_ERROR');
-    
+    commit("SET_LOADING", true);
+    commit("CLEAR_ERROR");
+
     try {
       // Build query parameters for server-side pagination, sorting, and searching
       const queryParams = new URLSearchParams();
-      
+
       // Pagination and sorting
       const page = params.page || 1;
       const limit = params.limit || 10;
-      const sortBy = params.sortBy || 'createdAt';
-      const sortOrder = params.sortOrder || 'desc';
-      
-      queryParams.append('page', page);
-      queryParams.append('limit', limit);
-      queryParams.append('sortBy', sortBy);
-      queryParams.append('sortOrder', sortOrder);
-      
+      const sortBy = params.sortBy || "createdAt";
+      const sortOrder = params.sortOrder || "desc";
+
+      queryParams.append("page", page);
+      queryParams.append("limit", limit);
+      queryParams.append("sortBy", sortBy);
+      queryParams.append("sortOrder", sortOrder);
+
       // General search
       if (params.search && params.search.trim()) {
-        queryParams.append('search', params.search.trim());
+        queryParams.append("search", params.search.trim());
       }
-      
+
       // Specific filters
-      if (params.status) queryParams.append('status', params.status);
-      if (params.type) queryParams.append('type', params.type);
-      if (params.rollId) queryParams.append('rollId', params.rollId);
-      if (params.productId) queryParams.append('productId', params.productId);
-      
+      if (params.status) queryParams.append("status", params.status);
+      if (params.type) queryParams.append("type", params.type);
+      if (params.rollId) queryParams.append("rollId", params.rollId);
+      if (params.productId) queryParams.append("productId", params.productId);
+
       // Range filters
-      if (params.minWeight) queryParams.append('minWeight', params.minWeight);
-      if (params.maxWeight) queryParams.append('maxWeight', params.maxWeight);
-      if (params.minWidth) queryParams.append('minWidth', params.minWidth);
-      if (params.maxWidth) queryParams.append('maxWidth', params.maxWidth);
-      
+      if (params.minWeight) queryParams.append("minWeight", params.minWeight);
+      if (params.maxWeight) queryParams.append("maxWeight", params.maxWeight);
+      if (params.minWidth) queryParams.append("minWidth", params.minWidth);
+      if (params.maxWidth) queryParams.append("maxWidth", params.maxWidth);
+
       const queryString = queryParams.toString();
       const url = `/inventory?${queryString}`;
-      
-      console.log('Fetching inventory with URL:', url);
-      
+
+      console.log("Fetching inventory with URL:", url);
+
       const response = await apiClient.get(url);
-      console.log('API Response:', response.data);
-      
+      console.log("API Response:", response.data);
+
       if (response.data.success) {
         const inventoryData = response.data.data || [];
         const totalCount = response.data.total || 0;
-        
-        commit('SET_INVENTORY', inventoryData);
-        commit('SET_TOTAL_COUNT', totalCount);
-        
+
+        commit("SET_INVENTORY", inventoryData);
+        commit("SET_TOTAL_COUNT", totalCount);
+
         return {
           data: inventoryData,
           total: totalCount,
           pagination: response.data.pagination,
-          searchInfo: response.data.searchInfo
+          searchInfo: response.data.searchInfo,
         };
       } else {
-        throw new Error('API returned success: false');
+        throw new Error("API returned success: false");
       }
-      
     } catch (error) {
       console.error("Error fetching inventory:", error);
-      
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          error.message || 
-                          'Error fetching inventory.';
-      
-      commit('SET_ERROR', errorMessage);
-      commit('SET_INVENTORY', []);
-      commit('SET_TOTAL_COUNT', 0);
-      
+
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Error fetching inventory.";
+
+      commit("SET_ERROR", errorMessage);
+      commit("SET_INVENTORY", []);
+      commit("SET_TOTAL_COUNT", 0);
+
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit("SET_LOADING", false);
     }
   },
 
   // New action for advanced search
   async searchInventory({ dispatch }, searchParams) {
-    return dispatch('fetchInventory', {
+    return dispatch("fetchInventory", {
       page: 1, // Reset to first page for new search
-      ...searchParams
+      ...searchParams,
     });
   },
 
   // New action for filtering by specific field
-  async filterInventory({ dispatch }, { field, value, preserveOtherParams = {} }) {
+  async filterInventory(
+    { dispatch },
+    { field, value, preserveOtherParams = {} }
+  ) {
     const params = {
       page: 1, // Reset to first page for new filter
       ...preserveOtherParams,
-      [field]: value
+      [field]: value,
     };
-    
-    return dispatch('fetchInventory', params);
+
+    return dispatch("fetchInventory", params);
   },
 
   // Clear all filters and search
   async clearFilters({ dispatch }) {
-    return dispatch('fetchInventory', {
+    return dispatch("fetchInventory", {
       page: 1,
       limit: 10,
-      sortBy: 'createdAt',
-      sortOrder: 'desc'
+      sortBy: "createdAt",
+      sortOrder: "desc",
     });
   },
 
   // Existing actions remain the same...
   async fetchInventoryDetail({ commit }, inventoryId) {
-    commit('SET_LOADING', true);
+    commit("SET_LOADING", true);
     try {
       const response = await apiClient.get(`/inventory/${inventoryId}`);
       if (response.data.success) {
-        commit('SET_INVENTORY_DETAIL', response.data.data);
+        commit("SET_INVENTORY_DETAIL", response.data.data);
         return response.data.data; // Return data for direct use
       } else {
-        throw new Error('Failed to fetch inventory details');
+        throw new Error("Failed to fetch inventory details");
       }
     } catch (error) {
-      console.error('Error fetching inventory detail:', error);
-      commit('SET_ERROR', 'Failed to fetch inventory details.');
+      console.error("Error fetching inventory detail:", error);
+      commit("SET_ERROR", "Failed to fetch inventory details.");
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit("SET_LOADING", false);
     }
   },
 
   async saveInventory({ commit }, { inventoryId, inventoryData }) {
-    commit('SET_LOADING', true);
+    commit("SET_LOADING", true);
     try {
       let response;
       if (inventoryId) {
-        response = await apiClient.put(`/inventory/${inventoryId}`, inventoryData);
-        commit('UPDATE_INVENTORY', response.data.data);
+        response = await apiClient.put(
+          `/inventory/${inventoryId}`,
+          inventoryData
+        );
+        commit("UPDATE_INVENTORY", response.data.data);
       } else {
-        response = await apiClient.post('/inventory', inventoryData);
-        commit('ADD_INVENTORY', response.data.data);
+        response = await apiClient.post("/inventory", inventoryData);
+        commit("ADD_INVENTORY", response.data.data);
       }
       return response.data.data; // Return the updated/created inventory item
     } catch (error) {
-      console.error(`Error ${inventoryId ? 'updating' : 'creating'} inventory:`, error);
-      commit('SET_ERROR', `Error ${inventoryId ? 'updating' : 'creating'} inventory.`);
+      console.error(
+        `Error ${inventoryId ? "updating" : "creating"} inventory:`,
+        error
+      );
+      commit(
+        "SET_ERROR",
+        `Error ${inventoryId ? "updating" : "creating"} inventory.`
+      );
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit("SET_LOADING", false);
     }
   },
 
   async deleteInventory({ commit }, inventoryId) {
-    commit('SET_LOADING', true);
+    commit("SET_LOADING", true);
     try {
       await apiClient.delete(`/inventory/${inventoryId}`);
-      commit('REMOVE_INVENTORY_FROM_LIST', inventoryId);
+      commit("REMOVE_INVENTORY_FROM_LIST", inventoryId);
     } catch (error) {
       console.error("Error deleting inventory item:", error);
-      commit('SET_ERROR', 'Error deleting inventory item.');
+      commit("SET_ERROR", "Error deleting inventory item.");
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit("SET_LOADING", false);
     }
   },
 
   // Action to refresh current page
   async refreshInventory({ dispatch }, currentOptions) {
-    return dispatch('fetchInventory', currentOptions);
+    return dispatch("fetchInventory", currentOptions);
   },
 };
 
@@ -203,7 +215,9 @@ const mutations = {
     state.totalCount += 1;
   },
   UPDATE_INVENTORY(state, updatedInventory) {
-    const index = state.inventory.findIndex((item) => item.id === updatedInventory.id);
+    const index = state.inventory.findIndex(
+      (item) => item.id === updatedInventory.id
+    );
     if (index !== -1) {
       state.inventory.splice(index, 1, updatedInventory);
     }

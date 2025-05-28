@@ -4,7 +4,11 @@
       <!-- Dialog Header -->
       <div class="dialog-header">
         <h3 class="dialog-title">{{ title }}</h3>
-        <button @click="closeDialog" class="close-button" aria-label="Close dialog">
+        <button
+          @click="closeDialog"
+          class="close-button"
+          aria-label="Close dialog"
+        >
           <span>&times;</span>
         </button>
       </div>
@@ -18,21 +22,24 @@
               <!-- General Search -->
               <div class="search-field">
                 <label>General Search:</label>
-                <input 
-                  v-model="searchParams.search" 
+                <input
+                  v-model="searchParams.search"
                   @input="debouncedSearch"
                   placeholder="Search rollId, productId, status, or numeric values..."
                   class="search-input"
                 />
                 <small class="search-hint">
-                  Try: "M1234", "available", "100-200", ">50", 
+                  Try: "M1234", "available", "100-200", ">50",
                 </small>
               </div>
 
               <!-- Quick Filters -->
               <div class="search-field">
                 <label>Status:</label>
-                <select v-model="searchParams.status" @change="handleFilterChange">
+                <select
+                  v-model="searchParams.status"
+                  @change="handleFilterChange"
+                >
                   <option value="">All Statuses</option>
                   <option value="available">Available</option>
                   <option value="reserved">Reserved</option>
@@ -42,7 +49,10 @@
 
               <div class="search-field">
                 <label>Type:</label>
-                <select v-model="searchParams.type" @change="handleFilterChange">
+                <select
+                  v-model="searchParams.type"
+                  @change="handleFilterChange"
+                >
                   <option value="">All Types</option>
                   <option value="film">Film</option>
                   <option value="non-film">Non-Film</option>
@@ -54,8 +64,8 @@
               <!-- Specific Field Searches -->
               <div class="search-field">
                 <label>Roll ID:</label>
-                <input 
-                  v-model="searchParams.rollId" 
+                <input
+                  v-model="searchParams.rollId"
                   @input="debouncedSearch"
                   placeholder="e.g., M1234"
                 />
@@ -63,8 +73,8 @@
 
               <div class="search-field">
                 <label>Product ID:</label>
-                <input 
-                  v-model="searchParams.productId" 
+                <input
+                  v-model="searchParams.productId"
                   @input="debouncedSearch"
                   placeholder="Product ID"
                 />
@@ -76,19 +86,19 @@
               <div class="search-field">
                 <label>Weight Range:</label>
                 <div class="range-inputs">
-                  <input 
-                    v-model="searchParams.minWeight" 
+                  <input
+                    v-model="searchParams.minWeight"
                     @input="debouncedSearch"
-                    type="number" 
-                    placeholder="Min" 
+                    type="number"
+                    placeholder="Min"
                     step="0.01"
                   />
                   <span>to</span>
-                  <input 
-                    v-model="searchParams.maxWeight" 
+                  <input
+                    v-model="searchParams.maxWeight"
                     @input="debouncedSearch"
-                    type="number" 
-                    placeholder="Max" 
+                    type="number"
+                    placeholder="Max"
                     step="0.01"
                   />
                 </div>
@@ -97,19 +107,19 @@
               <div class="search-field">
                 <label>Width Range:</label>
                 <div class="range-inputs">
-                  <input 
-                    v-model="searchParams.minWidth" 
+                  <input
+                    v-model="searchParams.minWidth"
                     @input="debouncedSearch"
-                    type="number" 
-                    placeholder="Min" 
+                    type="number"
+                    placeholder="Min"
                     step="0.01"
                   />
                   <span>to</span>
-                  <input 
-                    v-model="searchParams.maxWidth" 
+                  <input
+                    v-model="searchParams.maxWidth"
                     @input="debouncedSearch"
-                    type="number" 
-                    placeholder="Max" 
+                    type="number"
+                    placeholder="Max"
                     step="0.01"
                   />
                 </div>
@@ -118,8 +128,12 @@
 
             <!-- Action Buttons -->
             <div class="search-actions">
-              <button @click="handleSearch" :disabled="isLoading" class="search-btn">
-                {{ isLoading ? 'Searching...' : 'Search' }}
+              <button
+                @click="handleSearch"
+                :disabled="isLoading"
+                class="search-btn"
+              >
+                {{ isLoading ? "Searching..." : "Search" }}
               </button>
               <button @click="clearAllFilters" class="clear-btn">
                 Clear All
@@ -131,7 +145,9 @@
           <div class="search-info" v-if="searchResults">
             <p>
               Found {{ getTotalCount }} items
-              <span v-if="searchParams.search">(searching for "{{ searchParams.search }}")</span>
+              <span v-if="searchParams.search"
+                >(searching for "{{ searchParams.search }}")</span
+              >
             </p>
           </div>
 
@@ -155,7 +171,11 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in allInventory" :key="item.id" class="table-row">
+                  <tr
+                    v-for="item in allInventory"
+                    :key="item.id"
+                    class="table-row"
+                  >
                     <td>{{ item.rollId }}</td>
                     <td>{{ item.productId }}</td>
                     <td>
@@ -177,8 +197,8 @@
 
             <!-- Pagination (simplified for dialog) -->
             <div class="dialog-pagination" v-if="totalPages > 1">
-              <button 
-                @click="handlePageChange(currentPage - 1)" 
+              <button
+                @click="handlePageChange(currentPage - 1)"
                 :disabled="currentPage <= 1"
                 class="pagination-btn"
               >
@@ -187,8 +207,8 @@
               <span class="page-info">
                 Page {{ currentPage }} of {{ totalPages }}
               </span>
-              <button 
-                @click="handlePageChange(currentPage + 1)" 
+              <button
+                @click="handlePageChange(currentPage + 1)"
                 :disabled="currentPage >= totalPages"
                 class="pagination-btn"
               >
@@ -204,9 +224,9 @@
         <button @click="closeDialog" class="cancel-btn">
           {{ cancelText }}
         </button>
-        <button 
-          v-if="confirmText" 
-          @click="confirmAction" 
+        <button
+          v-if="confirmText"
+          @click="confirmAction"
           :disabled="isLoading"
           class="confirm-btn"
         >
@@ -218,85 +238,85 @@
 </template>
 
 <script>
-import { mapGetters, mapActions } from 'vuex';
-import { debounce } from 'lodash';
+import { mapGetters, mapActions } from "vuex";
+import { debounce } from "lodash";
 
 export default {
-  name: 'InventorySearchDialog',
-  
+  name: "InventorySearchDialog",
+
   props: {
     isVisible: {
       type: Boolean,
-      default: false
+      default: false,
     },
     title: {
       type: String,
-      default: 'Search Inventory'
+      default: "Search Inventory",
     },
     confirmText: {
       type: String,
-      default: ''
+      default: "",
     },
     cancelText: {
       type: String,
-      default: 'Close'
+      default: "Close",
     },
     showResults: {
       type: Boolean,
-      default: true
+      default: true,
     },
     closeOnOverlay: {
       type: Boolean,
-      default: true
+      default: true,
     },
     maxHeight: {
       type: String,
-      default: '80vh'
-    }
+      default: "80vh",
+    },
   },
 
   data() {
     return {
       searchParams: {
-        search: '',
-        status: '',
-        type: '',
-        rollId: '',
-        productId: '',
-        minWeight: '',
-        maxWeight: '',
-        minWidth: '',
-        maxWidth: '',
+        search: "",
+        status: "",
+        type: "",
+        rollId: "",
+        productId: "",
+        minWeight: "",
+        maxWeight: "",
+        minWidth: "",
+        maxWidth: "",
         page: 1,
         limit: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortBy: "createdAt",
+        sortOrder: "desc",
       },
       searchResults: null,
       currentPage: 1,
-      totalPages: 1
+      totalPages: 1,
     };
   },
-  
+
   computed: {
-    ...mapGetters('inventory', [
-      'allInventory', 
-      'isLoading', 
-      'getTotalCount', 
-      'getError'
-    ])
+    ...mapGetters("inventory", [
+      "allInventory",
+      "isLoading",
+      "getTotalCount",
+      "getError",
+    ]),
   },
-  
+
   methods: {
-    ...mapActions('inventory', [
-      'fetchInventory', 
-      'searchInventory', 
-      'filterInventory',
-      'clearFilters'
+    ...mapActions("inventory", [
+      "fetchInventory",
+      "searchInventory",
+      "filterInventory",
+      "clearFilters",
     ]),
 
     // Debounced search for real-time search as user types
-    debouncedSearch: debounce(function() {
+    debouncedSearch: debounce(function () {
       this.handleSearch();
     }, 500),
 
@@ -304,15 +324,15 @@ export default {
       try {
         this.searchParams.page = 1;
         this.currentPage = 1;
-        
+
         const result = await this.searchInventory(this.searchParams);
         this.searchResults = result;
-        
+
         if (result.pagination) {
           this.totalPages = result.pagination.totalPages;
         }
       } catch (error) {
-        console.error('Search failed:', error);
+        console.error("Search failed:", error);
       }
     },
 
@@ -321,7 +341,11 @@ export default {
     },
 
     async handleSort(field) {
-      const newOrder = this.searchParams.sortBy === field && this.searchParams.sortOrder === 'asc' ? 'desc' : 'asc';
+      const newOrder =
+        this.searchParams.sortBy === field &&
+        this.searchParams.sortOrder === "asc"
+          ? "desc"
+          : "asc";
       this.searchParams.sortBy = field;
       this.searchParams.sortOrder = newOrder;
       await this.handleSearch();
@@ -329,53 +353,53 @@ export default {
 
     async handlePageChange(page) {
       if (page < 1 || page > this.totalPages) return;
-      
+
       this.searchParams.page = page;
       this.currentPage = page;
-      
+
       try {
         const result = await this.fetchInventory(this.searchParams);
         this.searchResults = result;
       } catch (error) {
-        console.error('Page change failed:', error);
+        console.error("Page change failed:", error);
       }
     },
 
     async clearAllFilters() {
       this.searchParams = {
-        search: '',
-        status: '',
-        type: '',
-        rollId: '',
-        productId: '',
-        minWeight: '',
-        maxWeight: '',
-        minWidth: '',
-        maxWidth: '',
+        search: "",
+        status: "",
+        type: "",
+        rollId: "",
+        productId: "",
+        minWeight: "",
+        maxWeight: "",
+        minWidth: "",
+        maxWidth: "",
         page: 1,
         limit: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortBy: "createdAt",
+        sortOrder: "desc",
       };
-      
+
       this.currentPage = 1;
       await this.clearFilters();
       this.searchResults = null;
     },
 
     selectItem(item) {
-      this.$emit('item-selected', item);
+      this.$emit("item-selected", item);
       this.closeDialog();
     },
 
     closeDialog() {
-      this.$emit('close');
+      this.$emit("close");
     },
 
     confirmAction() {
-      this.$emit('confirm', {
+      this.$emit("confirm", {
         searchParams: this.searchParams,
-        searchResults: this.searchResults
+        searchResults: this.searchResults,
       });
     },
 
@@ -383,7 +407,7 @@ export default {
       if (this.closeOnOverlay) {
         this.closeDialog();
       }
-    }
+    },
   },
 
   watch: {
@@ -391,17 +415,17 @@ export default {
       if (newVal) {
         // Auto-focus first input when dialog opens
         this.$nextTick(() => {
-          const firstInput = this.$el.querySelector('input');
+          const firstInput = this.$el.querySelector("input");
           if (firstInput) firstInput.focus();
         });
-        
+
         // Load initial data if needed
         if (!this.searchResults) {
           this.handleSearch();
         }
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -505,7 +529,9 @@ export default {
   font-size: 14px;
 }
 
-.search-input, .search-field input, .search-field select {
+.search-input,
+.search-field input,
+.search-field select {
   width: 100%;
   padding: 8px;
   border: 1px solid #ddd;
@@ -536,7 +562,8 @@ export default {
   margin-top: 15px;
 }
 
-.search-btn, .clear-btn {
+.search-btn,
+.clear-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
@@ -702,7 +729,8 @@ export default {
   background: #f8f9fa;
 }
 
-.cancel-btn, .confirm-btn {
+.cancel-btn,
+.confirm-btn {
   padding: 10px 20px;
   border: none;
   border-radius: 4px;
@@ -740,20 +768,20 @@ export default {
     width: 95vw;
     max-height: 95vh;
   }
-  
+
   .search-row {
     flex-direction: column;
   }
-  
+
   .search-field {
     min-width: unset;
   }
-  
+
   .range-inputs {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .search-actions {
     flex-direction: column;
   }
