@@ -179,7 +179,7 @@ export default {
         }
         .sticker-content {
           width: 4in;
-          height: 6in;
+          height: 5.80in;
           border: 2px solid black;
           box-sizing: border-box;
           padding: 10px;
@@ -206,7 +206,7 @@ export default {
           font-size: 18px;
         }
         .barcode-section {
-          margin: 15px 0;
+          margin: 2px 0;
           text-align: center;
         }
         .barcode-section img {

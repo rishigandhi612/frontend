@@ -21,59 +21,74 @@ const getters = {
 const actions = {
   async fetchInventory({ commit }, params = {}) {
     commit('SET_LOADING', true);
+    commit('CLEAR_ERROR');
+    
     try {
-      // Build query parameters for server-side pagination and sorting
+      // Build query parameters for server-side pagination, sorting, and searching
       const queryParams = new URLSearchParams();
       
-      // Set default values if not provided
+      // Pagination and sorting
       const page = params.page || 1;
       const limit = params.limit || 10;
-      const sortBy = params.sortBy || 'rollId';
-      const sortOrder = params.sortOrder || 'asc';
+      const sortBy = params.sortBy || 'createdAt';
+      const sortOrder = params.sortOrder || 'desc';
       
       queryParams.append('page', page);
       queryParams.append('limit', limit);
       queryParams.append('sortBy', sortBy);
       queryParams.append('sortOrder', sortOrder);
       
-      // Add any additional filters if provided
-      if (params.search) queryParams.append('search', params.search);
+      // General search
+      if (params.search && params.search.trim()) {
+        queryParams.append('search', params.search.trim());
+      }
+      
+      // Specific filters
       if (params.status) queryParams.append('status', params.status);
       if (params.type) queryParams.append('type', params.type);
+      if (params.rollId) queryParams.append('rollId', params.rollId);
+      if (params.productId) queryParams.append('productId', params.productId);
       
-      // Make the API call with query parameters
+      // Range filters
+      if (params.minWeight) queryParams.append('minWeight', params.minWeight);
+      if (params.maxWeight) queryParams.append('maxWeight', params.maxWeight);
+      if (params.minWidth) queryParams.append('minWidth', params.minWidth);
+      if (params.maxWidth) queryParams.append('maxWidth', params.maxWidth);
+      
       const queryString = queryParams.toString();
       const url = `/inventory?${queryString}`;
       
+      console.log('Fetching inventory with URL:', url);
+      
       const response = await apiClient.get(url);
+      console.log('API Response:', response.data);
       
-      // Handle different response structures
-      let inventoryData = [];
-      let totalCount = 0;
-      
-      if (response.data.success && response.data.data) {
-        // If API returns success wrapper
-        inventoryData = Array.isArray(response.data.data) ? response.data.data : response.data.data.items || [];
-        totalCount = response.data.total || response.data.data.total || inventoryData.length;
-      } else if (Array.isArray(response.data)) {
-        // If API returns array directly
-        inventoryData = response.data;
-        totalCount = response.headers['x-total-count'] || inventoryData.length;
+      if (response.data.success) {
+        const inventoryData = response.data.data || [];
+        const totalCount = response.data.total || 0;
+        
+        commit('SET_INVENTORY', inventoryData);
+        commit('SET_TOTAL_COUNT', totalCount);
+        
+        return {
+          data: inventoryData,
+          total: totalCount,
+          pagination: response.data.pagination,
+          searchInfo: response.data.searchInfo
+        };
       } else {
-        // If API returns object with items array
-        inventoryData = response.data.items || response.data.data || [];
-        totalCount = response.data.total || response.data.totalCount || inventoryData.length;
+        throw new Error('API returned success: false');
       }
-      
-      // Set the inventory data and total count
-      commit('SET_INVENTORY', inventoryData);
-      commit('SET_TOTAL_COUNT', totalCount);
       
     } catch (error) {
       console.error("Error fetching inventory:", error);
-      commit('SET_ERROR', 'Error fetching inventory.');
       
-      // Set empty data on error
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          'Error fetching inventory.';
+      
+      commit('SET_ERROR', errorMessage);
       commit('SET_INVENTORY', []);
       commit('SET_TOTAL_COUNT', 0);
       
@@ -83,6 +98,36 @@ const actions = {
     }
   },
 
+  // New action for advanced search
+  async searchInventory({ dispatch }, searchParams) {
+    return dispatch('fetchInventory', {
+      page: 1, // Reset to first page for new search
+      ...searchParams
+    });
+  },
+
+  // New action for filtering by specific field
+  async filterInventory({ dispatch }, { field, value, preserveOtherParams = {} }) {
+    const params = {
+      page: 1, // Reset to first page for new filter
+      ...preserveOtherParams,
+      [field]: value
+    };
+    
+    return dispatch('fetchInventory', params);
+  },
+
+  // Clear all filters and search
+  async clearFilters({ dispatch }) {
+    return dispatch('fetchInventory', {
+      page: 1,
+      limit: 10,
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    });
+  },
+
+  // Existing actions remain the same...
   async fetchInventoryDetail({ commit }, inventoryId) {
     commit('SET_LOADING', true);
     try {
