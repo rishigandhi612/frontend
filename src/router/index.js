@@ -2,24 +2,24 @@ import Vue from 'vue';
 import Router from 'vue-router';
 
 // Import components
-import Login from '../components/LoginUser.vue';
-import UserDashboard from '../components/UserDashboard.vue';
-import CustomerList from '../components/CustomerList.vue';
-import CustomerDetail from '@/components/CustomerDetail.vue';
-import ProductList from '@/components/ProductList.vue';
-import ProductDetail from '@/components/ProductDetail.vue';
-import AddProduct from '@/components/AddProduct.vue';
-import AddInventory from '@/components/AddInventory.vue';
-import InvoiceList from '@/components/InvoiceList.vue';
-import InvoiceDetail from '@/components/InvoiceDetail.vue';
-import AddInvoice from '@/components/AddInvoice.vue';
-import UserList from '@/components/UserList.vue';
-import UserDetail from '@/components/UserDetail.vue';
-import AddUser from '@/components/AddUser.vue'
-import AddCustomer from '@/components/AddCustomer.vue'
+import Login from '../components/Users/LoginUser.vue';
+import UserDashboard from '../components/Users/UserDashboard.vue';
+import CustomerList from '../components/Customers/CustomerList.vue';
+import CustomerDetail from '@/components/Customers/CustomerDetail.vue';
+import ProductList from '@/components/Products/ProductList.vue';
+import ProductDetail from '@/components/Products/ProductDetail.vue';
+import AddProduct from '@/components/Products/AddProduct.vue';
+import AddInventory from '@/components/Inventory/AddInventory.vue';
+import InvoiceList from '@/components/Invoices/InvoiceList.vue';
+import InvoiceDetail from '@/components/Invoices/InvoiceDetail.vue';
+import AddInvoice from '@/components/Invoices/AddInvoice.vue';
+import UserList from '@/components/Users/UserList.vue';
+import UserDetail from '@/components/Users/UserDetail.vue';
+import AddUser from '@/components/Users/AddUser.vue'
+import AddCustomer from '@/components/Customers/AddCustomer.vue'
 import NotFound from '@/components/NotFound.vue';
-import InventoryList from '@/components/InventoryList.vue';
-import InventoryDetail from '@/components/InventoryDetail.vue';
+import InventoryList from '@/components/Inventory/InventoryList.vue';
+import InventoryDetail from '@/components/Inventory/InventoryDetail.vue';
 
 Vue.use(Router);
 

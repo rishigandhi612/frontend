@@ -91,7 +91,7 @@
 
 <script>
 import JsBarcode from "jsbarcode";
-import logo from "../assets/HoloLogo.png";
+import logo from "@/assets/HoloLogo.png";
 
 export default {
   name: "InventorySticker",

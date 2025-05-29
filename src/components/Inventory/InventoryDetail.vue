@@ -139,7 +139,7 @@
 </template>
 
 <script>
-import InventorySticker from "./InventorySticker.vue";
+import InventorySticker from "../Printables/InventorySticker.vue";
 
 export default {
   components: {

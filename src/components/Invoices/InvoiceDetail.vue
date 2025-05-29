@@ -189,8 +189,8 @@
 
 <script>
 import { mapState, mapActions } from "vuex";
-import InvoicePdf from "@/components/InvoicePdf.vue";
-import DeliveryChallan from "@/components/DeliveryChallan.vue";
+import InvoicePdf from "@/components/Printables/InvoicePdf.vue";
+import DeliveryChallan from "@/components/Printables/DeliveryChallan.vue";
 // import SendEmail from "./SendEmail.vue";
 
 export default {
