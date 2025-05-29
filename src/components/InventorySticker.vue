@@ -1,6 +1,10 @@
 <template>
   <div class="sticker-container">
-    <div class="sticker-content" ref="stickerContent">
+    <div
+      class="sticker-content"
+      ref="stickerContent"
+      :class="{ landscape: inventoryItem.type === 'non-film' }"
+    >
       <div class="product-name-header">
         <h1 class="product-name">
           {{ capitalizeFirstLetter(productName) || "Product Name" }}
@@ -10,12 +14,19 @@
       <div class="info-row" v-if="inventoryItem.type === 'film'">
         Roll No: <strong>{{ inventoryItem.rollId || "N/A" }} </strong>
       </div>
-      <div
+      <v-row
         class="info-row batch-number"
         v-if="inventoryItem.type === 'non-film'"
       >
-        Batch No: <strong>{{ inventoryItem.rollId || "N/A" }} </strong>
-      </div>
+        <v-col cols="6">
+          Batch No: <strong>{{ inventoryItem.rollId || "N/A" }} </strong>
+          <!-- Net Weight: <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg -->
+        </v-col>
+        <v-col cols="6">
+ Net Weight: <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg
+        </v-col>
+      </v-row>
+
       <div class="info-row" v-if="inventoryItem.type === 'film'">
         Thickness: <strong>{{ inventoryItem.micron || "N/A" }}</strong> µm
       </div>
@@ -31,7 +42,7 @@
       <div class="info-row" v-if="inventoryItem.type === 'film'">
         Core Weight: {{ calculateCoreWeight() }} kg
       </div>
-      <div class="info-row batch-number">
+      <div class="info-row" v-if="inventoryItem.type === 'film'">
         Net Weight: <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg
       </div>
 
@@ -174,7 +185,7 @@ export default {
       if (hiddenImg) hiddenImg.remove();
 
       // Create a new print window
-      const printWindow = window.open("", "_blank", "width=400,height=600");
+      const printWindow = window.open("", "_blank", "width=600,height=400");
       if (!printWindow) {
         console.error("Popup blocked. Please allow popups for this site.");
         return;
@@ -188,6 +199,8 @@ export default {
 
       // Once loaded, inject content
       printWindow.onload = () => {
+        const isLandscape = this.inventoryItem.type === "non-film";
+
         printWindow.document.head.innerHTML = `
       <meta charset="UTF-8">
       <title>Print Sticker</title>
@@ -203,8 +216,11 @@ export default {
           padding: 20px;
         }
         .sticker-content {
-          width: 4in;
-          height: 5.80in;
+          ${
+            isLandscape
+              ? "width: 5.80in; height: 4in;"
+              : "width: 4in; height: 5.80in;"
+          }
           border: 2px solid black;
           box-sizing: border-box;
           padding: 10px;
@@ -226,13 +242,13 @@ export default {
           font-weight: bold;
         }
         .batch-number{
-        border: 2px solid black;
+          border: 2px solid black;
           box-sizing: border-box;
-           margin: 20px; padding: 15px 0;
-           text-align: center;
-          font-size: 48px;
+          padding: 5px 0;
+          text-align: center;
+          font-size: ${isLandscape ? "36px" : "48px"};
           background: white;
-          }
+        }
         .info-row {
           padding: 5px 0;
           border-bottom: 1px solid black;
@@ -254,13 +270,13 @@ export default {
           font-size: 15px;
         }
         .company-name {
-          font-size: 30px;
+          font-size: ${isLandscape ? "36px" : "30px"};
           margin: 5px 0;
           font-weight: bold;
         }
         .address, .contact-web {
           margin: 3px 0;
-          font-size: 12px;
+          font-size: ${isLandscape ? "14px" : "12px"};
         }
         .separator-line {
           height: 1px;
@@ -269,7 +285,7 @@ export default {
         }
         .product-line1, .product-line2 {
           margin: 2px 0;
-          font-size: 12px;
+          font-size: ${isLandscape ? "14px" : "12px"};
         }
         .footer-logo {
           width: 60px;
@@ -278,7 +294,9 @@ export default {
         @media print {
           body { padding: 0; margin: 0; display: block; }
           .sticker-content { margin: 0; }
-          @page { size: A4; margin: 0.5in; }
+          @page { size: ${
+            isLandscape ? "landscape" : "portrait"
+          }; margin: 0.5in; }
         }
       </style>
     `;
@@ -329,6 +347,12 @@ export default {
   flex-direction: column;
 }
 
+/* Landscape orientation for non-film items */
+.sticker-content.landscape {
+  width: 6in;
+  height: 4in;
+}
+
 .product-name-header {
   background: black;
   color: white;
@@ -348,6 +372,20 @@ export default {
   padding: 5px 0;
   border-bottom: 1px solid black;
   font-size: 12px;
+}
+
+.batch-number {
+  border: 2px solid black;
+  box-sizing: border-box;
+  margin: 20px;
+  text-align: center;
+  font-size: 48px;
+  background: white;
+}
+
+/* Adjust batch number size for landscape */
+.landscape .batch-number {
+  font-size: 36px;
 }
 
 .barcode-section {
@@ -375,10 +413,21 @@ export default {
   font-weight: bold;
 }
 
+/* Larger company name for landscape */
+.landscape .company-name {
+  font-size: 18px;
+}
+
 .address,
 .contact-web {
   margin: 3px 0;
   font-size: 9px;
+}
+
+/* Larger text for landscape */
+.landscape .address,
+.landscape .contact-web {
+  font-size: 11px;
 }
 
 .separator-line {
@@ -391,6 +440,12 @@ export default {
 .product-line2 {
   margin: 2px 0;
   font-size: 8px;
+}
+
+/* Larger product lines for landscape */
+.landscape .product-line1,
+.landscape .product-line2 {
+  font-size: 10px;
 }
 
 .footer-logo {
@@ -416,6 +471,4 @@ export default {
 .print-btn.secondary {
   background: #555;
 }
-
-/* No print styles needed - we're using a separate print window */
 </style>
