@@ -41,15 +41,25 @@
                   ></v-text-field>
                 </v-col>
                 
-                <!-- Roll ID (Required) -->
-                <!-- <v-col cols="12" sm="6">
+                <!-- Type Selection -->
+                <v-col cols="12" sm="6">
+                  <v-select
+                    v-model="form.type"
+                    :items="typeOptions"
+                    label="Type"
+                    :rules="[v => !!v || 'Type is required']"
+                  ></v-select>
+                </v-col>
+                
+                <!-- Roll ID (Required for non-film) -->
+                <v-col cols="12" sm="6" v-if="form.type === 'non-film'">
                   <v-text-field
                     v-model="form.rollId"
-                    label="Roll ID"
-                    :rules="[v => !!v || 'Roll ID is required']"
-                    placeholder="Enter unique roll identifier"
+                    label="Batch Number"
+                    :rules="[v => !!v || 'Batch Number is required']"
+                    placeholder="Enter unique batch identifier"
                   ></v-text-field>
-                </v-col> -->
+                </v-col>
                 
                 <!-- Net Weight (Required) -->
                 <v-col cols="12" sm="6">
@@ -65,16 +75,6 @@
                     ]"
                     suffix="kg"
                   ></v-text-field>
-                </v-col>
-                
-                <!-- Type Selection -->
-                <v-col cols="12" sm="6">
-                  <v-select
-                    v-model="form.type"
-                    :items="typeOptions"
-                    label="Type"
-                    :rules="[v => !!v || 'Type is required']"
-                  ></v-select>
                 </v-col>
                 
                 <!-- Status -->
@@ -120,7 +120,6 @@
                     type="number"
                     step="0.01"
                     min="0"
-               
                     placeholder="Enter micron thickness"
                   ></v-text-field>
                 </v-col>
@@ -195,7 +194,7 @@ export default {
         width: null,
         netWeight: null,
         grossWeight: null,
-    //    rollId: '',
+        rollId: '',
         micron: null,
         mtr: null,
         type: 'film',
@@ -266,7 +265,7 @@ export default {
           width: inventoryItem.width,
           netWeight: inventoryItem.netWeight,
           grossWeight: inventoryItem.grossWeight,
-          // rollId: inventoryItem.rollId,
+          rollId: inventoryItem.rollId || '',
           micron: inventoryItem.micron,
           mtr: inventoryItem.mtr,
           type: inventoryItem.type || 'film',
@@ -307,7 +306,7 @@ export default {
           width: this.form.width || null,
           netWeight: Number(this.form.netWeight),
           grossWeight: this.form.grossWeight ? Number(this.form.grossWeight) : null,
-          // rollId: this.form.rollId ,
+          rollId: this.form.rollId || null,
           micron: this.form.micron || null,
           mtr: this.form.mtr || null,
           type: this.form.type,
@@ -330,7 +329,7 @@ export default {
             width: null,
             netWeight: null,
             grossWeight: null,
-       //     rollId: '',
+            rollId: '',
             micron: null,
             mtr: null,
             type: 'film',
