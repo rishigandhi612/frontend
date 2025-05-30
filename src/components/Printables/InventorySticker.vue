@@ -482,7 +482,7 @@ generateStickerHTML(item, barcodeImageData, isLandscape) {
 
   const filmRows = item.type === 'film' ? `
     <div class="info-row">Roll No: <strong>${item.rollId || "N/A"}</strong></div>
-    <div class="info-row">Thickness: <strong>${item.micron || "N/A"}</strong> µm</div>
+    <div class="info-row">Length (Approx): <strong>${item.mtr || "N/A"}</strong> meters</div>
     <div class="info-row">Size: <strong>${this.displaySizeInInches(item.width)}</strong></div>
     <div class="info-row">Size: ${this.displaySizeInMm(item.width)}</div>
     <div class="info-row">Gross Weight: ${item.grossWeight || "N/A"} kg</div>
