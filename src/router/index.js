@@ -20,6 +20,7 @@ import AddCustomer from '@/components/Customers/AddCustomer.vue'
 import NotFound from '@/components/NotFound.vue';
 import InventoryList from '@/components/Inventory/InventoryList.vue';
 import InventoryDetail from '@/components/Inventory/InventoryDetail.vue';
+import BatchAddInventory from '@/components/Inventory/BatchAddInventory.vue';
 
 Vue.use(Router);
 
@@ -88,6 +89,12 @@ const routes = [
     path: '/addinventory',
     component: AddInventory,
     name: 'addInventory',
+    meta: { requiresAuth: true },
+  },
+   {
+    path: '/BatchAddinventory',
+    component: BatchAddInventory,
+    name: 'BatchAddInventory',
     meta: { requiresAuth: true },
   },
   {

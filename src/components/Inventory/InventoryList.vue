@@ -302,6 +302,11 @@
               <v-icon>mdi-plus</v-icon> Add Inventory
             </v-btn>
           </v-col>
+           <v-col cols="12" md="12">
+            <v-btn @click="goToBatchAddInventory" color="secondary" block>
+              <v-icon>mdi-plus</v-icon> Batch Add Inventory
+            </v-btn>
+          </v-col>
           <v-col cols="12" md="12">
             <v-btn 
               @click="printAllStickers" 
@@ -767,6 +772,9 @@ export default {
 
     goToAddInventory() {
       this.$router.push({ name: "addInventory" });
+    },
+     goToBatchAddInventory() {
+      this.$router.push({ name: "BatchAddInventory" });
     },
 
     goBack() {
