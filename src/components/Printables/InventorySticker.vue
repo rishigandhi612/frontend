@@ -29,7 +29,7 @@
       </v-row>
 
       <div class="info-row" v-if="inventoryItem.type === 'film'">
-        Thickness: <strong>{{ inventoryItem.micron || "N/A" }}</strong> µm
+        Length (Approx): <strong>{{ inventoryItem.mtr || "N/A" }}</strong> meters
       </div>
       <div class="info-row" v-if="inventoryItem.type === 'film'">
         Size: <strong>{{ displaySizeInInches() }} </strong>
