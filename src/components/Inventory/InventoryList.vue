@@ -532,6 +532,8 @@ export default {
           micron: item.micron,
           width: item.width,
           netWeight: item.netWeight,
+          grossWeight: item.grossWeight,
+          mtr:item.mtr,
         }));
 
         // Set product name (use the first item's product name or a generic name)
