@@ -15,12 +15,6 @@
 
         <!-- Search Controls -->
         <v-row class="mb-3">
-          <!-- <v-col cols="12" md="6">
-            <v-btn @click="showSearchDialog" color="primary" outlined>
-              <v-icon left>mdi-magnify</v-icon>
-              Advanced Search
-            </v-btn>
-          </v-col> -->
           <v-col cols="12" md="6" class="text-right">
             <v-chip
               v-if="hasActiveFilters"
@@ -62,6 +56,38 @@
           </v-col>
         </v-row>
 
+        <!-- Bulk Actions Row -->
+        <v-row class="mb-3" v-if="selectedItems.length > 0">
+          <v-col>
+            <v-card outlined class="pa-3">
+              <div class="d-flex align-center">
+                <v-icon color="primary" class="mr-2">mdi-checkbox-marked-circle</v-icon>
+                <span class="text-subtitle-1 mr-4">
+                  {{ selectedItems.length }} item(s) selected
+                </span>
+                <v-spacer></v-spacer>
+                <v-btn
+                  color="primary"
+                  class="mr-2"
+                  @click="printSelectedStickers"
+                  :disabled="selectedItems.length === 0"
+                >
+                  <v-icon left>mdi-printer</v-icon>
+                  Print Stickers ({{ selectedItems.length }})
+                </v-btn>
+                <v-btn
+                  text
+                  color="error"
+                  @click="clearSelection"
+                >
+                  <v-icon left>mdi-close</v-icon>
+                  Clear Selection
+                </v-btn>
+              </div>
+            </v-card>
+          </v-col>
+        </v-row>
+
         <!-- Search Dialog -->
         <InventorySearch
           :is-visible="showDialog"
@@ -82,7 +108,10 @@
           :loading="isTableLoading"
           :server-items-length="totalItems"
           class="elevation-1"
-           :footer-props="{
+          show-select
+          v-model="selectedItems"
+          item-key="id"
+          :footer-props="{
             'items-per-page-options': [5, 10, 15, 20],
           }"
           @update:options="handleTableOptions"
@@ -180,13 +209,20 @@
             </div>
           </template>
 
-          <template v-slot:item="{ item }">
-            <tr @click="handleRowClick(item.id)" class="clickable-row">
-              <td>{{ item.rollId }}</td>
-              <td>{{ item.productName || "Unknown Product" }}</td>
-              <td>{{ item.width }}</td>
-              <td>{{ item.netWeight }}</td>
+          <template v-slot:item="{ item, isSelected, select }">
+            <tr class="clickable-row">
               <td>
+                <v-checkbox
+                  :input-value="isSelected"
+                  @change="select($event)"
+                  color="primary"
+                ></v-checkbox>
+              </td>
+              <td @click="handleRowClick(item.id)">{{ item.rollId }}</td>
+              <td @click="handleRowClick(item.id)">{{ item.productName || "Unknown Product" }}</td>
+              <td @click="handleRowClick(item.id)">{{ item.width }}</td>
+              <td @click="handleRowClick(item.id)">{{ item.netWeight }}</td>
+              <td @click="handleRowClick(item.id)">
                 <v-chip
                   :color="getTypeColor(item.type)"
                   small
@@ -195,7 +231,7 @@
                   {{ item.type }}
                 </v-chip>
               </td>
-              <td>
+              <td @click="handleRowClick(item.id)">
                 <v-chip
                   :color="getStatusColor(item.status)"
                   small
@@ -204,6 +240,17 @@
                   {{ item.status }}
                 </v-chip>
               </td>
+              <!-- <td>
+                <v-btn
+                  icon
+                  small
+                  color="primary"
+                  @click="printSingleSticker(item)"
+                  title="Print Sticker"
+                >
+                  <v-icon small>mdi-printer</v-icon>
+                </v-btn>
+              </td> -->
             </tr>
           </template>
 
@@ -255,9 +302,30 @@
               <v-icon>mdi-plus</v-icon> Add Inventory
             </v-btn>
           </v-col>
+          <v-col cols="12" md="12">
+            <v-btn 
+              @click="printAllStickers" 
+              color="orange" 
+              block
+              :disabled="inventoryWithProductNames.length === 0"
+            >
+              <v-icon>mdi-printer-multiple</v-icon> 
+              Print All ({{ inventoryWithProductNames.length }})
+            </v-btn>
+          </v-col>
         </v-row>
       </v-col>
     </v-row>
+
+    <!-- Sticker Printing Component (Hidden) -->
+    <div style="position: absolute; left: -9999px; top: -9999px;">
+      <InventorySticker
+        v-if="stickerItems.length > 0"
+        ref="stickerComponent"
+        :inventory-items="stickerItems"
+        :product-name="stickerProductName"
+      />
+    </div>
 
     <!-- Search Results Snackbar -->
     <v-snackbar
@@ -273,18 +341,48 @@
         </v-btn>
       </template>
     </v-snackbar>
+
+    <!-- Print Confirmation Dialog -->
+    <v-dialog v-model="printDialog" max-width="500">
+      <v-card>
+        <v-card-title>
+          <v-icon left color="primary">mdi-printer</v-icon>
+          Print Stickers Confirmation
+        </v-card-title>
+        <v-card-text>
+          <p>You are about to print <strong>{{ printItemsCount }}</strong> sticker(s).</p>
+          <p v-if="printItemsCount > 4">
+            This will use <strong>{{ Math.ceil(printItemsCount / 4) }}</strong> A4 page(s) 
+            (4 stickers per page).
+          </p>
+          <p class="text-caption text--secondary mt-3">
+            Make sure your printer is ready and loaded with A4 paper.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="printDialog = false">Cancel</v-btn>
+          <v-btn color="primary" @click="confirmPrint">
+            <v-icon left>mdi-printer</v-icon>
+            Print Now
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script>
 import { mapGetters } from "vuex";
 import InventorySearch from "./InventorySearch.vue";
+import InventorySticker from "../Printables/InventorySticker.vue";
 import { debounce } from "lodash";
 
 export default {
   name: "InventoryList",
   components: {
     InventorySearch,
+    InventorySticker,
   },
   data() {
     return {
@@ -292,6 +390,12 @@ export default {
       quickSearch: "",
       searchResultsSnackbar: false,
       searchResultsMessage: "",
+      selectedItems: [],
+      stickerItems: [],
+      stickerProductName: "",
+      printDialog: false,
+      printItemsCount: 0,
+      pendingPrintAction: null,
       currentFilters: {
         quickSearch: "",
         status: "",
@@ -316,6 +420,7 @@ export default {
         { text: "Net Weight", value: "netWeight", sortable: true },
         { text: "Type", value: "type", sortable: true },
         { text: "Status", value: "status", sortable: true },
+        // { text: "Actions", value: "actions", sortable: false, width: "100px" },
       ],
     };
   },
@@ -378,6 +483,75 @@ export default {
       }
     },
 
+    // Sticker Printing Methods
+    printSingleSticker(item) {
+      this.printItemsCount = 1;
+      this.pendingPrintAction = () => this.executePrint([item]);
+      this.printDialog = true;
+    },
+
+    printSelectedStickers() {
+      if (this.selectedItems.length === 0) {
+        this.$toast?.warning?.("Please select items to print stickers for.");
+        return;
+      }
+      this.printItemsCount = this.selectedItems.length;
+      this.pendingPrintAction = () => this.executePrint(this.selectedItems);
+      this.printDialog = true;
+    },
+
+    printAllStickers() {
+      if (this.inventoryWithProductNames.length === 0) {
+        this.$toast?.warning?.("No inventory items available to print.");
+        return;
+      }
+      this.printItemsCount = this.inventoryWithProductNames.length;
+      this.pendingPrintAction = () => this.executePrint(this.inventoryWithProductNames);
+      this.printDialog = true;
+    },
+
+    async confirmPrint() {
+      this.printDialog = false;
+      if (this.pendingPrintAction) {
+        await this.pendingPrintAction();
+        this.pendingPrintAction = null;
+      }
+    },
+
+    async executePrint(items) {
+      try {
+        // Transform items to the format expected by the sticker component
+        this.stickerItems = items.map(item => ({
+          rollId: item.rollId,
+          type: item.type,
+          micron: item.micron,
+          width: item.width,
+          netWeight: item.netWeight,
+        }));
+
+        // Set product name (use the first item's product name or a generic name)
+        this.stickerProductName = items[0]?.productName || "Mixed Products";
+
+        // Wait for the component to render
+        await this.$nextTick();
+
+        // Print the stickers
+        if (this.$refs.stickerComponent) {
+          this.$refs.stickerComponent.printStickers();
+          this.showResultsMessage(`Printing ${items.length} sticker(s)...`);
+        } else {
+          throw new Error("Sticker component not found");
+        }
+      } catch (error) {
+        console.error("Error printing stickers:", error);
+        this.$toast?.error?.("Failed to print stickers. Please try again.");
+      }
+    },
+
+    clearSelection() {
+      this.selectedItems = [];
+    },
+
     // Search Dialog Methods
     showSearchDialog() {
       this.showDialog = true;
@@ -389,7 +563,6 @@ export default {
 
     handleItemSelected(item) {
       console.log("Selected item:", item);
-      // Navigate to item detail or handle selection
       this.handleRowClick(item.id);
       this.showResultsMessage(`Selected: ${item.rollId}`);
     },
@@ -397,9 +570,8 @@ export default {
     async handleSearchConfirm(data) {
       console.log("Search data:", data);
 
-      // Update current filters with search parameters
       this.currentFilters = {
-        quickSearch: this.quickSearch, // Preserve quick search
+        quickSearch: this.quickSearch,
         status: data.searchParams.status || "",
         type: data.searchParams.type || "",
         rollId: data.searchParams.rollId || "",
@@ -410,14 +582,10 @@ export default {
         maxWidth: data.searchParams.maxWidth || "",
       };
 
-      // Close dialog
       this.closeSearchDialog();
-
-      // Reset pagination and perform search
       this.options.page = 1;
       await this.loadItems();
 
-      // Show results message
       const resultsCount = this.getTotalCount || 0;
       this.showResultsMessage(
         `Found ${resultsCount} items matching your search criteria`
@@ -431,7 +599,7 @@ export default {
     },
 
     async performQuickSearch() {
-      this.options.page = 1; // Reset to first page
+      this.options.page = 1;
       await this.loadItems();
     },
 
@@ -464,7 +632,6 @@ export default {
     },
 
     async clearAllFilters() {
-      // Reset all filters
       this.currentFilters = {
         quickSearch: "",
         status: "",
@@ -477,15 +644,9 @@ export default {
         maxWidth: "",
       };
 
-      // Reset quick search input
       this.quickSearch = "";
-
-      // Reset pagination
       this.options.page = 1;
-
-      // Reload data
       await this.loadItems();
-
       this.showResultsMessage("All filters cleared");
     },
 
@@ -533,7 +694,7 @@ export default {
       this.searchResultsSnackbar = true;
     },
 
-    // Existing Methods (Updated)
+    // Existing Methods
     async fetchProducts() {
       try {
         await this.$store.dispatch("products/fetchProducts");
@@ -547,13 +708,11 @@ export default {
 
     async loadItems() {
       try {
-        // Create a query object based on current options and filters
         const params = {
           page: this.options.page,
           limit: this.options.itemsPerPage,
           sortBy: this.options.sortBy[0] || "rollId",
           sortOrder: this.options.sortDesc[0] ? "desc" : "asc",
-          // Add search/filter parameters
           search: this.currentFilters.quickSearch,
           status: this.currentFilters.status,
           type: this.currentFilters.type,
@@ -565,7 +724,6 @@ export default {
           maxWidth: this.currentFilters.maxWidth,
         };
 
-        // Remove empty parameters
         Object.keys(params).forEach((key) => {
           if (
             params[key] === "" ||
@@ -576,7 +734,6 @@ export default {
           }
         });
 
-        // Dispatch action to fetch inventory with pagination/sorting/filtering
         await this.$store.dispatch("inventory/fetchInventory", params);
       } catch (error) {
         console.error("Error loading inventory items:", error);
@@ -590,7 +747,6 @@ export default {
     },
 
     refreshInventory() {
-      // Reset pagination to first page when refreshing
       this.options.page = 1;
       this.loadItems();
     },
@@ -636,5 +792,13 @@ export default {
 
 .text--secondary {
   color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.clickable-row td:first-child {
+  cursor: default;
+}
+
+.clickable-row td:last-child {
+  cursor: default;
 }
 </style>
