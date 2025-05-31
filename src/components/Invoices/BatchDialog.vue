@@ -186,10 +186,9 @@ export default {
     },
     
     calculateBatchItemTotal(item) {
-      const width = parseFloat(item.width) || 0;
       const quantity = parseFloat(item.quantity) || 0;
       const unitPrice = parseFloat(this.batchProduct.unit_price) || 0;
-      return (width * quantity * unitPrice).toFixed(2);
+      return (quantity * unitPrice).toFixed(2);
     },
     
     closeBatchDialog() {
