@@ -415,7 +415,7 @@ export default {
       options: {
         page: 1,
         itemsPerPage: 10,
-        sortBy: ["rollId"],
+        sortBy: [""],
         sortDesc: [false],
       },
       headers: [
