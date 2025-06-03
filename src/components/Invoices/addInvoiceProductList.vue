@@ -20,7 +20,7 @@
         <v-text-field
           v-model="product.width"
           label="Width"
-          :rules="[rules.required, rules.numeric]"
+          :rules="[rules.numeric]"
           required
           type="number"
           min="1"

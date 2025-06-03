@@ -368,44 +368,72 @@ export default {
       }
     },
 
-    prepareInvoicePayload() {
-      const totalItemsPrice = this.calculateTotalItemsPrice();
-      const otherCharges = parseFloat(this.otherCharges) || 0;
-      const totalWithOtherCharges = totalItemsPrice + otherCharges;
-      
-      let cgstAmount = 0;
-      let sgstAmount = 0;
-      let igstAmount = 0;
-      
-      if (this.isIntraStateTransaction) {
-        cgstAmount = totalWithOtherCharges * 0.09;
-        sgstAmount = totalWithOtherCharges * 0.09;
-      } else {
-        igstAmount = totalWithOtherCharges * 0.18;
-      }
-      
-      const grandTotal = Math.round(totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount);
+    // Fixed prepareInvoicePayload method for InvoiceForm.vue
 
-      return {
-        customer: this.selectedCustomerId,
-        invoiceNumber: this.invoiceNumber,
-        products: this.invoiceProducts.map((product) => ({
-          product: product.productId,
-          width: parseFloat(product.width || 0),
-          quantity: parseFloat(product.quantity),
-          unit_price: parseFloat(product.unit_price),
-          totalPrice: parseFloat(product.quantity * product.unit_price),
-          // Include inventory reference if available
-          ...(product.rollId && { rollId: product.rollId }),
-          ...(product.inventoryItemId && { inventoryItemId: product.inventoryItemId })
-        })),
-        otherCharges,
-        cgst: cgstAmount,
-        sgst: sgstAmount,
-        igst: igstAmount,
-        grandTotal,
-      };
-    },
+prepareInvoicePayload() {
+  const totalItemsPrice = this.calculateTotalItemsPrice();
+  const otherCharges = parseFloat(this.otherCharges) || 0;
+  const totalWithOtherCharges = totalItemsPrice + otherCharges;
+  
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+  let igstAmount = 0;
+  
+  if (this.isIntraStateTransaction) {
+    cgstAmount = totalWithOtherCharges * 0.09;
+    sgstAmount = totalWithOtherCharges * 0.09;
+  } else {
+    igstAmount = totalWithOtherCharges * 0.18;
+  }
+  
+  const grandTotal = Math.round(totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount);
+
+  // ✅ FIXED: Properly handle product structure
+  const products = this.invoiceProducts.map((product) => {
+    // Handle both cases: when productId is a string and when it's an object
+    let productReference;
+    
+    if (typeof product.productId === 'string') {
+      // Normal case: productId is just the ID string
+      productReference = { _id: product.productId };
+    } else if (product.productId && product.productId._id) {
+      // From inventory dialog: productId is already an object with _id
+      productReference = product.productId;
+    } else {
+      // Fallback: try to find the product in allProducts
+      const foundProduct = this.allProducts.find(p => p._id === product.productId);
+      productReference = foundProduct || { _id: product.productId };
+    }
+
+    return {
+      product: productReference,
+      width: parseFloat(product.width || 0),
+      quantity: parseFloat(product.quantity),
+      unit_price: parseFloat(product.unit_price),
+      totalPrice: parseFloat(product.quantity * product.unit_price),
+      // Include inventory reference if available
+      ...(product.rollId && { rollId: product.rollId }),
+      ...(product.inventoryItemId && { inventoryItemId: product.inventoryItemId })
+    };
+  });
+
+  // ✅ Also collect all rollIds for inventory tracking
+  const rollIds = this.invoiceProducts
+    .filter(product => product.rollId)
+    .map(product => product.rollId);
+
+  return {
+    customer: this.selectedCustomerId,
+    invoiceNumber: this.invoiceNumber,
+    products,
+    rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
+    otherCharges,
+    cgst: cgstAmount,
+    sgst: sgstAmount,
+    igst: igstAmount,
+    grandTotal,
+  };
+},
 
     validateInvoicePayload(payload) {
       if (!payload.customer) {

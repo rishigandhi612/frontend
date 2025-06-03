@@ -48,7 +48,7 @@
                     dense
                     min="1"
                     hide-details
-                    :rules="[rules.required, rules.numeric]"
+                    :rules="[rules.numeric]"
                   />
                 </td>
                 <td>
