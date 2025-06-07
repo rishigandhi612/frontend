@@ -21,7 +21,6 @@
       >
         <v-col cols="6">
           Batch No: <strong>{{ inventoryItem.rollId || "N/A" }} </strong>
-          <!-- Net Weight: <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg -->
         </v-col>
         <v-col cols="6">
           Net Weight: <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg
@@ -49,12 +48,6 @@
 
       <div class="barcode-section">
         <canvas ref="barcodeCanvas" class="barcode-canvas" />
-        <img
-          ref="barcodeImage"
-          class="barcode-image"
-          style="display: none"
-          alt="Barcode"
-        />
       </div>
 
       <div class="footer">
@@ -82,34 +75,24 @@
       </div>
     </div>
 
-    <!-- Print Controls (Enhanced) -->
+    <!-- Print Controls -->
     <div class="print-controls no-print">
       <button 
         @click="printSticker" 
         class="print-btn secondary"
         v-if="inventoryItem"
+        :disabled="printing"
       >
-        Print Single Sticker
+        {{ printing ? 'Printing...' : 'Print Single Sticker' }}
       </button>
       <button 
         @click="printMultipleStickers" 
         class="print-btn secondary"
         v-if="inventoryItems && inventoryItems.length > 1"
+        :disabled="printing"
       >
-        Print All Stickers ({{ inventoryItems.length }} items)
+        {{ printing ? 'Printing...' : `Print All Stickers (${inventoryItems.length} items)` }}
       </button>
-    </div>
-
-    <!-- Hidden Multi-Sticker Data for Batch Printing -->
-    <div style="display: none;" ref="hiddenMultiData">
-      <div 
-        v-for="(item, index) in inventoryItems" 
-        :key="index"
-        class="hidden-sticker-data"
-        :data-item-index="index"
-      >
-        <canvas :ref="el => setBarcodeRef(index, el)" />
-      </div>
     </div>
   </div>
 </template>
@@ -121,29 +104,31 @@ import logo from "@/assets/HoloLogo.png";
 export default {
   name: "InventorySticker",
   props: {
-    inventoryItem: Object, // Single item for preview
-    inventoryItems: Array, // Multiple items for batch printing
+    inventoryItem: Object,
+    inventoryItems: Array,
     productName: String,
   },
   data() {
     return {
       logo,
-      barcodeRefs: {},
+      printing: false,
+      barcodeCache: new Map(), // Cache for barcode images
     };
   },
   mounted() {
     this.generateBarcode();
-    if (this.inventoryItems && this.inventoryItems.length > 0) {
-      this.$nextTick(() => {
-        this.generateMultipleBarcodes();
-      });
+  },
+  watch: {
+    inventoryItem: {
+      handler() {
+        this.$nextTick(() => {
+          this.generateBarcode();
+        });
+      },
+      deep: true
     }
   },
   methods: {
-    setBarcodeRef(index, el) {
-      this.barcodeRefs[index] = el;
-    },
-    
     capitalizeFirstLetter(text) {
       return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
     },
@@ -173,570 +158,538 @@ export default {
     },
     
     generateBarcode() {
-      if (this.$refs.barcodeCanvas && this.inventoryItem && this.inventoryItem.rollId) {
-        JsBarcode(this.$refs.barcodeCanvas, this.inventoryItem.rollId, {
+      if (this.$refs.barcodeCanvas && this.inventoryItem?.rollId) {
+        try {
+          JsBarcode(this.$refs.barcodeCanvas, this.inventoryItem.rollId, {
+            format: "CODE128",
+            displayValue: true,
+            fontSize: 20,
+            height: 80,
+            width: 3,
+            margin: 10,
+          });
+        } catch (error) {
+          console.error("Error generating barcode:", error);
+        }
+      }
+    },
+
+    // Generate barcode image data for a specific item with larger size
+    async generateBarcodeForItem(item) {
+      if (!item?.rollId) return null;
+      
+      // Check cache first
+      if (this.barcodeCache.has(item.rollId)) {
+        return this.barcodeCache.get(item.rollId);
+      }
+
+      try {
+        // Create a temporary canvas
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, item.rollId, {
           format: "CODE128",
           displayValue: true,
-          fontSize: 18,
-          height: 50,
+          fontSize: 20,
+          height: 80,
+          width: 3,
+          margin: 10,
         });
-        this.generateBarcodeImage();
+        
+        const imageData = canvas.toDataURL("image/png");
+        
+        // Cache the result
+        this.barcodeCache.set(item.rollId, imageData);
+        
+        return imageData;
+      } catch (error) {
+        console.error("Error generating barcode for item:", error);
+        return null;
       }
     },
     
-    generateMultipleBarcodes() {
-      if (this.inventoryItems) {
-        this.inventoryItems.forEach((item, index) => {
-          const canvas = this.barcodeRefs[index];
-          if (canvas && item.rollId) {
-            JsBarcode(canvas, item.rollId, {
-              format: "CODE128",
-              displayValue: true,
-              fontSize: 18,
-              height: 50,
-            });
+    // Single sticker print
+    async printSticker() {
+      if (this.printing) return;
+      
+      this.printing = true;
+      
+      try {
+        const stickerContent = this.$refs.stickerContent;
+        if (!stickerContent) {
+          throw new Error("Sticker content not found.");
+        }
+
+        // Generate barcode image
+        const barcodeImageData = await this.generateBarcodeForItem(this.inventoryItem);
+        
+        const printWindow = window.open("", "_blank", "width=600,height=400");
+        if (!printWindow) {
+          throw new Error("Popup blocked. Please allow popups for this site.");
+        }
+
+        const isLandscape = this.inventoryItem.type === "non-film";
+        const stickerHTML = this.generateStickerHTML(this.inventoryItem, barcodeImageData, isLandscape);
+        
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              <title>Print Sticker</title>
+              ${this.getSingleStickerStyles(isLandscape)}
+            </head>
+            <body>
+              ${stickerHTML}
+            </body>
+          </html>
+        `);
+        
+        printWindow.document.close();
+        
+        // Wait for content to load, then print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.onafterprint = () => printWindow.close();
+          }, 500);
+        };
+        
+      } catch (error) {
+        console.error("Print error:", error);
+        alert("Error printing sticker: " + error.message);
+      } finally {
+        this.printing = false;
+      }
+    },
+
+    // Multiple stickers print - EXACTLY 4 per page
+    async printMultipleStickers() {
+      if (this.printing || !this.inventoryItems?.length) return;
+      
+      this.printing = true;
+      
+      try {
+        // Generate all barcodes first
+        const barcodePromises = this.inventoryItems.map(item => 
+          this.generateBarcodeForItem(item)
+        );
+        const barcodeImages = await Promise.all(barcodePromises);
+        
+        const printWindow = window.open("", "_blank", "width=800,height=600");
+        if (!printWindow) {
+          throw new Error("Popup blocked. Please allow popups for this site.");
+        }
+
+        const { pages, styles } = this.generateMultiPageContent(this.inventoryItems, barcodeImages);
+        
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              <title>Print Multiple Stickers - ${this.inventoryItems.length} items</title>
+              ${styles}
+            </head>
+            <body>
+              ${pages}
+            </body>
+          </html>
+        `);
+        
+        printWindow.document.close();
+        
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.onafterprint = () => printWindow.close();
+          }, 1000);
+        };
+        
+      } catch (error) {
+        console.error("Bulk print error:", error);
+        alert("Error printing stickers: " + error.message);
+      } finally {
+        this.printing = false;
+      }
+    },
+
+    // Generate content for multiple pages - EXACTLY 4 stickers per page
+    generateMultiPageContent(items, barcodeImages) {
+      const itemsPerPage = 4; // Fixed at 4 stickers per page
+      let pagesHTML = '';
+      
+      for (let i = 0; i < items.length; i += itemsPerPage) {
+        const pageItems = items.slice(i, i + itemsPerPage);
+        const pageBarcodes = barcodeImages.slice(i, i + itemsPerPage);
+        
+        let pageHTML = '<div class="print-page"><div class="sticker-grid">';
+        
+        // Always create 4 slots, fill empty ones if needed
+        for (let j = 0; j < 4; j++) {
+          if (j < pageItems.length) {
+            const item = pageItems[j];
+            const isLandscape = item.type === 'non-film';
+            const barcodeImage = pageBarcodes[j];
+            pageHTML += this.generateStickerHTML(item, barcodeImage, isLandscape);
+          } else {
+            // Empty slot to maintain 2x2 grid
+            pageHTML += '<div class="empty-slot"></div>';
           }
-        });
+        }
+        
+        pageHTML += '</div></div>';
+        pagesHTML += pageHTML;
       }
+      
+      return {
+        pages: pagesHTML,
+        styles: this.getMultiStickerStyles()
+      };
     },
-    
-    generateBarcodeImage() {
-      if (this.$refs.barcodeCanvas && this.$refs.barcodeImage) {
-        const imageData = this.$refs.barcodeCanvas.toDataURL("image/png");
-        this.$refs.barcodeImage.src = imageData;
-      }
+
+    // Generate HTML for a single sticker
+    generateStickerHTML(item, barcodeImageData, isLandscape) {
+      const barcodeImg = barcodeImageData ? 
+        `<img src="${barcodeImageData}" style="max-width: 100%; height: 80px; object-fit: contain;" alt="Barcode">` : 
+        `<div style="height: 80px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
+
+      const filmRows = item.type === 'film' ? `
+        <div class="info-row">Roll No: <strong>${item.rollId || "N/A"}</strong></div>
+        <div class="info-row">Length (Approx): <strong>${item.mtr || "N/A"}</strong> meters</div>
+        <div class="info-row">Size: <strong>${this.displaySizeInInches(item.width)}</strong></div>
+        <div class="info-row">Size: ${this.displaySizeInMm(item.width)}</div>
+        <div class="info-row">Gross Weight: ${item.grossWeight || "N/A"} kg</div>
+        <div class="info-row">Core Weight: ${this.calculateCoreWeight(item)} kg</div>
+        <div class="info-row">Net Weight: <strong>${item.netWeight || "N/A"}</strong> kg</div>
+      ` : `
+        <div class="batch-number">
+          <div style="display: flex; justify-content: space-between; padding: 0 10px;">
+            <div>Batch No: <strong>${item.rollId || "N/A"}</strong></div>
+            <div>Net Weight: <strong>${item.netWeight || "N/A"}</strong> kg</div>
+          </div>
+        </div>
+      `;
+
+      return `
+        <div class="sticker-content ${isLandscape ? 'landscape' : ''}">
+          <div class="product-name-header">
+            <h1 class="product-name">${this.capitalizeFirstLetter(this.productName) || "Product Name"}</h1>
+          </div>
+          ${filmRows}
+          <div class="barcode-section">${barcodeImg}</div>
+          <div class="footer">
+            <p class="address">Marketed By:</p>
+            <h2 class="company-name">HEMANT TRADERS</h2>
+            <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
+            <p class="contact-web">
+              Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br />
+              Web: hemanttraders.vercel.app
+            </p>
+            <div class="separator-line"></div>
+            <h2 class="product-line1">
+              Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong>
+            </h2>
+            <h2 class="product-line2">
+              <strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong>
+            </h2>
+          </div>
+        </div>
+      `;
     },
-    
-    // Alias method for backward compatibility
+
+    // Styles for single sticker print with larger barcode
+    getSingleStickerStyles(isLandscape) {
+      return `
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: helvetica;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+          }
+          .sticker-content {
+            ${isLandscape ? "width: 5.80in; height: 3.80in;" : "width: 3.8in; height: 5.80in;"}
+            border: 2px solid black;
+            box-sizing: border-box;
+            padding: 10px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+          }
+          .product-name-header {
+            background: black;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            margin: -10px -10px 10px -10px;
+          }
+          .product-name {
+            font-size: 24px;
+            margin: 0;
+            text-transform: uppercase;
+            font-weight: bold;
+          }
+          .batch-number {
+            border: 2px solid black;
+            box-sizing: border-box;
+            padding: 10px 0;
+            text-align: center;
+            font-size: ${isLandscape ? "36px" : "48px"};
+            background: white;
+            margin: 10px 0;
+          }
+          .info-row {
+            padding: 5px 0;
+            border-bottom: 1px solid black;
+            font-size: 18px;
+          }
+          .barcode-section {
+            margin: 15px 0;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+          }
+          .footer {
+            text-align: center;
+            border-top: 1px solid black;
+            margin-top: auto;
+            padding-top: 10px;
+            font-size: 15px;
+          }
+          .company-name {
+            font-size: ${isLandscape ? "36px" : "30px"};
+            margin: 5px 0;
+            font-weight: bold;
+          }
+          .address, .contact-web {
+            margin: 3px 0;
+            font-size: ${isLandscape ? "14px" : "12px"};
+          }
+          .separator-line {
+            height: 1px;
+            background: black;
+            margin: 5px 0;
+          }
+          .product-line1, .product-line2 {
+            margin: 2px 0;
+            font-size: ${isLandscape ? "14px" : "12px"};
+          }
+          @media print {
+            body { padding: 0; margin: 0; display: block; }
+            .sticker-content { margin: 0; }
+            @page { size: ${isLandscape ? "landscape" : "portrait"}; margin: 0.0in; }
+          }
+        </style>
+      `;
+    },
+
+    // Enhanced styles for multiple stickers print - 2x2 grid layout
+    getMultiStickerStyles() {
+      return `
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          
+          body {
+            font-family: helvetica;
+            background: white;
+            margin: 0;
+            padding: 0;
+          }
+          
+          .print-page {
+            width: 100%;
+            min-height: 100vh;
+            page-break-after: always;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            // padding: 0.25in;
+          }
+          
+          .print-page:last-child {
+            page-break-after: avoid;
+          }
+          
+          .sticker-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 1in;
+            width: 100%;
+            max-width: 8in;
+            height: 12in;
+          }
+          
+          .sticker-content {
+            width: 100%;
+            height: 100%;
+            max-width: 4in;
+            max-height: 6in;
+            border: 2px solid black;
+            box-sizing: border-box;
+            padding: 12px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            font-family: helvetica;
+            page-break-inside: avoid;
+          }
+          
+          .sticker-content.landscape {
+            max-width: 100%;
+            max-height: 3.8in;
+            grid-column: span 2;
+            width: 100%;
+          }
+          
+          .empty-slot {
+            width: 100%;
+            height: 100%;
+            max-height: 5.8in;
+          }
+          
+          .product-name-header {
+            background: black;
+            color: white;
+            text-align: center;
+            padding: 6px 2px;
+            margin: -8px -8px 6px -8px;
+          }
+          
+          .product-name {
+            font-size: 16px;
+            margin: 0;
+            text-transform: uppercase;
+            font-weight: bold;
+          }
+          
+          .landscape .product-name {
+            font-size: 18px;
+          }
+          
+          .info-row {
+            padding: 3px 0;
+            border-bottom: 1px solid black;
+            font-size: 18px;
+          }
+          
+          .batch-number {
+            border: 2px solid black;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 24px;
+            background: white;
+            margin: 6px 0;
+          }
+          
+          .landscape .batch-number {
+            font-size: 20px;
+          }
+          
+          .barcode-section {
+            margin: 8px 0;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+          }
+          
+          .barcode-section img {
+            max-width: 100%;
+            height: 80px !important;
+            object-fit: contain;
+          }
+          
+          .footer {
+            text-align: center;
+            border-top: 1px solid black;
+            margin-top: auto;
+            padding-top: 0px;
+            font-size: 24px;
+          }
+          
+          .company-name {
+            font-size: 24px;
+            margin: 0px 0;
+            font-weight: bold;
+          }
+          
+          .landscape .company-name {
+            font-size: 18px;
+          }
+          
+          .address, .contact-web {
+            margin: 1px 0;
+            font-size: 12px;
+            line-height: 1.2;
+          }
+          
+          .landscape .address,
+          .landscape .contact-web {
+            font-size: 10px;
+          }
+          
+          .separator-line {
+            height: 1px;
+            background: black;
+            margin: 0px 0;
+          }
+          
+          .product-line1, .product-line2 {
+            margin: 2px 0;
+            font-size: 12px;
+            line-height: 1.1;
+          }
+          
+          .landscape .product-line1,
+          .landscape .product-line2 {
+            font-size: 9px;
+          }
+          
+          @media print {
+            @page {
+              size: A4;
+              margin: 0.25in;
+            }
+            
+            .print-page {
+              margin: 0;
+              padding: 0.1in;
+              min-height: auto;
+              height: auto;
+            }
+            
+            .sticker-grid {
+              height: auto;
+              min-height: 10in;
+            }
+            
+            .barcode-section img {
+              height: 80px !important;
+              max-height: 80px !important;
+            }
+          }
+        </style>
+      `;
+    },
+
+    // Backward compatibility method
     printStickers() {
       if (this.inventoryItems && this.inventoryItems.length > 1) {
         this.printMultipleStickers();
       } else {
         this.printSticker();
       }
-    },
-    
-    // Original single print functionality (matching second file exactly)
-    printSticker() {
-      // Ensure sticker content exists
-      const stickerContent = this.$refs.stickerContent;
-      if (!stickerContent) {
-        console.error("Sticker content not found.");
-        return;
-      }
-
-      // Get barcode image from canvas
-      let barcodeImageData = "";
-      if (this.$refs.barcodeCanvas) {
-        try {
-          barcodeImageData = this.$refs.barcodeCanvas.toDataURL("image/png");
-        } catch (err) {
-          console.error("Error generating barcode image:", err);
-        }
-      }
-
-      // Clone the sticker DOM content
-      const clonedContent = stickerContent.cloneNode(true);
-
-      // Replace the canvas with an image in the cloned content
-      const canvas = clonedContent.querySelector("canvas");
-      if (canvas && barcodeImageData) {
-        const img = document.createElement("img");
-        img.src = barcodeImageData;
-        img.style.cssText = "max-width: 300px; height: 75px;";
-        img.alt = "Barcode";
-        canvas.parentNode.replaceChild(img, canvas);
-      }
-
-      // Remove hidden barcode image if present
-      const hiddenImg = clonedContent.querySelector(".barcode-image");
-      if (hiddenImg) hiddenImg.remove();
-
-      // Create a new print window
-      const printWindow = window.open("", "_blank", "width=600,height=400");
-      if (!printWindow) {
-        console.error("Popup blocked. Please allow popups for this site.");
-        return;
-      }
-
-      // Write minimal HTML to avoid blocking
-      printWindow.document.write(
-        "<!DOCTYPE html><html><head><title>Loading...</title></head><body>Loading...</body></html>"
-      );
-      printWindow.document.close();
-
-      // Once loaded, inject content
-      printWindow.onload = () => {
-        const isLandscape = this.inventoryItem.type === "non-film";
-
-        printWindow.document.head.innerHTML = `
-      <meta charset="UTF-8">
-      <title>Print Sticker</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-          font-family: helvetica;
-          background: white;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-height: 100vh;
-          padding: 20px;
-        }
-        .sticker-content {
-          ${
-            isLandscape
-              ? "width: 5.80in; height: 4in;"
-              : "width: 3.8in; height: 5.80in;"
-          }
-          border: 2px solid black;
-          box-sizing: border-box;
-          padding: 10px;
-          background: white;
-          display: flex;
-          flex-direction: column;
-        }
-        .product-name-header {
-          background: black;
-          color: white;
-          text-align: center;
-          padding: 10px 0;
-          margin: -10px -10px 10px -10px;
-        }
-        .product-name {
-          font-size: 24px;
-          margin: 0;
-          text-transform: uppercase;
-          font-weight: bold;
-        }
-        .batch-number{
-          border: 2px solid black;
-          box-sizing: border-box;
-          padding: 5px 0;
-          text-align: center;
-          font-size: ${isLandscape ? "36px" : "48px"};
-          background: white;
-        }
-        .info-row {
-          padding: 5px 0;
-          border-bottom: 1px solid black;
-          font-size: 18px;
-        }
-        .barcode-section {
-          margin: 2px 0;
-          text-align: center;
-        }
-        .barcode-section img {
-          max-width: 200px;
-          height: 50px;
-        }
-        .footer {
-          text-align: center;
-          border-top: 1px solid black;
-          margin-top: 2px;
-          padding-top: 10px;
-          font-size: 15px;
-        }
-        .company-name {
-          font-size: ${isLandscape ? "36px" : "30px"};
-          margin: 5px 0;
-          font-weight: bold;
-        }
-        .address, .contact-web {
-          margin: 3px 0;
-          font-size: ${isLandscape ? "14px" : "12px"};
-        }
-        .separator-line {
-          height: 1px;
-          background: black;
-          margin: 5px 0;
-        }
-        .product-line1, .product-line2 {
-          margin: 2px 0;
-          font-size: ${isLandscape ? "14px" : "12px"};
-        }
-        .footer-logo {
-          width: 60px;
-          margin-bottom: 5px;
-        }
-        @media print {
-          body { padding: 5; margin: 0; display: block; }
-          .sticker-content { margin: 0; }
-          @page { size: ${
-            isLandscape ? "landscape" : "portrait"
-          }; margin: 0.5in; }
-        }
-      </style>
-    `;
-
-        printWindow.document.body.innerHTML = clonedContent.outerHTML;
-
-        // Wait for all images to load before printing
-        const images = printWindow.document.images;
-        let loadedCount = 0;
-
-        function tryPrint() {
-          loadedCount++;
-          if (loadedCount === images.length || images.length === 0) {
-            setTimeout(() => {
-              printWindow.print();
-              printWindow.onafterprint = () => printWindow.close();
-            }, 200);
-          }
-        }
-
-        for (let img of images) {
-          if (img.complete) {
-            tryPrint();
-          } else {
-            img.onload = tryPrint;
-            img.onerror = tryPrint;
-          }
-        }
-      };
-    },
-
-    // Enhanced batch print functionality
-    printMultipleStickers() {
-      if (!this.inventoryItems || this.inventoryItems.length === 0) {
-        console.error("No inventory items to print.");
-        return;
-      }
-
-      const printWindow = window.open("", "_blank", "width=800,height=600");
-      if (!printWindow) {
-        console.error("Popup blocked. Please allow popups for this site.");
-        return;
-      }
-
-      // Paginate items (4 per page)
-      const itemsPerPage = 4;
-      const pages = [];
-      for (let i = 0; i < this.inventoryItems.length; i += itemsPerPage) {
-        pages.push(this.inventoryItems.slice(i, i + itemsPerPage));
-      }
-
-      let allPagesHTML = '';
-      pages.forEach((pageItems, pageIndex) => {
-        let pageHTML = '<div class="print-page"><div class="sticker-grid">';
-        
-        pageItems.forEach((item, itemIndex) => {
-          // Calculate global index for barcode reference
-          const globalIndex = pageIndex * itemsPerPage + itemIndex;
-          
-          // Get barcode image for this item
-          let barcodeImageData = "";
-          const canvas = this.barcodeRefs[globalIndex];
-          if (canvas) {
-            try {
-              barcodeImageData = canvas.toDataURL("image/png");
-            } catch (err) {
-              console.error("Error generating barcode image:", err);
-            }
-          }
-
-          const isLandscape = item.type === 'non-film';
-          pageHTML += this.generateStickerHTML(item, barcodeImageData, isLandscape);
-        });
-
-        // Fill empty slots if needed
-        const emptySlots = itemsPerPage - pageItems.length;
-        for (let j = 0; j < emptySlots; j++) {
-          pageHTML += '<div class="sticker-placeholder"></div>';
-        }
-
-        pageHTML += '</div></div>';
-        allPagesHTML += pageHTML;
-      });
-
-      const styles = this.getMultiStickerStyles();
-
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print Stickers - ${this.inventoryItems.length} items</title>
-            ${styles}
-          </head>
-          <body>
-            ${allPagesHTML}
-          </body>
-        </html>
-      `);
-
-      printWindow.document.close();
-      printWindow.focus();
-
-      printWindow.onload = () => {
-        setTimeout(() => {
-          printWindow.print();
-          printWindow.close();
-        }, 1000);
-      };
-    },
-
- 
-generateStickerHTML(item, barcodeImageData, isLandscape) {
-  const barcodeImg = barcodeImageData ? 
-    `<img src="${barcodeImageData}" style="max-width: 200px; height: 50px;" alt="Barcode">` : 
-    '';
-
-  const filmRows = item.type === 'film' ? `
-    <div class="info-row">Roll No: <strong>${item.rollId || "N/A"}</strong></div>
-    <div class="info-row">Length (Approx): <strong>${item.mtr || "N/A"}</strong> meters</div>
-    <div class="info-row">Size: <strong>${this.displaySizeInInches(item.width)}</strong></div>
-    <div class="info-row">Size: ${this.displaySizeInMm(item.width)}</div>
-    <div class="info-row">Gross Weight: ${item.grossWeight || "N/A"} kg</div>
-    <div class="info-row">Core Weight: ${this.calculateCoreWeight(item)} kg</div>
-    <div class="info-row">Net Weight: <strong>${item.netWeight || "N/A"}</strong> kg</div>
-  ` : `
-    <div class="batch-number">
-      <div style="display: flex; justify-content: space-between;">
-        <div>Batch No: <strong>${item.rollId || "N/A"}</strong></div>
-        <div>Net Weight: <strong>${item.netWeight || "N/A"}</strong> kg</div>
-      </div>
-    </div>
-  `;
-
-  return `
-    <div class="sticker-content ${isLandscape ? 'landscape' : ''}">
-      <div class="product-name-header">
-        <h1 class="product-name">${this.capitalizeFirstLetter(this.productName) || "Product Name"}</h1>
-      </div>
-      ${filmRows}
-      <div class="barcode-section">${barcodeImg}</div>
-      <div class="footer">
-        <p class="address">Marketed By:</p>
-        <h2 class="company-name">HEMANT TRADERS</h2>
-        <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
-        <p class="contact-web">
-          Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br />
-          Web: hemanttraders.vercel.app
-        </p>
-        <div class="separator-line"></div>
-        <h2 class="product-line1">
-          Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong>
-        </h2>
-        <h2 class="product-line2">
-          <strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong>
-        </h2>
-      </div>
-    </div>
-  `;
-},
-
-getMultiStickerStyles() {
-  return `
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      
-      @media print {
-        @page {
-          size: A4;
-          margin: 0.5in;
-        }
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: helvetica;
-          background: white;
-        }
-        .print-page {
-          width: 100%;
-          height: 100vh;
-          page-break-after: always;
-          position: relative;
-        }
-        .print-page:last-child {
-          page-break-after: avoid;
-        }
-        .sticker-grid {
-          display: grid;
-          grid-template-columns: 4in 4in;
-          grid-template-rows: 5.80in 5.80in;
-          gap: 0.2in;
-          width: 100%;
-          height: 100%;
-          justify-content: start;
-          align-content: start;
-          padding: 0;
-        }
-        
-        /* Main sticker container - exact size as single print */
-        .sticker-content {
-          width: 4in;
-          height: 5.80in;
-          border: 2px solid black;
-          box-sizing: border-box;
-          padding: 20px;
-          background: white;
-          display: flex;
-          flex-direction: column;
-          font-family: helvetica;
-          page-break-inside: avoid;
-        }
-        
-        /* Landscape orientation for non-film items */
-        .sticker-content.landscape {
-          width: 5.80in;
-          height: 4in;
-          grid-column: span 2; /* Take full width for landscape */
-        }
-        
-        /* Adjust grid for landscape items */
-        .sticker-grid.has-landscape {
-          grid-template-columns: 5.80in;
-          grid-template-rows: repeat(auto-fit, 4in);
-          gap: 0.2in;
-        }
-        
-        .sticker-placeholder {
-          width: 4in;
-          height: 5.80in;
-        }
-        
-        /* Product name header - matching single print */
-        .product-name-header {
-          background: black;
-          color: white;
-          text-align: center;
-          padding: 10px 0;
-          margin: -10px -10px 10px -10px;
-        }
-        
-        .product-name {
-          font-size: 24px;
-          margin: 0;
-          text-transform: uppercase;
-          font-weight: bold;
-        }
-        
-        /* Info rows - matching single print */
-        .info-row {
-          padding: 5px 0;
-          border-bottom: 1px solid black;
-          font-size: 18px;
-        }
-        
-        /* Batch number styling - matching single print exactly */
-        .batch-number {
-          border: 2px solid black;
-          box-sizing: border-box;
-          padding: 5px 0;
-          text-align: center;
-          font-size: 48px;
-          background: white;
-        }
-        
-        /* Landscape batch number */
-        .landscape .batch-number {
-          font-size: 36px;
-        }
-        
-        /* Barcode section - matching single print */
-        .barcode-section {
-          margin: 2px 0;
-          text-align: center;
-        }
-        
-        .barcode-section img {
-          max-width: 200px;
-          height: 50px;
-        }
-        
-        /* Footer - matching single print */
-        .footer {
-          text-align: center;
-          border-top: 1px solid black;
-          margin-top: 2px;
-          padding-top: 10px;
-          font-size: 15px;
-        }
-        
-        .company-name {
-          font-size: 30px;
-          margin: 5px 0;
-          font-weight: bold;
-        }
-        
-        /* Landscape company name */
-        .landscape .company-name {
-          font-size: 36px;
-        }
-        
-        .address, .contact-web {
-          margin: 3px 0;
-          font-size: 12px;
-        }
-        
-        /* Landscape address and contact */
-        .landscape .address,
-        .landscape .contact-web {
-          font-size: 14px;
-        }
-        
-        .separator-line {
-          height: 1px;
-          background: black;
-          margin: 5px 0;
-        }
-        
-        .product-line1, .product-line2 {
-          margin: 2px 0;
-          font-size: 12px;
-        }
-        
-        /* Landscape product lines */
-        .landscape .product-line1,
-        .landscape .product-line2 {
-          font-size: 14px;
-        }
-        
-        .footer-logo {
-          width: 60px;
-          margin-bottom: 5px;
-        }
-      }
-      
-      /* Screen styles for preview */
-      @media screen {
-        body {
-          font-family: helvetica;
-          background: white;
-          padding: 20px;
-        }
-        .print-page {
-          margin-bottom: 30px;
-          border: 1px dashed #ccc;
-          padding: 20px;
-        }
-        .sticker-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          grid-template-rows: 1fr 1fr;
-          gap: 20px;
-          max-width: 800px;
-        }
-        .sticker-content {
-          width: 200px;
-          height: 290px;
-          border: 2px solid black;
-          box-sizing: border-box;
-          padding: 5px;
-          background: white;
-          display: flex;
-          flex-direction: column;
-          font-family: helvetica;
-          transform: scale(0.5);
-          transform-origin: top left;
-        }
-        .sticker-content.landscape {
-          width: 290px;
-          height: 200px;
-        }
-      }
-    </style>
-  `;
-}
+    }
   },
 };
 </script>
@@ -757,7 +710,6 @@ getMultiStickerStyles() {
   flex-direction: column;
 }
 
-/* Landscape orientation for non-film items */
 .sticker-content.landscape {
   width: 6in;
   height: 4in;
@@ -781,7 +733,7 @@ getMultiStickerStyles() {
 .info-row {
   padding: 5px 0;
   border-bottom: 1px solid black;
-  font-size: 12px;
+  font-size: 24px;
 }
 
 .batch-number {
@@ -793,7 +745,6 @@ getMultiStickerStyles() {
   background: white;
 }
 
-/* Adjust batch number size for landscape */
 .landscape .batch-number {
   font-size: 36px;
 }
@@ -801,12 +752,16 @@ getMultiStickerStyles() {
 .barcode-section {
   margin: 15px 0;
   text-align: center;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
 }
 
-.barcode-canvas,
-.barcode-image {
-  max-width: 200px;
-  height: 100px;
+.barcode-canvas {
+  max-width: 400px;
+  height: 80px;
 }
 
 .footer {
@@ -818,14 +773,13 @@ getMultiStickerStyles() {
 }
 
 .company-name {
-  font-size: 12px;
+  font-size: 24px;
   margin: 5px 0;
   font-weight: bold;
 }
 
-/* Larger company name for landscape */
 .landscape .company-name {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .address,
@@ -834,10 +788,9 @@ getMultiStickerStyles() {
   font-size: 9px;
 }
 
-/* Larger text for landscape */
 .landscape .address,
 .landscape .contact-web {
-  font-size: 11px;
+  font-size: 22px;
 }
 
 .separator-line {
@@ -849,13 +802,12 @@ getMultiStickerStyles() {
 .product-line1,
 .product-line2 {
   margin: 2px 0;
-  font-size: 8px;
+  font-size: 12px;
 }
 
-/* Larger product lines for landscape */
 .landscape .product-line1,
 .landscape .product-line2 {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .footer-logo {
@@ -876,13 +828,23 @@ getMultiStickerStyles() {
   color: white;
   border: none;
   cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.print-btn:hover:not(:disabled) {
+  background: #333;
+}
+
+.print-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .print-btn.secondary {
   background: #555;
 }
 
-.hidden-sticker-data {
-  display: none;
+.print-btn.secondary:hover:not(:disabled) {
+  background: #777;
 }
 </style>

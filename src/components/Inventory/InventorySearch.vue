@@ -142,9 +142,9 @@
           </div>
 
           <!-- Search Results Info -->
-          <div class="search-info" v-if="searchResults">
+          <div class="search-info" v-if="displayedItems.length > 0 || searchExecuted">
             <p>
-              Found {{ getTotalCount }} items
+              Found {{ displayedItems.length }} items
               <span v-if="searchParams.search"
                 >(searching for "{{ searchParams.search }}")</span
               >
@@ -157,9 +157,9 @@
           </div>
 
           <!-- Results Table (Compact view for dialog) -->
-          <div class="results-table" v-if="showResults && searchResults">
+          <div class="results-table" v-if="showResults && (displayedItems.length > 0 || searchExecuted)">
             <div class="table-container">
-              <table class="inventory-table">
+              <table class="inventory-table" v-if="displayedItems.length > 0">
                 <thead>
                   <tr>
                     <th @click="handleSort('rollId')">Roll ID</th>
@@ -172,7 +172,7 @@
                 </thead>
                 <tbody>
                   <tr
-                    v-for="item in allInventory"
+                    v-for="item in paginatedItems"
                     :key="item.id"
                     class="table-row"
                   >
@@ -183,7 +183,7 @@
                         {{ item.status }}
                       </span>
                     </td>
-                    <td>{{ item.weight }}</td>
+                    <td>{{ item.netWeight || item.weight }}</td>
                     <td>{{ item.width }}</td>
                     <td>
                       <button @click="selectItem(item)" class="select-btn">
@@ -193,6 +193,14 @@
                   </tr>
                 </tbody>
               </table>
+              
+              <!-- No Results Message -->
+              <div v-else-if="searchExecuted" class="no-results">
+                <p>No items found matching your search criteria.</p>
+                <button @click="clearAllFilters" class="clear-btn">
+                  Clear Filters
+                </button>
+              </div>
             </div>
 
             <!-- Pagination (simplified for dialog) -->
@@ -288,13 +296,15 @@ export default {
         minWidth: "",
         maxWidth: "",
         page: 1,
-        limit: 10,
+        limit: 50, // Increased for dialog
         sortBy: "createdAt",
         sortOrder: "desc",
       },
-      searchResults: null,
+      searchResults: [],
       currentPage: 1,
       totalPages: 1,
+      itemsPerPage: 10,
+      searchExecuted: false,
     };
   },
 
@@ -305,6 +315,23 @@ export default {
       "getTotalCount",
       "getError",
     ]),
+
+    // Use search results if available, otherwise fall back to store inventory
+    displayedItems() {
+      return this.searchResults.length > 0 ? this.searchResults : this.allInventory;
+    },
+
+    // Paginate the displayed items for the dialog
+    paginatedItems() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.displayedItems.slice(start, end);
+    },
+
+    // Calculate total pages based on displayed items
+    calculatedTotalPages() {
+      return Math.ceil(this.displayedItems.length / this.itemsPerPage);
+    },
   },
 
   methods: {
@@ -322,17 +349,45 @@ export default {
 
     async handleSearch() {
       try {
-        this.searchParams.page = 1;
+        this.searchExecuted = true;
         this.currentPage = 1;
+        
+        // Clean up search params - remove empty values
+        const cleanParams = {};
+        Object.keys(this.searchParams).forEach(key => {
+          const value = this.searchParams[key];
+          if (value !== "" && value !== null && value !== undefined) {
+            cleanParams[key] = value;
+          }
+        });
 
-        const result = await this.searchInventory(this.searchParams);
-        this.searchResults = result;
-
-        if (result.pagination) {
-          this.totalPages = result.pagination.totalPages;
+        // If no search parameters, get all inventory
+        if (Object.keys(cleanParams).length <= 3) { // Only page, limit, sortBy left
+          // const result = await this.fetchInventory({ 
+          //   limit: 100 // Get more items for search dialog
+          // });
+          this.searchResults = this.allInventory;
+        } else {
+          // Perform search
+          const result = await this.searchInventory(cleanParams);
+          
+          // Store the search results locally
+          if (result && result.data) {
+            this.searchResults = result.data;
+          } else if (result && Array.isArray(result)) {
+            this.searchResults = result;
+          } else {
+            // If search doesn't return expected format, use store data
+            this.searchResults = this.allInventory;
+          }
         }
+
+        // Update pagination
+        this.totalPages = this.calculatedTotalPages;
+
       } catch (error) {
         console.error("Search failed:", error);
+        this.searchResults = [];
       }
     },
 
@@ -348,21 +403,35 @@ export default {
           : "asc";
       this.searchParams.sortBy = field;
       this.searchParams.sortOrder = newOrder;
-      await this.handleSearch();
+      
+      // Sort the current results
+      this.sortResults(field, newOrder);
     },
 
-    async handlePageChange(page) {
+    sortResults(field, order) {
+      if (this.searchResults.length === 0) return;
+      
+      this.searchResults.sort((a, b) => {
+        let aVal = a[field];
+        let bVal = b[field];
+        
+        // Handle different data types
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = bVal.toLowerCase();
+        }
+        
+        if (order === 'asc') {
+          return aVal > bVal ? 1 : -1;
+        } else {
+          return aVal < bVal ? 1 : -1;
+        }
+      });
+    },
+
+    handlePageChange(page) {
       if (page < 1 || page > this.totalPages) return;
-
-      this.searchParams.page = page;
       this.currentPage = page;
-
-      try {
-        const result = await this.fetchInventory(this.searchParams);
-        this.searchResults = result;
-      } catch (error) {
-        console.error("Page change failed:", error);
-      }
     },
 
     async clearAllFilters() {
@@ -377,14 +446,17 @@ export default {
         minWidth: "",
         maxWidth: "",
         page: 1,
-        limit: 10,
+        limit: 50,
         sortBy: "createdAt",
         sortOrder: "desc",
       };
 
       this.currentPage = 1;
-      await this.clearFilters();
-      this.searchResults = null;
+      this.searchExecuted = false;
+      this.searchResults = [];
+      
+      // Reset to show all inventory
+      await this.fetchInventory({ limit: 100 });
     },
 
     selectItem(item) {
@@ -420,7 +492,7 @@ export default {
         });
 
         // Load initial data if needed
-        if (!this.searchResults) {
+        if (this.searchResults.length === 0 && !this.searchExecuted) {
           this.handleSearch();
         }
       }
@@ -683,6 +755,17 @@ export default {
 
 .select-btn:hover {
   background: #1e7e34;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-results p {
+  margin-bottom: 15px;
+  font-size: 16px;
 }
 
 /* Dialog Pagination */
