@@ -682,6 +682,7 @@ export default {
         available: "success",
         reserved: "warning",
         damaged: "error",
+        sold: "primary",
         "in-use": "info",
       };
       return colors[status] || "grey";
