@@ -207,28 +207,23 @@ export default {
       }
     },
     
-    // Single sticker print
+    // Single sticker print - now uses the same multi-style with one item
     async printSticker() {
       if (this.printing) return;
       
       this.printing = true;
       
       try {
-        const stickerContent = this.$refs.stickerContent;
-        if (!stickerContent) {
-          throw new Error("Sticker content not found.");
-        }
-
         // Generate barcode image
         const barcodeImageData = await this.generateBarcodeForItem(this.inventoryItem);
         
-        const printWindow = window.open("", "_blank", "width=600,height=400");
+        const printWindow = window.open("", "_blank", "width=1000vw,height=1000vh");
         if (!printWindow) {
           throw new Error("Popup blocked. Please allow popups for this site.");
         }
 
-        const isLandscape = this.inventoryItem.type === "non-film";
-        const stickerHTML = this.generateStickerHTML(this.inventoryItem, barcodeImageData, isLandscape);
+        // Use the same multi-page content generator with single item
+        const { pages, styles } = this.generateMultiPageContent([this.inventoryItem], [barcodeImageData]);
         
         printWindow.document.write(`
           <!DOCTYPE html>
@@ -236,10 +231,10 @@ export default {
             <head>
               <meta charset="UTF-8">
               <title>Print Sticker</title>
-              ${this.getSingleStickerStyles(isLandscape)}
+              ${styles}
             </head>
             <body>
-              ${stickerHTML}
+              ${pages}
             </body>
           </html>
         `);
@@ -275,7 +270,7 @@ export default {
         );
         const barcodeImages = await Promise.all(barcodePromises);
         
-        const printWindow = window.open("", "_blank", "width=800,height=600");
+        const printWindow = window.open("", "_blank", "width=1500vw,height=1000vh");
         if (!printWindow) {
           throw new Error("Popup blocked. Please allow popups for this site.");
         }
@@ -351,7 +346,7 @@ export default {
     generateStickerHTML(item, barcodeImageData, isLandscape) {
       const barcodeImg = barcodeImageData ? 
         `<img src="${barcodeImageData}" style="max-width: 100%; height: 80px; object-fit: contain;" alt="Barcode">` : 
-        `<div style="height: 80px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
+        `<div style="height: 800px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
 
       const filmRows = item.type === 'film' ? `
         <div class="info-row">Roll No: <strong>${item.rollId || "N/A"}</strong></div>
@@ -397,100 +392,7 @@ export default {
       `;
     },
 
-    // Styles for single sticker print with larger barcode
-    getSingleStickerStyles(isLandscape) {
-      return `
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: helvetica;
-            background: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 10px;
-          }
-          .sticker-content {
-            ${isLandscape ? "width: 5.80in; height: 3.80in;" : "width: 3.8in; height: 5.80in;"}
-            border: 2px solid black;
-            box-sizing: border-box;
-            padding: 10px;
-            background: white;
-            display: flex;
-            flex-direction: column;
-          }
-          .product-name-header {
-            background: black;
-            color: white;
-            text-align: center;
-            padding: 10px 0;
-            margin: -10px -10px 10px -10px;
-          }
-          .product-name {
-            font-size: 24px;
-            margin: 0;
-            text-transform: uppercase;
-            font-weight: bold;
-          }
-          .batch-number {
-            border: 2px solid black;
-            box-sizing: border-box;
-            padding: 10px 0;
-            text-align: center;
-            font-size: ${isLandscape ? "36px" : "48px"};
-            background: white;
-            margin: 10px 0;
-          }
-          .info-row {
-            padding: 5px 0;
-            border-bottom: 1px solid black;
-            font-size: 18px;
-          }
-          .barcode-section {
-            margin: 15px 0;
-            text-align: center;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100px;
-          }
-          .footer {
-            text-align: center;
-            border-top: 1px solid black;
-            margin-top: auto;
-            padding-top: 10px;
-            font-size: 15px;
-          }
-          .company-name {
-            font-size: ${isLandscape ? "36px" : "30px"};
-            margin: 5px 0;
-            font-weight: bold;
-          }
-          .address, .contact-web {
-            margin: 3px 0;
-            font-size: ${isLandscape ? "14px" : "12px"};
-          }
-          .separator-line {
-            height: 1px;
-            background: black;
-            margin: 5px 0;
-          }
-          .product-line1, .product-line2 {
-            margin: 2px 0;
-            font-size: ${isLandscape ? "14px" : "12px"};
-          }
-          @media print {
-            body { padding: 0; margin: 0; display: block; }
-            .sticker-content { margin: 0; }
-            @page { size: ${isLandscape ? "landscape" : "portrait"}; margin: 0.0in; }
-          }
-        </style>
-      `;
-    },
-
-    // Enhanced styles for multiple stickers print - 2x2 grid layout
+    // Multi-style (unchanged - used for both single and multiple stickers)
     getMultiStickerStyles() {
       return `
         <style>
@@ -505,7 +407,7 @@ export default {
           
           .print-page {
             width: 100%;
-            min-height: 100vh;
+            min-height: 100%;
             page-break-after: always;
             display: flex;
             align-items: center;
@@ -516,25 +418,27 @@ export default {
           .print-page:last-child {
             page-break-after: avoid;
           }
-          
+            
           .sticker-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
-            gap: 1in;
+            gap: 0.2in;   
             width: 100%;
-            max-width: 8in;
-            height: 12in;
+            max-width: 12in;
+            height: 100%;
+            max-height: 15in;
           }
-          
+
           .sticker-content {
             width: 100%;
             height: 100%;
             max-width: 4in;
-            max-height: 6in;
+            min-width: 3.6in;
+            min-height: 5.6in;
             border: 2px solid black;
             box-sizing: border-box;
-            padding: 12px;
+            padding: 5px;
             background: white;
             display: flex;
             flex-direction: column;
@@ -544,7 +448,7 @@ export default {
           
           .sticker-content.landscape {
             max-width: 100%;
-            max-height: 3.8in;
+            min-height: 6in;
             grid-column: span 2;
             width: 100%;
           }
@@ -552,7 +456,7 @@ export default {
           .empty-slot {
             width: 100%;
             height: 100%;
-            max-height: 5.8in;
+            max-height: 6in;
           }
           
           .product-name-header {
@@ -669,7 +573,7 @@ export default {
             }
             
             .sticker-grid {
-              height: auto;
+              height: 11in;
               min-height: 10in;
             }
             

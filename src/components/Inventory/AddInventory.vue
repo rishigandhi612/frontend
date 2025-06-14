@@ -203,7 +203,8 @@ export default {
       statusOptions: [
         { text: 'Available', value: 'available' },
         { text: 'Damaged', value: 'damaged' },
-        { text: 'Reserved', value: 'reserved' }
+        { text: 'Reserved', value: 'reserved' },
+        { text: 'Sold', value: 'sold' }
       ],
       typeOptions: [
         { text: 'Film', value: 'film' },

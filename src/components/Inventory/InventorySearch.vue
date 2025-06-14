@@ -44,6 +44,7 @@
                   <option value="available">Available</option>
                   <option value="reserved">Reserved</option>
                   <option value="damaged">Damaged</option>
+                  <option value="sold">Sold</option>
                 </select>
               </div>
 
