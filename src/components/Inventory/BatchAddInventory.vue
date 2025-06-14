@@ -1,12 +1,12 @@
 <template>
-  <v-container>
+  <v-container fluid>
     <v-row>
-      <v-col cols="12" md="2">
+     <v-col cols="12" md="2">
         <v-btn @click="goBack" block>
           <v-icon left>mdi-arrow-left</v-icon> Back
         </v-btn>
       </v-col>
-      <v-col cols="12" md="8">
+      <v-col cols="12" md="10">
         <v-card class="pa-4">
           <v-card-title class="text-h4 justify-center">
             Batch Add Inventory Items
@@ -103,7 +103,54 @@
                 ></v-text-field>
                 <span v-else class="grey--text">N/A</span>
               </template>
-              
+        
+              <!-- Width Column -->
+              <template slot="item.width" slot-scope="{ item }">
+                <v-text-field
+                v-if="item.type === 'film'"
+                  v-model.number="item.width"
+                  label="Width"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  dense
+                  hide-details
+                  style="min-width: 100px;"
+                ></v-text-field>
+                 <span v-else class="grey--text">N/A</span>
+              </template>
+                           
+              <!-- Micron Column -->
+              <template slot="item.micron" slot-scope="{ item }">
+                <v-text-field
+                  v-model.number="item.micron"
+                   v-if="item.type === 'film'"
+                  label="Micron"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  dense
+                  hide-details
+                  style="min-width: 100px;"
+                ></v-text-field>
+                 <span v-else class="grey--text">N/A</span>
+              </template>
+
+                 <!-- Gross Weight Column -->
+              <template slot="item.grossWeight" slot-scope="{ item }">
+                <v-text-field
+                  v-model.number="item.grossWeight"
+                  label="Gross Weight"
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  dense
+                  hide-details
+                  suffix="kg"
+                  style="min-width: 120px;"
+                ></v-text-field>
+              </template>
+                    
               <!-- Net Weight Column -->
               <template slot="item.netWeight" slot-scope="{ item }">
                 <v-text-field
@@ -120,53 +167,11 @@
                 ></v-text-field>
               </template>
               
-              <!-- Width Column -->
-              <template slot="item.width" slot-scope="{ item }">
-                <v-text-field
-                  v-model.number="item.width"
-                  label="Width"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  dense
-                  hide-details
-                  style="min-width: 100px;"
-                ></v-text-field>
-              </template>
-              
-              <!-- Gross Weight Column -->
-              <template slot="item.grossWeight" slot-scope="{ item }">
-                <v-text-field
-                  v-model.number="item.grossWeight"
-                  label="Gross Weight"
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  dense
-                  hide-details
-                  suffix="kg"
-                  style="min-width: 120px;"
-                ></v-text-field>
-              </template>
-              
-              <!-- Micron Column -->
-              <template slot="item.micron" slot-scope="{ item }">
-                <v-text-field
-                  v-model.number="item.micron"
-                  label="Micron"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  dense
-                  hide-details
-                  style="min-width: 100px;"
-                ></v-text-field>
-              </template>
-              
               <!-- Meter Column -->
               <template slot="item.mtr" slot-scope="{ item }">
                 <v-text-field
                   v-model.number="item.mtr"
+                   v-if="item.type === 'film'"
                   label="Length"
                   type="number"
                   step="0.01"
@@ -176,6 +181,7 @@
                   suffix="m"
                   style="min-width: 100px;"
                 ></v-text-field>
+                 <span v-else class="grey--text">N/A</span>
               </template>
               
               <!-- Status Column -->
@@ -323,10 +329,10 @@ export default {
         { text: 'Product', value: 'product', sortable: false, width: '200px' },
         { text: 'Type', value: 'type', sortable: false, width: '120px' },
         { text: 'Batch #', value: 'rollId', sortable: false, width: '120px' },
-        { text: 'Net Weight (kg)', value: 'netWeight', sortable: false, width: '120px' },
+        { text: 'Micron', value: 'micron', sortable: false, width: '100px' },
         { text: 'Width', value: 'width', sortable: false, width: '100px' },
         { text: 'Gross Weight (kg)', value: 'grossWeight', sortable: false, width: '120px' },
-        { text: 'Micron', value: 'micron', sortable: false, width: '100px' },
+         { text: 'Net Weight (kg)', value: 'netWeight', sortable: false, width: '120px' },
         { text: 'Length (m)', value: 'mtr', sortable: false, width: '100px' },
         { text: 'Status', value: 'status', sortable: false, width: '120px' },
         { text: 'Actions', value: 'actions', sortable: false, width: '80px' }
