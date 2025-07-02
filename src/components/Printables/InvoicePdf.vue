@@ -4,8 +4,8 @@
 
 <script>
 import jsPDF from "jspdf";
-import "jspdf-autotable"; // Import jsPDF autotable for table generation
-import { toWords } from "number-to-words"; // Install the library: npm install number-to-words
+import "jspdf-autotable"; 
+import { toWords } from "number-to-words"; 
 
 export default {
   props: {
@@ -21,39 +21,122 @@ export default {
       return `${day} ${month} ${year}`;
     },
 
+    // Helper function to split text into multiple lines based on width
+    splitTextToFitWidth(doc, text, maxWidth, fontSize = 12) {
+      doc.setFontSize(fontSize);
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+
+      for (let word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const textWidth = doc.getTextWidth(testLine);
+        
+        if (textWidth <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            // If single word is too long, break it
+            lines.push(word);
+          }
+        }
+      }
+      
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      
+      return lines;
+    },
+
+    // Helper function to calculate the height needed for wrapped text
+    calculateTextHeight(lines, lineHeight = 5) {
+      return lines.length * lineHeight;
+    },
+
     downloadPdf() {
       const doc = new jsPDF();
+      
+      // Calculate dynamic start position for the table based on header height
+      const headerInfo = this.calculateHeaderHeight(doc);
+      const tableStartY = headerInfo.height + 15; // Add more padding to ensure no overlap
 
-      // Add Products Table with HSN Code
-      const aggregatedProducts = this.invoiceDetail.products.reduce(
+      // Step 1: First aggregation by name-hsn-width (same as before)
+      const initialAggregation = this.invoiceDetail.products.reduce(
         (acc, product) => {
           const key = `${product.product.name}-${product.product.hsn_code}-${product.width}`;
           if (!acc[key]) {
-            acc[key] = { ...product, quantity: 0 }; // Initialize the quantity
+            acc[key] = { 
+              ...product, 
+              quantity: 0,
+              nos: 0
+            };
           }
-          acc[key].quantity += product.quantity; // Add quantity for matching products
+          acc[key].quantity += product.quantity;
+          acc[key].nos += 1;
           return acc;
         },
         {}
       );
 
-      const products = Object.values(aggregatedProducts).map((product) => [
+      // Step 2: Group by product name and HSN to check width count
+      const productGroups = {};
+      Object.values(initialAggregation).forEach(product => {
+        const groupKey = `${product.product.name}-${product.product.hsn_code}`;
+        if (!productGroups[groupKey]) {
+          productGroups[groupKey] = [];
+        }
+        productGroups[groupKey].push(product);
+      });
+
+      // Step 3: Final aggregation - merge if 4+ different widths
+      const finalAggregatedProducts = {};
+      Object.entries(productGroups).forEach(([groupKey, products]) => {
+        if (products.length >= 4) {
+          // Merge all widths for this product group
+          const mergedProduct = {
+            product: products[0].product, // Use first product's details
+            width: "DIFF", // Replace width with "DIFF"
+            unit_price: products[0].unit_price, // Assuming same unit price
+            quantity: products.reduce((sum, p) => sum + p.quantity, 0),
+            nos: products.reduce((sum, p) => sum + p.nos, 0)
+          };
+          finalAggregatedProducts[groupKey] = mergedProduct;
+        } else {
+          // Keep separate entries for each width
+          products.forEach((product, index) => {
+            const key = `${groupKey}-${index}`;
+            finalAggregatedProducts[key] = product;
+          });
+        }
+      });
+
+      // Step 4: Create products array for the table
+      const products = Object.values(finalAggregatedProducts).map((product) => [
         product.product.name,
         product.product.hsn_code || "N/A",
-        product.width + (product.width > 70 ? " mm " : "''"),
+        product.width === "DIFF" ? "DIFF" : (product.width + (product.width > 70 ? " mm " : "''")),
+        product.nos, // Number of pieces/entries merged
         `${product.quantity.toFixed(3)} Kgs`,
         `Rs.${product.unit_price.toFixed(2)}`,
         `Rs.${(product.quantity * product.unit_price).toFixed(2)}`,
       ]);
 
+      // Calculate total nos (total number of individual product entries)
+      const totalNos = Object.values(finalAggregatedProducts)
+        .reduce((total, product) => total + product.nos, 0);
+
       // Calculate total quantity
-      const totalQuantity = Object.values(aggregatedProducts)
+      const totalQuantity = Object.values(finalAggregatedProducts)
         .reduce((total, product) => total + product.quantity, 0)
         .toFixed(3);
 
-      // Add Total Rows with formatted values
-      products.push(["", "", "", "", "", ""]);
+      products.push(["", "", "", "", "", "",""]);
       products.push([
+        "",
         "",
         "",
         "",
@@ -61,15 +144,17 @@ export default {
         "Sub Total",
         `Rs.${this.invoiceDetail.totalAmount.toFixed(2)}`, // Format to 2 decimal places
       ]);
-      if (this.invoiceDetail.otherCharges !== 0) { products.push([
-        "add:",
-        "",
-        "",
-        "",
-        "Other Charges",
-        `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-    }
+      if (this.invoiceDetail.otherCharges !== 0) { 
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "",
+          "Other Charges",
+          `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`, // Format to 2 decimal places
+        ]);
+      }
       
       // Conditionally add tax rows based on what's in the invoice
       if (this.invoiceDetail.cgst > 0 || this.invoiceDetail.sgst > 0) {
@@ -77,7 +162,7 @@ export default {
           "add:",
           "",
           "",
-          "",
+          "","",
           "CGST @ 9%",
           `Rs.${this.invoiceDetail.cgst.toFixed(2)}`, // Format to 2 decimal places
         ]);
@@ -85,7 +170,7 @@ export default {
           "add:",
           "",
           "",
-          "",
+          "","",
           "SGST @ 9%",
           `Rs.${this.invoiceDetail.sgst.toFixed(2)}`, // Format to 2 decimal places
         ]);
@@ -97,7 +182,7 @@ export default {
           "add:",
           "",
           "",
-          "",
+          "","",
           "IGST @ 18%",
           `Rs.${this.invoiceDetail.igst.toFixed(2)}`, // Format to 2 decimal places
         ]);
@@ -107,6 +192,7 @@ export default {
         "Grand Total",
         "",
         "",
+        totalNos,
         `${totalQuantity} Kgs`,
         "",
         `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`, // Format to 2 decimal places
@@ -114,9 +200,9 @@ export default {
 
       // Render the product table
       doc.autoTable({
-        startY: 100,
+        startY: tableStartY,
         head: [
-            ["Product Name", "HSN/SAC", "Width", "Quantity", "Rate", "Amount"],
+            ["Product Name", "HSN/SAC", "Width", "Nos", "Quantity", "Rate", "Amount"],
         ],
         body: products,
         styles: { 
@@ -172,7 +258,7 @@ export default {
         doc.addPage();
         this.addHeader(doc);
         newPageAddedForHSN = true;
-        amountTextY = 20; // Adjust the Y position for the new page (or any appropriate value)
+        amountTextY = this.calculateHeaderHeight(doc).height + 10; // Adjust based on dynamic header height
       }
 
       // Print the "AMOUNT CHARGEABLE (in words)"
@@ -313,6 +399,34 @@ export default {
         };
       }
     },
+
+    // Function to calculate the total height needed for the header
+    calculateHeaderHeight(doc) {
+      // Base header elements height (static parts)
+      let currentY = 56; // Starting from the static header elements
+      
+      // Calculate customer name height
+      const customerName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;
+      const nameLines = this.splitTextToFitWidth(doc, customerName, 180, 12);
+      currentY += nameLines.length * 5; // 5 is line height for customer name
+      
+      // Calculate address height
+      const addressText = `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
+        this.invoiceDetail.customer?.address?.city || "N/A"
+      },${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
+      const addressLines = this.splitTextToFitWidth(doc, addressText, 180, 12);
+      currentY += addressLines.length * 5; // 5 is line height for address
+      
+      // Add space for other fixed elements (phone, GSTIN, dispatch)
+      currentY += 15; // 3 lines * 5 line height each
+      
+      return {
+        height: currentY,
+        nameLines: nameLines.length,
+        addressLines: addressLines.length
+      };
+    },
+
     addHeader(doc) {
       // Add Logo
       const logoPath = require("@/assets/HoloLogo.png"); // Ensure the correct path to your logo file
@@ -364,6 +478,7 @@ export default {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text(`(Original For Recipient)`, 105, 56, "center");
+      
       // Add Invoice Title
       doc.setFontSize(12);
       doc.text(`Invoice #${this.invoiceDetail.invoiceNumber}`, 14, 62);
@@ -378,41 +493,52 @@ export default {
         "right"
       );
 
-      // Add Customer Details
+      // Dynamic customer name handling
+      let currentY = 70;
+      const customerName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;
+      const nameLines = this.splitTextToFitWidth(doc, customerName, 180, 12);
+      
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text(
-        `M/s ${this.invoiceDetail.customer?.name || "N/A"}`,
-        105,
-        70,
-        "center"
-      );
+      nameLines.forEach((line, index) => {
+        doc.text(line, 105, currentY + (index * 5), "center");
+      });
+      currentY += nameLines.length * 5;
+
+      // Dynamic address handling
+      const addressText = `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
+        this.invoiceDetail.customer?.address?.city || "N/A"
+      },${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
+      const addressLines = this.splitTextToFitWidth(doc, addressText, 180, 12);
+      
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
-      doc.text(
-        `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-          this.invoiceDetail.customer?.address?.city || "N/A"
-        },${this.invoiceDetail.customer?.address?.pincode || "N/A"}`,
-        105,
-        75,
-        "center"
-      );
+      addressLines.forEach((line, index) => {
+        doc.text(line, 105, currentY + (index * 5), "center");
+      });
+      currentY += addressLines.length * 5;
+
+      // Contact, GSTIN, and Dispatch info (these typically don't need wrapping but can be made dynamic too if needed)
       doc.text(
         `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
         105,
-        80,
+        currentY,
         "center"
       );
+      currentY += 5;
+      
       doc.text(
         `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
         105,
-        85,
+        currentY,
         "center"
       );
+      currentY += 5;
+      
       doc.text(
         `Dispatch through: ${this.invoiceDetail.transporter || "N/A"}`,
         105,
-        90,
+        currentY,
         "center"
       );
     },
@@ -444,7 +570,7 @@ export default {
         105,
         pageHeight - 25,
         "left"
-      );
+      );          
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text(
@@ -461,7 +587,7 @@ export default {
 <style scoped>
 #invoice-pdf {
   padding: 20px;
-}
+} 
 
 table {
   width: 100%;
