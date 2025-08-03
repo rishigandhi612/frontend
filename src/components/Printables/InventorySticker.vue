@@ -8,7 +8,7 @@
     >
       <div class="product-name-header">
         <h1 class="product-name">
-          {{ capitalizeFirstLetter(productName) || "Product Name" }}
+{{ capitalizeFirstLetter(inventoryItem.productName) || "Product Name" }}
         </h1>
       </div>
 
@@ -368,7 +368,7 @@ export default {
       return `
         <div class="sticker-content ${isLandscape ? 'landscape' : ''}">
           <div class="product-name-header">
-            <h1 class="product-name">${this.capitalizeFirstLetter(this.productName) || "Product Name"}</h1>
+            <h1 class="product-name">${this.capitalizeFirstLetter(item.productName) || "Product Name"}</h1>
           </div>
           ${filmRows}
           <div class="barcode-section">${barcodeImg}</div>
@@ -447,10 +447,11 @@ export default {
           }
           
           .sticker-content.landscape {
-            max-width: 100%;
-            min-height: 6in;
+            max-width: 4in;
+            min-width: 4in;
+            min-height: 5.6in;
             grid-column: span 2;
-            width: 100%;
+            width: 4in;
           }
           
           .empty-slot {

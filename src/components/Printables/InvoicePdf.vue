@@ -34,15 +34,24 @@ export default {
         
         if (textWidth <= maxWidth) {
           currentLine = testLine;
-        } else {
-          if (currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            // If single word is too long, break it
-            lines.push(word);
-          }
-        }
+} else {
+           if (currentLine) {
+             lines.push(currentLine);
+             currentLine = word;
+           } else {
+            // If single word is too long, break it at character level
+            let remainingWord = word;
+            while (remainingWord.length > 0) {
+              let charCount = 1;
+              while (charCount <= remainingWord.length && 
+                     doc.getTextWidth(remainingWord.substring(0, charCount)) <= maxWidth) {
+                charCount++;
+              }
+              lines.push(remainingWord.substring(0, charCount - 1));
+              remainingWord = remainingWord.substring(charCount - 1);
+            }
+           }
+         }
       }
       
       if (currentLine) {

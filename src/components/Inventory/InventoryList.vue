@@ -534,10 +534,13 @@ export default {
           netWeight: item.netWeight,
           grossWeight: item.grossWeight,
           mtr:item.mtr,
+          productName: item.productName,
         }));
 
+        console.log('Sticker items to print:', this.stickerItems);
+        
         // Set product name (use the first item's product name or a generic name)
-        this.stickerProductName = items[0]?.productName || "Mixed Products";
+        // this.stickerProductName = items[0]?.productName || "Mixed Products";
 
         // Wait for the component to render
         await this.$nextTick();
