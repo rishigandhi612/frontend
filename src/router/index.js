@@ -21,6 +21,7 @@ import NotFound from '@/components/NotFound.vue';
 import InventoryList from '@/components/Inventory/InventoryList.vue';
 import InventoryDetail from '@/components/Inventory/InventoryDetail.vue';
 import BatchAddInventory from '@/components/Inventory/BatchAddInventory.vue';
+import SendEmail from '@/components/SendEmail.vue';
 
 Vue.use(Router);
 
@@ -155,6 +156,12 @@ const routes = [
     path: '/adduser/:id?',
     component: AddUser,
     name: 'EditUser',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/SendPurchaseOrder',
+    component: SendEmail,
+    name: 'SendPurchaseOrder',
     meta: { requiresAuth: true },
   },
   {

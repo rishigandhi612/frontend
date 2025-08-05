@@ -7,6 +7,7 @@ import products from './products';
 import invoices from './invoice';
 import users from './users';
 import inventory from './inventory'; // Import the new inventory module
+import sendPO from './sendPO'; // Import the sendPO module
 import auth from './apiClient';
 import store from './index'; 
 import router from '@/router';
@@ -24,6 +25,7 @@ export default new Vuex.Store({
     invoices,
     users,
     inventory, // Add the inventory module
+    sendPO, // Add the sendPO module
   },
   state: {
     user: null,
