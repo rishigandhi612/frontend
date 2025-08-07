@@ -1,48 +1,54 @@
 // Vuex store module for Send Purchase Order
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 const state = {
   // PO Form Data
   formData: {
-    email: '',
-    supplierName: '',
-    poNumber: '',
-    totalAmount: '',
+    email: "",
+    supplierName: "",
     orderDate: new Date().toISOString().substr(0, 10),
-    expectedDeliveryDate: '',
-    deliveryAddress: '',
-    contactPerson: '',
-    phoneNumber: '',
-    paymentTerms: '',
+    expectedDeliveryDate: "",
+    deliveryType: "NORMAL_DELIVERY", // 'NORMAL_DELIVERY' or 'THIRD_PARTY_DELIVERY'
+    thirdPartyCustomerId: "", // Only used when deliveryType is 'THIRD_PARTY_DELIVERY'
+    // Add these new fields
+    packSize: "",
+    nos: 0,
+    totalQty: 0,
+    remarks: "", // New remarks field
     items: [
       {
-        name: '',
-        quantity: 1,
-        price: 0,
-        productId: null // Reference to product from invoice store
-      }
-    ]
+        name: "",
+        description: "",
+        packSize: "",
+        nos: 1,
+        totalQty: 1,
+        productId: null,
+      },
+    ],
   },
-  
+
   // Loading states
   loadingState: {
     sendEmail: false,
     fetchProducts: false,
     fetchCustomers: false,
-    fetchSuppliers: false
+    fetchSuppliers: false,
   },
-  
+
   // Data from other stores/APIs
   availableProducts: [],
   availableCustomers: [],
   availableSuppliers: [],
-  
+
   // Messages
-  successMessage: '',
-  errorMessage: '',
-  
-//   // Configuration
-//   apiBaseUrl: 'http://localhost:3001'
+  successMessage: "",
+  errorMessage: "",
+
+  // Delivery options
+  deliveryOptions: [
+    { text: "Normal Delivery", value: "NORMAL_DELIVERY" },
+    { text: "Third Party Delivery", value: "THIRD_PARTY_DELIVERY" },
+  ],
 };
 
 const getters = {
@@ -50,46 +56,62 @@ const getters = {
   loadingState: (state) => state.loadingState,
   availableProducts: (state) => state.availableProducts,
   availableCustomers: (state) => state.availableCustomers,
-  availableSuppliers: (state) => state.availableCustomers,
+  availableSuppliers: (state) => state.availableSuppliers,
+  deliveryOptions: (state) => state.deliveryOptions,
   successMessage: (state) => state.successMessage,
   errorMessage: (state) => state.errorMessage,
-  
-  // Computed values
-  calculatedTotal: (state) => {
-    return state.formData.items.reduce((sum, item) => {
-      return sum + ((item.quantity || 0) * (item.price || 0));
-    }, 0);
-  },
-  
+
+  // Check if form can be sent
   canSend: (state) => {
-    return state.formData.email && 
-           state.formData.supplierName && 
-           state.formData.poNumber && 
-           state.formData.items.length > 0 &&
-           state.formData.items.some(item => item.name && item.quantity > 0 && item.price > 0);
+    const hasBasicInfo =
+      state.formData.email &&
+      state.formData.supplierName &&
+      state.formData.items.length > 0 &&
+      state.formData.items.some(
+        (item) =>
+          item.name && item.packSize && item.nos > 0 && item.totalQty > 0
+      );
+
+    // If third party delivery, also check if customer is selected
+    if (state.formData.deliveryType === "THIRD_PARTY_DELIVERY") {
+      return hasBasicInfo && state.formData.thirdPartyCustomerId;
+    }
+
+    return hasBasicInfo;
   },
-  
+
   // Get products formatted for dropdown
   productOptions: (state) => {
-    return state.availableProducts.map(product => ({
+    return state.availableProducts.map((product) => ({
       text: product.name || product.productName,
       value: product._id,
-      price: product.price || product.sellingPrice || 0,
-      details: product
+      details: product,
     }));
   },
-  
-  // Get customers formatted for dropdown
+
+  // Get customers formatted for dropdown (suppliers)
   customerOptions: (state) => {
-    return state.availableCustomers.map(customer => ({
-      text: customer.name || customer.customerName,
-      value: customer._id,
-      email: customer.email,
-      phone: customer.phone,
+    return state.availableCustomers.map((customer) => ({
+      text: customer.name,
+      value: customer.name,
+      email: customer.email_id,
+      phone: customer.phone_no,
       address: customer.address,
-      details: customer
+      details: customer,
     }));
-  }
+  },
+
+  // Get customers for third party delivery
+  thirdPartyCustomerOptions: (state) => {
+    return state.availableCustomers.map((customer) => ({
+      text: customer.name,
+      value: customer._id,
+      email: customer.email_id,
+      phone: customer.phone_no,
+      address: customer.address,
+      details: customer,
+    }));
+  },
 };
 
 const actions = {
@@ -97,334 +119,302 @@ const actions = {
   async initializeStore({ dispatch }) {
     try {
       await Promise.all([
-        dispatch('fetchProductsFromInvoice'),
-        dispatch('fetchCustomersFromInvoice')
+        dispatch("fetchProductsFromInvoice"),
+        dispatch("fetchCustomersFromAPI"),
       ]);
     } catch (error) {
-      console.error('Error initializing SendPO store:', error);
+      console.error("Error initializing SendPO store:", error);
     }
   },
-  
+
   // Fetch products from invoice store or API
   async fetchProductsFromInvoice({ commit, rootGetters }) {
-    commit('SET_LOADING_STATE', { type: 'fetchProducts', value: true });
+    commit("SET_LOADING_STATE", { type: "fetchProducts", value: true });
     try {
       // Try to get products from invoice store first
-      const invoicesData = rootGetters['invoices/allInvoices'] || [];
+      const invoicesData = rootGetters["invoices/allInvoices"] || [];
       let products = [];
-      
+
       // Extract unique products from invoices
       const productMap = new Map();
-      invoicesData.forEach(invoice => {
+      invoicesData.forEach((invoice) => {
         if (invoice.products && Array.isArray(invoice.products)) {
-          invoice.products.forEach(product => {
+          invoice.products.forEach((product) => {
             if (product._id && !productMap.has(product._id)) {
               productMap.set(product._id, {
                 _id: product._id,
                 name: product.name || product.productName,
-                price: product.price || product.sellingPrice || 0,
                 description: product.description,
                 category: product.category,
-                ...product
+                ...product,
               });
             }
           });
         }
       });
-      
+
       products = Array.from(productMap.values());
-      
+
       // If no products from invoices, try to fetch from API
       if (products.length === 0) {
         try {
-          const response = await apiClient.get('/product');
+          const response = await apiClient.get("/product");
           if (response.data.success) {
             products = response.data.data || [];
           }
         } catch (apiError) {
-          console.warn('Could not fetch products from API:', apiError);
+          console.warn("Could not fetch products from API:", apiError);
         }
       }
-      
-      commit('SET_AVAILABLE_PRODUCTS', products);
+
+      commit("SET_AVAILABLE_PRODUCTS", products);
     } catch (error) {
-      console.error('Error fetching products:', error);
-      commit('SET_ERROR_MESSAGE', 'Failed to load products');
+      console.error("Error fetching products:", error);
+      commit("SET_ERROR_MESSAGE", "Failed to load products");
     } finally {
-      commit('SET_LOADING_STATE', { type: 'fetchProducts', value: false });
+      commit("SET_LOADING_STATE", { type: "fetchProducts", value: false });
     }
   },
-  
-  // Fetch customers from invoice store or API
-  async fetchCustomersFromInvoice({ commit, rootGetters }) {
-    commit('SET_LOADING_STATE', { type: 'fetchCustomers', value: true });
+
+  // Fetch customers directly from API
+  async fetchCustomersFromAPI({ commit }) {
+    commit("SET_LOADING_STATE", { type: "fetchCustomers", value: true });
     try {
-      // Try to get customers from invoice store first
-      const invoicesData = rootGetters['invoices/allInvoices'] || [];
-      let customers = [];
-      
-      // Extract unique customers from invoices
-      const customerMap = new Map();
-      invoicesData.forEach(invoice => {
-        if (invoice.customer && invoice.customer._id) {
-          if (!customerMap.has(invoice.customer._id)) {
-            customerMap.set(invoice.customer._id, {
-              _id: invoice.customer._id,
-              name: invoice.customer.name || invoice.customer.customerName,
-              email: invoice.customer.email,
-              phone: invoice.customer.phone,
-              address: invoice.customer.address,
-              ...invoice.customer
-            });
-          }
-        }
-      });
-      
-      customers = Array.from(customerMap.values());
-      
-      // If no customers from invoices, try to fetch from API
-      if (customers.length === 0) {
-        try {
-          const response = await apiClient.get('/customer');
-          if (response.data.success) {
-            customers = response.data.data || [];
-          }
-        } catch (apiError) {
-          console.warn('Could not fetch customers from API:', apiError);
-        }
+      const response = await apiClient.get("/customer");
+      if (response.data.success) {
+        const customers = response.data.data || [];
+        commit("SET_AVAILABLE_CUSTOMERS", customers);
+      } else {
+        throw new Error("API returned unsuccessful response");
       }
-      
-      commit('SET_AVAILABLE_CUSTOMERS', customers);
     } catch (error) {
-      console.error('Error fetching customers:', error);
-      commit('SET_ERROR_MESSAGE', 'Failed to load customers');
+      console.error("Error fetching customers from API:", error);
+      commit("SET_ERROR_MESSAGE", "Failed to load customers");
+
+      // Fallback: try to get customers from invoice store
+      try {
+        const invoicesData = this.rootGetters["invoices/allInvoices"] || [];
+        const customerMap = new Map();
+
+        invoicesData.forEach((invoice) => {
+          if (invoice.customer && invoice.customer._id) {
+            if (!customerMap.has(invoice.customer._id)) {
+              customerMap.set(invoice.customer._id, {
+                _id: invoice.customer._id,
+                name: invoice.customer.name || invoice.customer.customerName,
+                email_id: invoice.customer.email,
+                phone_no: invoice.customer.phone,
+                address: invoice.customer.address,
+                ...invoice.customer,
+              });
+            }
+          }
+        });
+
+        const customers = Array.from(customerMap.values());
+        commit("SET_AVAILABLE_CUSTOMERS", customers);
+      } catch (fallbackError) {
+        console.error("Fallback customer fetch also failed:", fallbackError);
+      }
     } finally {
-      commit('SET_LOADING_STATE', { type: 'fetchCustomers', value: false });
+      commit("SET_LOADING_STATE", { type: "fetchCustomers", value: false });
     }
   },
-  
+
   // Form actions
   updateFormData({ commit }, { field, value }) {
-    commit('UPDATE_FORM_DATA', { field, value });
+    commit("UPDATE_FORM_DATA", { field, value });
   },
-  
+
   addItem({ commit }) {
     const newItem = {
-      name: '',
-      quantity: 1,
-      price: 0,
-      productId: null
+      name: "",
+      description: "",
+      packSize: "",
+      nos: 1,
+      totalQty: 1,
+      productId: null,
     };
-    commit('ADD_ITEM', newItem);
+    commit("ADD_ITEM", newItem);
   },
-  
+
   removeItem({ commit }, index) {
-    commit('REMOVE_ITEM', index);
+    commit("REMOVE_ITEM", index);
   },
-  
+
   updateItem({ commit }, { index, field, value }) {
-    commit('UPDATE_ITEM', { index, field, value });
+    commit("UPDATE_ITEM", { index, field, value });
   },
-  
+
   // Select product for an item
   selectProduct({ commit }, { itemIndex, product }) {
-    commit('UPDATE_ITEM', { 
-      index: itemIndex, 
-      field: 'name', 
-      value: product.name || product.productName 
+    commit("UPDATE_ITEM", {
+      index: itemIndex,
+      field: "name",
+      value: product.name || product.productName,
     });
-    commit('UPDATE_ITEM', { 
-      index: itemIndex, 
-      field: 'price', 
-      value: product.price || product.sellingPrice || 0 
-    });
-    commit('UPDATE_ITEM', { 
-      index: itemIndex, 
-      field: 'productId', 
-      value: product._id 
+    commit("UPDATE_ITEM", {
+      index: itemIndex,
+      field: "productId",
+      value: product._id,
     });
   },
-  
-  // Load sample data
-  loadSampleData({ commit }) {
-    const sampleData = {
-      email: 'rishigandhi021@gmail.com',
-      supplierName: 'Steel Corporation Ltd',
-      poNumber: 'PO-HT-2025-007',
-      totalAmount: '45000.00',
-      orderDate: '2024-08-04',
-      expectedDeliveryDate: '2024-08-15',
-      deliveryAddress: 'Hemant Traders Warehouse, Plot 45, Industrial Area, Pune - 411019',
-      contactPerson: 'Rishi Sharma',
-      phoneNumber: '+91-9876543210',
-      paymentTerms: 'Net 30 days from delivery date',
-      items: [
-        {
-          name: 'Steel Rods 12mm x 12ft',
-          quantity: 100,
-          price: 250.00,
-          productId: null
-        },
-        {
-          name: 'Steel Plates 6mm',
-          quantity: 20,
-          price: 1000.00,
-          productId: null
-        },
-        {
-          name: 'Angle Iron 40x40mm',
-          quantity: 50,
-          price: 300.00,
-          productId: null
-        }
-      ]
-    };
-    commit('SET_FORM_DATA', sampleData);
-  },
-  
+
   // Reset form
   resetForm({ commit }) {
     const initialFormData = {
-      email: '',
-      supplierName: '',
-      poNumber: '',
-      totalAmount: '',
+      email: "",
+      supplierName: "",
       orderDate: new Date().toISOString().substr(0, 10),
-      expectedDeliveryDate: '',
-      deliveryAddress: '',
-      contactPerson: '',
-      phoneNumber: '',
-      paymentTerms: '',
+      expectedDeliveryDate: "",
+      deliveryType: "NORMAL_DELIVERY",
+      thirdPartyCustomerId: "",
+      remarks: "",
       items: [
         {
-          name: '',
-          quantity: 1,
-          price: 0,
-          productId: null
-        }
-      ]
-    };
-    commit('SET_FORM_DATA', initialFormData);
-    commit('CLEAR_MESSAGES');
-  },
-  
-  // Send email
-  async sendPurchaseOrder({ commit, state, getters }) {
-    commit('SET_LOADING_STATE', { type: 'sendEmail', value: true });
-    commit('CLEAR_MESSAGES');
-    
-    try {
-      // Prepare payload
-      const payload = {
-        ...state.formData,
-        totalAmount: getters.calculatedTotal.toFixed(2)
-      };
-      
-      // Remove undefined fields
-      Object.keys(payload).forEach(key => {
-        if (payload[key] === undefined || payload[key] === '') {
-          delete payload[key];
-        }
-      });
-      
-      // Validate required fields
-      if (!payload.email || !payload.supplierName || !payload.poNumber || 
-          !payload.items || payload.items.length === 0) {
-        throw new Error('Please fill in all required fields: email, supplier name, PO number, and items.');
-      }
-      
-      console.log('Sending PO payload:', payload);
-      
-      const response = await apiClient.post('/email/email', payload, {
-        headers: {
-          'Content-Type': 'application/json'
+          name: "",
+          description: "",
+          packSize: "",
+          nos: 1,
+          totalQty: 1,
+          productId: null,
         },
-        timeout: 30000
+      ],
+    };
+    commit("SET_FORM_DATA", initialFormData);
+    commit("CLEAR_MESSAGES");
+  },
+
+  // Send email
+  async sendPurchaseOrder({ commit, state }) {
+    commit("SET_LOADING_STATE", { type: "sendEmail", value: true });
+    commit("CLEAR_MESSAGES");
+
+    try {
+      // Prepare payload to match backend expectations
+      const payload = {
+        email: state.formData.email,
+        supplierName: state.formData.supplierName,
+        items: state.formData.items,
+        orderDate: state.formData.orderDate,
+        deliveryType: state.formData.deliveryType,
+        expectedDeliveryDate: state.formData.expectedDeliveryDate,
+        remarks: state.formData.remarks,
+      };
+
+      // Add thirdPartyCustomer object if third party delivery
+      if (
+        payload.deliveryType === "THIRD_PARTY_DELIVERY" &&
+        state.formData.thirdPartyCustomerId
+      ) {
+        const customer = state.availableCustomers.find(
+          (c) => c._id === state.formData.thirdPartyCustomerId
+        );
+        if (customer) {
+          payload.thirdPartyCustomer = customer;
+        }
+      }
+
+      console.log("Sending PO payload:", payload);
+
+      const response = await apiClient.post("/email/email", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
       });
-      
-      commit('SET_SUCCESS_MESSAGE', response.data.message || 'Purchase order sent successfully!');
-      
+
+      commit(
+        "SET_SUCCESS_MESSAGE",
+        response.data.message || "Purchase order sent successfully!"
+      );
     } catch (error) {
-      console.error('Error sending purchase order:', error);
-      const errorMessage = error.response?.data?.message || 
-                          error.message || 
-                          'Failed to send purchase order. Please try again.';
-      commit('SET_ERROR_MESSAGE', errorMessage);
+      console.error("Error sending purchase order:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to send purchase order. Please try again.";
+      commit("SET_ERROR_MESSAGE", errorMessage);
       throw error;
     } finally {
-      commit('SET_LOADING_STATE', { type: 'sendEmail', value: false });
+      commit("SET_LOADING_STATE", { type: "sendEmail", value: false });
     }
   },
-  
+
   // Message actions
   clearMessages({ commit }) {
-    commit('CLEAR_MESSAGES');
+    commit("CLEAR_MESSAGES");
   },
-  
+
   setSuccessMessage({ commit }, message) {
-    commit('SET_SUCCESS_MESSAGE', message);
+    commit("SET_SUCCESS_MESSAGE", message);
   },
-  
+
   setErrorMessage({ commit }, message) {
-    commit('SET_ERROR_MESSAGE', message);
-  }
+    commit("SET_ERROR_MESSAGE", message);
+  },
 };
 
 const mutations = {
   SET_FORM_DATA(state, formData) {
     state.formData = { ...state.formData, ...formData };
   },
-  
+
   UPDATE_FORM_DATA(state, { field, value }) {
     state.formData[field] = value;
+
+    // Reset third party customer when switching to normal delivery
+    if (field === "deliveryType" && value === "NORMAL_DELIVERY") {
+      state.formData.thirdPartyCustomerId = "";
+    }
   },
-  
+
   ADD_ITEM(state, item) {
     state.formData.items.push(item);
   },
-  
+
   REMOVE_ITEM(state, index) {
     if (state.formData.items.length > 1) {
       state.formData.items.splice(index, 1);
     }
   },
-  
+
   UPDATE_ITEM(state, { index, field, value }) {
     if (state.formData.items[index]) {
       state.formData.items[index][field] = value;
     }
   },
-  
+
   SET_AVAILABLE_PRODUCTS(state, products) {
     state.availableProducts = products;
   },
-  
+
   SET_AVAILABLE_CUSTOMERS(state, customers) {
     state.availableCustomers = customers;
   },
-  
+
   SET_AVAILABLE_SUPPLIERS(state, suppliers) {
-    state.availableCustomers = suppliers;
+    state.availableSuppliers = suppliers;
   },
-  
+
   SET_LOADING_STATE(state, { type, value }) {
     state.loadingState[type] = value;
   },
-  
+
   SET_SUCCESS_MESSAGE(state, message) {
     state.successMessage = message;
-    state.errorMessage = '';
+    state.errorMessage = "";
   },
-  
+
   SET_ERROR_MESSAGE(state, message) {
     state.errorMessage = message;
-    state.successMessage = '';
+    state.successMessage = "";
   },
-  
+
   CLEAR_MESSAGES(state) {
-    state.successMessage = '';
-    state.errorMessage = '';
-  }
+    state.successMessage = "";
+    state.errorMessage = "";
+  },
 };
 
 export default {
@@ -432,5 +422,5 @@ export default {
   state,
   getters,
   actions,
-  mutations
+  mutations,
 };

@@ -11,17 +11,6 @@
           <!-- Basic Information -->
           <v-row>
             <v-col cols="12" md="6">
-              <v-text-field
-                :value="formData.email"
-                @input="updateField('email', $event)"
-                label="Supplier Email *"
-                :rules="emailRules"
-                outlined
-                dense
-                prepend-icon="mdi-email"
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" md="6">
               <v-autocomplete
                 :value="formData.supplierName"
                 @input="updateField('supplierName', $event)"
@@ -36,40 +25,29 @@
                 <template v-slot:item="{ item }">
                   <v-list-item-content>
                     <v-list-item-title>{{ item.text }}</v-list-item-title>
-                    <v-list-item-subtitle v-if="item.details && item.details.email">
-                      {{ item.details.email }}
+                    <v-list-item-subtitle v-if="item.details && item.details.email_id">
+                      {{ item.details.email_id }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                 </template>
               </v-autocomplete>
             </v-col>
-          </v-row>
-
-          <v-row>
             <v-col cols="12" md="6">
               <v-text-field
-                :value="formData.poNumber"
-                @input="updateField('poNumber', $event)"
-                label="PO Number *"
-                :rules="[v => !!v || 'Required']"
+                :value="formData.email"
+                @input="updateField('email', $event)"
+                label="Supplier Email *"
+                :rules="emailRules"
                 outlined
                 dense
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-text-field
-                :value="calculatedTotal.toFixed(2)"
-                label="Total Amount *"
-                outlined
-                dense
+                prepend-icon="mdi-email"
                 readonly
-                prefix="₹"
-                class="font-weight-bold"
               ></v-text-field>
             </v-col>
           </v-row>
 
           <v-row>
+        
             <v-col cols="12" md="6">
               <v-text-field
                 :value="formData.orderDate"
@@ -81,6 +59,9 @@
                 type="date"
               ></v-text-field>
             </v-col>
+          </v-row>
+
+          <v-row>
             <v-col cols="12" md="6">
               <v-text-field
                 :value="formData.expectedDeliveryDate"
@@ -91,55 +72,46 @@
                 type="date"
               ></v-text-field>
             </v-col>
-          </v-row>
-
-          <!-- Contact Information -->
-          <v-row>
-            <v-col cols="12">
-              <v-textarea
-                :value="formData.deliveryAddress"
-                @input="updateField('deliveryAddress', $event)"
-                label="Delivery Address"
-                outlined
-                rows="2"
-                dense
-              ></v-textarea>
-            </v-col>
-          </v-row>
-
-          <v-row>
             <v-col cols="12" md="6">
-              <v-text-field
-                :value="formData.contactPerson"
-                @input="updateField('contactPerson', $event)"
-                label="Contact Person"
+              <v-select
+                :value="formData.deliveryType"
+                @input="updateField('deliveryType', $event)"
+                :items="deliveryOptions"
+                label="Delivery Type *"
+                :rules="[v => !!v || 'Required']"
                 outlined
                 dense
-              ></v-text-field>
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-text-field
-                :value="formData.phoneNumber"
-                @input="updateField('phoneNumber', $event)"
-                label="Phone Number"
-                outlined
-                dense
-                prepend-icon="mdi-phone"
-              ></v-text-field>
+                prepend-icon="mdi-truck"
+              ></v-select>
             </v-col>
           </v-row>
 
-          <v-row>
+          <!-- Third Party Customer Selection (only shown when Third Party Delivery is selected) -->
+          <v-row v-if="formData.deliveryType === 'THIRD_PARTY_DELIVERY'">
             <v-col cols="12">
-              <v-text-field
-                :value="formData.paymentTerms"
-                @input="updateField('paymentTerms', $event)"
-                label="Payment Terms"
+              <v-autocomplete
+                :value="formData.thirdPartyCustomerId"
+                @input="updateField('thirdPartyCustomerId', $event)"
+                :items="thirdPartyCustomerOptions"
+                label="Select Third Party Customer *"
+                :rules="formData.deliveryType === 'THIRD_PARTY_DELIVERY' ? [v => !!v || 'Required for third party delivery'] : []"
                 outlined
                 dense
-              ></v-text-field>
+                clearable
+                prepend-icon="mdi-account-multiple"
+                @change="onThirdPartyCustomerSelect"
+              >
+                <template v-slot:item="{ item }">
+                  <v-list-item-content>
+                    <v-list-item-title>{{ item.text }}</v-list-item-title>
+                    <v-list-item-subtitle v-if="item.details && item.details.email_id">
+                      {{ item.details.email_id }} | {{ item.details.phone_no }}
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                </template>
+              </v-autocomplete>
             </v-col>
-          </v-row>
+          </v-row>        
 
           <!-- Items Section -->
           <v-divider class="my-4"></v-divider>
@@ -151,77 +123,123 @@
             </v-chip>
           </h3>
 
-          <div v-for="(item, index) in formData.items" :key="index" class="mb-4">
-            <v-card outlined>
-              <v-card-text>
-                <v-row align="center">
-                  <v-col cols="12" md="4">
-                    <v-autocomplete
-                      :value="item.name"
-                      @input="updateItemField(index, 'name', $event)"
-                      :items="productOptions"
-                      label="Item Name *"
-                      :rules="[v => !!v || 'Required']"
-                      outlined
-                      dense
-                      clearable
-                      :loading="loadingState.fetchProducts"
-                      @change="onProductSelect(index, $event)"
-                    >
-                      <template v-slot:item="{ item: product }">
-                        <v-list-item-content>
-                          <v-list-item-title>{{ product.text }}</v-list-item-title>
-                          <v-list-item-subtitle v-if="product.price">
-                            ₹{{ product.price.toFixed(2) }}
-                          </v-list-item-subtitle>
-                        </v-list-item-content>
-                      </template>
-                    </v-autocomplete>
-                  </v-col>
-                  <v-col cols="12" md="3">
-                    <v-text-field
-                      :value="item.quantity"
-                      @input="updateItemField(index, 'quantity', parseInt($event) || 0)"
-                      label="Quantity *"
-                      :rules="[v => !!v || 'Required']"
-                      outlined
-                      dense
-                      type="number"
-                      min="1"
-                    ></v-text-field>
-                  </v-col>
-                  <v-col cols="12" md="3">
-                    <v-text-field
-                      :value="item.price"
-                      @input="updateItemField(index, 'price', parseFloat($event) || 0)"
-                      label="Price per unit *"
-                      :rules="[v => !!v || 'Required']"
-                      outlined
-                      dense
-                      type="number"
-                      step="0.01"
-                      prefix="₹"
-                    ></v-text-field>
-                  </v-col>
-                  <v-col cols="12" md="2" class="text-center">
-                    <div class="subtitle-1 font-weight-bold text-primary">
-                      ₹{{ ((item.quantity || 0) * (item.price || 0)).toFixed(2) }}
-                    </div>
-                    <v-btn 
-                      icon 
-                      small 
-                      color="error" 
-                      @click="removeItem(index)"
-                      :disabled="formData.items.length === 1"
-                      class="mt-1"
-                    >
-                      <v-icon small>mdi-delete</v-icon>
-                    </v-btn>
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
-          </div>
+        <div v-for="(item, index) in formData.items" :key="index" class="mb-4">
+  <v-card outlined>
+    <v-card-text>
+      <v-row align="center">
+        <!-- Item Name -->
+        <v-col cols="12" md="6">
+          <v-autocomplete
+            :value="item.name"
+            @input="updateItemField(index, 'name', $event)"
+            :items="productOptions"
+            label="Item Name *"
+            :rules="[v => !!v || 'Required']"
+            outlined
+            dense
+            clearable
+            :loading="loadingState.fetchProducts"
+            @change="onProductSelect(index, $event)"
+          >
+            <template v-slot:item="{ item: product }">
+              <v-list-item-content>
+                <v-list-item-title>{{ product.text }}</v-list-item-title>
+                <v-list-item-subtitle v-if="product.details && product.details.description">
+                  {{ product.details.description }}
+                </v-list-item-subtitle>
+              </v-list-item-content>
+            </template>
+          </v-autocomplete>
+        </v-col>
+
+        <!-- Description -->
+        <v-col cols="12" md="6">
+          <v-text-field
+            :value="item.description"
+            @input="updateItemField(index, 'description', $event)"
+            label="Description"
+            outlined
+            dense
+          ></v-text-field>
+        </v-col>
+
+        <!-- Pack Size -->
+       <v-col cols="12" md="3">
+  <v-text-field
+    :value="item.packSize"
+    @input="updateItemField(index, 'packSize', parseFloat($event) || 0); calculateTotalQty(index)"
+    label="Pack Size *"
+    :rules="[v => !!v || 'Required']"
+    outlined
+    dense
+    type="number"
+    min="0"
+    step="0.01"
+  ></v-text-field>
+</v-col>
+
+        <!-- Nos -->
+     <v-col cols="12" md="3">
+  <v-text-field
+    :value="item.nos"
+    @input="updateItemField(index, 'nos', parseInt($event) || 0); calculateTotalQty(index)"
+    label="Nos *"
+    :rules="[v => !!v || 'Required']"
+    outlined
+    dense
+    type="number"
+    min="1"
+  ></v-text-field>
+</v-col>
+
+        <!-- Total Qty -->
+        <v-col cols="12" md="3">
+          <v-text-field
+            :value="item.totalQty"
+            @input="updateItemField(index, 'totalQty', parseInt($event) || 0)"
+            label="Total Qty *"
+            :rules="[v => !!v || 'Required']"
+            outlined
+            dense
+            type="number"
+            min="1"
+            readonly
+            @blur="calculateTotalQty(index)"
+          ></v-text-field>
+        </v-col>
+
+        <!-- Delete Button -->
+        <v-col cols="12" md="3" class="text-center">
+          <v-btn 
+            icon 
+            small 
+            color="error" 
+            @click="removeItem(index)"
+            :disabled="formData.items.length === 1"
+            class="mt-1"
+          >
+            <v-icon small>mdi-delete</v-icon>
+          </v-btn>
+        </v-col>
+      </v-row>
+    </v-card-text>
+  </v-card>
+</div>
+<!-- Remarks Section -->
+<v-divider class="my-4"></v-divider>
+<v-row>
+  <v-col cols="12">
+    <v-textarea
+      :value="formData.remarks"
+      @input="updateField('remarks', $event)"
+      label="Special Remarks / Instructions"
+      outlined
+      rows="3"
+      placeholder="Enter any special instructions or remarks for this purchase order..."
+      prepend-icon="mdi-note-text"
+    ></v-textarea>
+  </v-col>
+</v-row>
 
           <v-btn 
             color="secondary" 
@@ -233,39 +251,29 @@
             Add Item
           </v-btn>
 
-          <!-- Total Display -->
-          <v-card color="grey lighten-4" class="mb-4">
-            <v-card-text>
-              <div class="d-flex justify-space-between align-center">
-                <span class="text-h6">Total Amount:</span>
-                <span class="text-h5 primary--text font-weight-bold">
-                  ₹{{ calculatedTotal.toFixed(2) }}
-                </span>
-              </div>
-              <div class="d-flex justify-space-between align-center mt-2">
-                <span class="caption">Items: {{ formData.items.length }}</span>
-                <span class="caption">
-                  Total Qty: {{ formData.items.reduce((sum, item) => sum + (item.quantity || 0), 0) }}
-                </span>
-              </div>
-            </v-card-text>
-          </v-card>
+          <!-- Items Summary -->
+         <v-card color="grey lighten-4" class="mb-4">
+  <v-card-text>
+    <div class="d-flex justify-space-between align-center">
+      <span class="text-h6">Items Summary:</span>
+      <span class="text-h6 primary--text font-weight-bold">
+        {{ formData.items.length }} item{{ formData.items.length !== 1 ? 's' : '' }}
+      </span>
+    </div>
+    <div class="d-flex justify-space-between align-center mt-2">
+      <span class="caption">
+        Total Quantity: {{ formData.items.reduce((sum, item) => sum + (item.totalQty || 0), 0) }}
+      </span>
+      <span class="caption">
+        Total Pieces: {{ formData.items.reduce((sum, item) => sum + (item.nos || 0), 0) }}
+      </span>
+    </div>
+  </v-card-text>
+</v-card>
 
           <!-- Action Buttons -->
           <v-row>
-            <v-col cols="12" md="3">
-              <v-btn 
-                color="info" 
-                outlined 
-                block 
-                @click="loadSampleData"
-                :disabled="loadingState.sendEmail"
-              >
-                <v-icon left>mdi-auto-fix</v-icon>
-                Load Sample
-              </v-btn>
-            </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" md="4">
               <v-btn 
                 color="secondary" 
                 outlined 
@@ -277,7 +285,7 @@
                 Reset Form
               </v-btn>
             </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" md="4">
               <v-btn 
                 color="warning" 
                 outlined 
@@ -289,7 +297,7 @@
                 Refresh Data
               </v-btn>
             </v-col>
-            <v-col cols="12" md="3">
+            <v-col cols="12" md="4">
               <v-btn 
                 color="primary" 
                 block 
@@ -303,6 +311,32 @@
             </v-col>
           </v-row>
         </v-form>
+
+        <!-- Delivery Information Display -->
+        <v-row class="mt-4" v-if="formData.deliveryType">
+          <v-col cols="12">
+            <v-card outlined class="pa-3">
+              <div class="d-flex align-center mb-2">
+                <v-icon color="info" class="mr-2">mdi-information</v-icon>
+                <span class="font-weight-bold">Delivery Information</span>
+              </div>
+              <div class="body-2">
+                <strong>Delivery Type:</strong> 
+                {{ formData.deliveryType === 'NORMAL_DELIVERY' ? 'Normal Delivery' : 'Third Party Delivery' }}
+              </div>
+              <div v-if="formData.deliveryType === 'THIRD_PARTY_DELIVERY' && selectedThirdPartyCustomer" class="body-2 mt-2">
+                <strong>Third Party Customer:</strong> {{ selectedThirdPartyCustomer.name }}<br>
+                <strong>Email:</strong> {{ selectedThirdPartyCustomer.email_id }}<br>
+                <strong>Phone:</strong> {{ selectedThirdPartyCustomer.phone_no }}<br>
+                <strong>Address:</strong> 
+                {{ selectedThirdPartyCustomer.address.line1 }}, 
+                {{ selectedThirdPartyCustomer.address.city }}, 
+                {{ selectedThirdPartyCustomer.address.state }} - 
+                {{ selectedThirdPartyCustomer.address.pincode }}
+              </div>
+            </v-card>
+          </v-col>
+        </v-row>
 
         <!-- Data Status Cards -->
         <v-row class="mt-4">
@@ -328,7 +362,7 @@
               <div class="d-flex align-center">
                 <v-icon color="success" class="mr-2">mdi-account-multiple</v-icon>
                 <span class="body-2">
-                  <strong>Customers/Suppliers:</strong> {{ availableCustomers.length }}
+                  <strong>Customers Available:</strong> {{ availableCustomers.length }}
                 </span>
                 <v-spacer></v-spacer>
                 <v-progress-circular 
@@ -378,13 +412,31 @@ export default {
       emailRules: [
         v => !!v || 'Email is required',
         v => /.+@.+\..+/.test(v) || 'Email must be valid'
+      ],
+      // Delivery type options
+      deliveryOptions: [
+        { text: 'Normal Delivery', value: 'NORMAL_DELIVERY' },
+        { text: 'Third Party Delivery', value: 'THIRD_PARTY_DELIVERY' }
+      ],
+      // Contact person dropdown options
+      contactPersonOptions: [
+        { text: 'Rishi Gandhi', value: 'Rishi Gandhi' },
+        { text: 'Hemant Gandhi', value: 'Hemant Gandhi' }
+      ],
+      // Phone number dropdown options
+      phoneNumberOptions: [
+        { text: '+91 98765 43210 (Rishi Gandhi)', value: '+91 98765 43210' },
+        { text: '+91 87654 32109 (Hemant Gandhi)', value: '+91 87654 32109' },
+        { text: '+91 76543 21098 (Office)', value: '+91 76543 21098' },
+        { text: '+91 65432 10987 (Alternate)', value: '+91 65432 10987' }
       ]
     }
   },
   
   computed: {
     ...mapState('sendPO', [
-      'loadingState'
+      'loadingState',
+      'selectedThirdPartyCustomer'
     ]),
     ...mapGetters('sendPO', [
       'formData',
@@ -392,10 +444,10 @@ export default {
       'availableCustomers',
       'successMessage',
       'errorMessage',
-      'calculatedTotal',
       'canSend',
       'productOptions',
-      'customerOptions'
+      'customerOptions',
+      'thirdPartyCustomerOptions'
     ])
   },
   
@@ -405,7 +457,9 @@ export default {
   },
   
   async mounted() {
-    // Load sample data for testing
+    // Fetch customers from API
+    await this.fetchCustomersFromAPI();
+    // Load sample data for testing products
     this.loadSampleData();
   },
   
@@ -413,7 +467,7 @@ export default {
     ...mapActions('sendPO', [
       'initializeStore',
       'fetchProductsFromInvoice',
-      'fetchCustomersFromInvoice',
+      'fetchCustomersFromAPI',
       'updateFormData',
       'addItem',
       'removeItem',
@@ -424,18 +478,35 @@ export default {
       'sendPurchaseOrder',
       'clearMessages'
     ]),
-    ...mapActions('invoices', {
-      fetchInvoices: 'fetchInvoices'
-    }),
     
     updateField(field, value) {
       this.updateFormData({ field, value });
     },
     
-    updateItemField(index, field, value) {
-      this.updateItem({ index, field, value });
-    },
+    // updateItemField(index, field, value) {
+    //   this.updateItem({ index, field, value });
+    // },
+   calculateTotalQty(index) {
+    const item = this.formData.items[index];
+    if (item.packSize && item.nos) {
+      const totalQty = parseFloat(item.packSize) * parseInt(item.nos);
+      this.updateItem({ index, field: 'totalQty', value: totalQty });
+    } else {
+      // If either packSize or nos is empty/zero, set totalQty to 0
+      this.updateItem({ index, field: 'totalQty', value: 0 });
+    }
+  },
+
+  updateItemField(index, field, value) {
+    this.updateItem({ index, field, value });
     
+    // Auto-calculate total when packSize or nos changes
+    if (field === 'packSize' || field === 'nos') {
+      this.$nextTick(() => {
+        this.calculateTotalQty(index);
+      });
+    }
+  },
     onProductSelect(itemIndex, productId) {
       if (productId) {
         const product = this.availableProducts.find(p => p._id === productId);
@@ -447,29 +518,41 @@ export default {
     
     onSupplierSelect(supplierName) {
       if (supplierName) {
-        const supplier = this.availableCustomers.find(c => 
-          (c.name || c.customerName) === supplierName
-        );
-        if (supplier && supplier.email) {
-          this.updateField('email', supplier.email);
+        const supplier = this.availableCustomers.find(c => c.name === supplierName);
+        if (supplier) {
+          // Auto-fill email from customer data
+          this.updateField('email', supplier.email_id || '');
+          // Store selected supplier for potential use
+          this.updateField('selectedSupplier', supplier);
         }
-        if (supplier && supplier.address) {
-          this.updateField('deliveryAddress', supplier.address);
+      }
+    },
+    
+    onThirdPartyCustomerSelect(customerId) {
+      if (customerId) {
+        const customer = this.availableCustomers.find(c => c._id === customerId);
+        if (customer) {
+          // Store selected third party customer details
+          this.updateFormData({ field: 'selectedThirdPartyCustomer', value: customer });
         }
-        if (supplier && supplier.phone) {
-          this.updateField('phoneNumber', supplier.phone);
-        }
+      }
+    },
+    
+    onContactPersonSelect(contactPerson) {
+      // Auto-select corresponding phone number when contact person is selected
+      if (contactPerson === 'Rishi Gandhi') {
+        this.updateField('phoneNumber', '+91 98765 43210');
+      } else if (contactPerson === 'Hemant Gandhi') {
+        this.updateField('phoneNumber', '+91 87654 32109');
       }
     },
     
     async refreshData() {
       try {
-        // First fetch invoices to get latest data
-        await this.fetchInvoices();
-        // Then fetch products and customers from updated invoices
+        // Fetch customers from API and products
         await Promise.all([
-          this.fetchProductsFromInvoice(),
-          this.fetchCustomersFromInvoice()
+          this.fetchCustomersFromAPI(),
+          this.fetchProductsFromInvoice()
         ]);
         this.$refs.form?.resetValidation();
       } catch (error) {
@@ -492,75 +575,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.v-card {
-  border-radius: 12px;
-}
-
-.v-btn {
-  text-transform: none;
-  font-weight: 500;
-}
-
-.v-alert {
-  border-radius: 8px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .v-container {
-    padding: 12px !important;
-  }
-}
-
-/* Form styling */
-.v-text-field, .v-textarea, .v-autocomplete {
-  margin-bottom: 8px;
-}
-
-/* Item cards */
-.v-card.outlined {
-  border: 1px solid #e0e0e0;
-  margin-bottom: 16px;
-  transition: all 0.3s ease;
-}
-
-.v-card.outlined:hover {
-  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
-}
-
-/* Total display */
-.grey.lighten-4 {
-  background-color: #f5f5f5 !important;
-}
-
-/* Loading state */
-.v-btn--loading {
-  pointer-events: none;
-}
-
-/* Status cards */
-.v-card.outlined .v-card__text {
-  padding: 8px 12px !important;
-}
-
-/* Enhanced autocomplete styling */
-.v-autocomplete .v-input__slot {
-  background-color: #fafafa;
-}
-
-.v-autocomplete.v-input--is-focused .v-input__slot {
-  background-color: white;
-}
-
-/* Item total styling */
-.text-primary {
-  color: #1976d2 !important;
-}
-
-/* Chip styling */
-.v-chip.v-chip--outlined {
-  border-width: 1px;
-}
-</style>

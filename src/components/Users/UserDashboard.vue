@@ -11,72 +11,96 @@
       <v-progress-circular indeterminate color="primary" size="50" />
     </v-row>
 
-    <!-- Dashboard Stats Cards -->
-    <v-row v-else>
-      <v-col
-        v-for="(value, key) in dashboardStats"
-        :key="key"
-        cols="12"
-        sm="6"
-        md="4"
-        lg="3"
-      >
-        <v-card
-          class="mx-auto my-4"
-          :color="config[key]?.color || 'grey'"
-          dark
-          outlined
-          tile
-          elevation="4"
-          hover
+    <!-- Dashboard Content -->
+    <div v-else>
+      <!-- Dashboard Stats Cards -->
+      <v-row>
+        <v-col
+          v-for="(value, key) in dashboardStats"
+          :key="key"
+          cols="12"
+          sm="6"
+          md="4"
+          lg="3"
         >
-          <v-card-title class="d-flex align-center">
-            <v-icon
-              class="mr-2"
-              :color="config[key]?.iconColor || 'white'"
-            >
-              {{ config[key]?.icon || 'mdi-help-circle-outline' }}
-            </v-icon>
-            {{ config[key]?.title || formatTitle(key) }}
-          </v-card-title>
+          <v-card
+            class="mx-auto my-4"
+            :color="config[key]?.color || 'grey'"
+            dark
+            outlined
+            tile
+            elevation="4"
+            hover
+          >
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" :color="config[key]?.iconColor || 'white'">
+                {{ config[key]?.icon || "mdi-help-circle-outline" }}
+              </v-icon>
+              {{ config[key]?.title || formatTitle(key) }}
+            </v-card-title>
 
-          <v-card-subtitle class="text-h6 font-weight-bold">
-            {{ value }}
-          </v-card-subtitle>
+            <v-card-subtitle class="text-h6 font-weight-bold">
+              {{ value }}
+            </v-card-subtitle>
 
-          <v-card-actions class="justify-end">
-            <v-btn
-              color="primary"
-              rounded
-              @click="handleAction(key)"
-              elevation="2"
-            >
-              {{ config[key]?.buttonText || 'View Details' }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
-    </v-row>
+            <v-card-actions class="justify-end">
+              <v-btn
+                color="primary"
+                rounded
+                @click="handleAction(key)"
+                elevation="2"
+              >
+                {{ config[key]?.buttonText || "View Details" }}
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
 
-    <!-- No Data Message -->
-    <v-alert
-      v-if="!loading && hasNoData"
-      type="error"
-      border="left"
-      colored-border
-    >
-      No data available.
-    </v-alert>
+      <!-- Send PO Card -->
+      <v-row class="mb-4">
+        <v-col cols="12" sm="6" md="4" lg="3">
+          <v-card
+            class="mx-auto my-4"
+            color="pink"
+            dark
+            outlined
+            tile
+            elevation="4"
+            hover
+          >
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" color="white"> mdi-email-send </v-icon>
+              Send Purchase Order
+            </v-card-title>
 
-    <!-- Error Message -->
-    <v-alert
-      v-if="error"
-      type="error"
-      border="left"
-      colored-border
-    >
-      Error loading dashboard stats: {{ error }}. Please try again later.
-    </v-alert>
+            <v-card-subtitle class="text-h6 font-weight-bold">
+              Create & Send PO
+            </v-card-subtitle>
+
+            <v-card-actions class="justify-end">
+              <v-btn
+                color="primary"
+                rounded
+                @click="$router.push('/SendPurchaseOrder')"
+                elevation="2"
+              >
+                Send PO
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
+      <!-- No Data Message -->
+      <v-alert v-if="hasNoData" type="error" border="left" colored-border>
+        No data available.
+      </v-alert>
+
+      <!-- Error Message -->
+      <v-alert v-if="error" type="error" border="left" colored-border>
+        Error loading dashboard stats: {{ error }}. Please try again later.
+      </v-alert>
+    </div>
   </v-container>
 </template>
 
@@ -126,22 +150,6 @@ export default {
           icon: "mdi-store",
           iconColor: "white",
           color: "purple",
-          buttonText: "View Inventory",
-          route: "/inventory",
-        },
-          availableInventory: {
-          title: "Available Inventory",
-          icon: "mdi-store-settings",
-          iconColor: "white",
-          color: "teal",
-          buttonText: "View Inventory",
-          route: "/inventory",
-        },
-         soldInventory: {
-          title: "Sold Inventory",
-          icon: "mdi-store-check",
-          iconColor: "white",
-          color: "blue-grey",
           buttonText: "View Inventory",
           route: "/inventory",
         },
