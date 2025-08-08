@@ -55,10 +55,9 @@
             </v-card-actions>
           </v-card>
         </v-col>
-      </v-row>
+     
 
       <!-- Send PO Card -->
-      <v-row class="mb-4">
         <v-col cols="12" sm="6" md="4" lg="3">
           <v-card
             class="mx-auto my-4"
@@ -90,7 +89,7 @@
             </v-card-actions>
           </v-card>
         </v-col>
-      </v-row>
+         </v-row>
       <!-- No Data Message -->
       <v-alert v-if="hasNoData" type="error" border="left" colored-border>
         No data available.
@@ -151,6 +150,38 @@ export default {
           iconColor: "white",
           color: "purple",
           buttonText: "View Inventory",
+          route: "/inventory",
+        },
+          totalTransporters: {
+          title: "Total Transporters",
+          icon: "mdi-truck",
+          iconColor: "white",
+          color: "teal",
+          buttonText: "View Transporters",
+          route: "/transporter",
+        },
+         availableInventory: {
+          title: "Available Inventory",
+          icon: "mdi-store",
+          iconColor: "white",
+          color: "green",
+          buttonText: "View Available Inventory",
+          route: "/inventory",
+        }, 
+        reservedInventory: {
+          title: "Reserved Inventory",
+          icon: "mdi-store",
+          iconColor: "white",
+          color: "orange",
+          buttonText: "View Reserved Inventory",
+          route: "/inventory",
+        },
+        damagedInventory: {
+          title: "Damaged Inventory",
+          icon: "mdi-store",
+          iconColor: "white",
+          color: "red",
+          buttonText: "View Damaged Inventory",
           route: "/inventory",
         },
       },
