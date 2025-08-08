@@ -22,6 +22,9 @@ import InventoryList from '@/components/Inventory/InventoryList.vue';
 import InventoryDetail from '@/components/Inventory/InventoryDetail.vue';
 import BatchAddInventory from '@/components/Inventory/BatchAddInventory.vue';
 import SendEmail from '@/components/SendEmail.vue';
+import AddTransporter from '@/components/Transporters/AddTransporter.vue';
+import TransporterDetail from '@/components/Transporters/TransporterDetail.vue';
+import TransporterList from '@/components/Transporters/TransporterList.vue';
 
 Vue.use(Router);
 
@@ -162,6 +165,29 @@ const routes = [
     path: '/SendPurchaseOrder',
     component: SendEmail,
     name: 'SendPurchaseOrder',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addtransporter',
+    component: AddTransporter,
+    name: 'AddTransporter',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/addtransporter/:id?',
+    component: AddTransporter,
+    name: 'EditTransporter',
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/transporter/:id',
+    component: TransporterDetail,
+    name: 'ViewTransporter',
+    meta: { requiresAuth: true },
+  },{
+    path: '/transporter',
+    component: TransporterList,
+    name: 'TransporterList',
     meta: { requiresAuth: true },
   },
   {
