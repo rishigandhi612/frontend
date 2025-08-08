@@ -561,19 +561,10 @@ export default {
     addSignatureLines(doc, pageHeight) {
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
-      doc.text("Receiver's Signature", 18, pageHeight - 30);
-      doc.line(10, pageHeight - 20, 80, pageHeight - 20);
-      doc.text("For Hemant Traders", 145, pageHeight - 30);
-      doc.line(140, pageHeight - 20, 200, pageHeight - 20);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text(
-          `Terms & Conditions(Non Negotiable):
-*Please Check the material before use. *Our responsibility ceases once the material leaves our godown. *Subject To Pune Jurisdiction 
-*Goods once sold will not be taken back. *Interest @24% will be charged if payments are not made before due date.`,
-          14,
-          pageHeight - 15
-        );
+      doc.text("Receiver's Signature", 14, pageHeight - 25);
+      doc.line(10, pageHeight - 18, 80, pageHeight - 18);
+      doc.text("For Hemant Traders", 140, pageHeight - 25);
+      doc.line(140, pageHeight - 18, 200, pageHeight - 18);
     },
 
     addHeader(doc, copyType) {
@@ -685,8 +676,7 @@ export default {
       if (isLastPage) {
         // Position Terms & Conditions based on whether signature lines are added
         const termsYPosition = hasSignature ? pageHeight - 30 : pageHeight - 15;
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
+
         doc.text(
           `Terms & Conditions(Non Negotiable):
 *Please Check the material before use. *Our responsibility ceases once the material leaves our godown. *Subject To Pune Jurisdiction 
