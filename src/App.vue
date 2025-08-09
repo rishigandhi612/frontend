@@ -68,6 +68,12 @@
           </v-list-item-icon>
           <v-list-item-title>Inventory</v-list-item-title>
         </v-list-item>
+          <v-list-item link @click="$router.push('/transporter')">
+          <v-list-item-icon>
+            <v-icon>mdi-truck</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Transporters</v-list-item-title>
+        </v-list-item>
         
       </v-list>
     </v-navigation-drawer>
