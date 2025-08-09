@@ -567,91 +567,116 @@ export default {
       doc.line(140, pageHeight - 18, 200, pageHeight - 18);
     },
 
-    addHeader(doc, copyType) {
-      const logoPath = require("@/assets/HoloLogo.png");
-      doc.addImage(logoPath, "PNG", 5, 8, 25, 25);
-      doc.setFontSize(36);
-      doc.setFont("helvetica", "bold");
-      doc.text("HEMANT TRADERS", 105, 20, "center");
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        "1281, Sadashiv Peth, Vertex Arcade, Pune - 411030",
-        105,
-        25,
-        "center"
-      );
-      doc.text(
-        "Contact: (+91) 9422080922 / 9420699675    Web: hemanttraders.vercel.app",
-        105,
-        32,
-        "center"
-      );
-      doc.line(0, 36, 210, 36);
-      doc.text(
-        "Dealers in BOPP, POLYESTER, PVC, THERMAL Films",
-        105,
-        42,
-        "center"
-      );
-      doc.text(
-        "Adhesives for Lamination, Bookbinding, and Pasting, UV Coats",
-        105,
-        48,
-        "center"
-      );
-      doc.line(0, 51, 210, 51);
-      doc.setFontSize(12);
-      doc.text(`(${copyType})`, 105, 56, "center");
+   addHeader(doc, copyType) {
+  const logoPath = require("@/assets/HoloLogo.png");
+  doc.addImage(logoPath, "PNG", 5, 8, 25, 25);
 
-      doc.setFontSize(12);
-      doc.text(`DELIVERY CHALLAN #${this.invoiceDetail.invoiceNumber}`, 14, 62);
-      doc.text(
-        `Date: ${this.formatDate(this.invoiceDetail.createdAt)}`,
-        200,
-        62,
-        "right"
-      );
+  doc.setFontSize(36);
+  doc.setFont("helvetica", "bold");
+  doc.text("HEMANT TRADERS", 105, 20, "center");
 
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text(
-        `M/s ${this.invoiceDetail.customer?.name || "N/A"}`,
-        105,
-        70,
-        "center"
-      );
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-          this.invoiceDetail.customer?.address?.city || "N/A"
-        }-${this.invoiceDetail.customer?.address?.pincode || "N/A"}`,
-        105,
-        75,
-        "center"
-      );
-      doc.text(
-        `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
-        105,
-        80,
-        "center"
-      );
-      doc.text(
-        `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
-        105,
-        85,
-        "center"
-      );
-      doc.text(
-        `Dispatch through: ${this.invoiceDetail.transporter || "N/A"}`,
-        105,
-        90,
-        "center"
-      );
+  doc.setFontSize(12);
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "1281, Sadashiv Peth, Vertex Arcade, Pune - 411030",
+    105,
+    25,
+    "center"
+  );
+  doc.text(
+    "Contact: (+91) 9422080922 / 9420699675    Web: hemanttraders.vercel.app",
+    105,
+    32,
+    "center"
+  );
 
-      return 100; // Return the new startY for the table
-    },
+  doc.line(0, 36, 210, 36);
+  doc.text(
+    "Dealers in BOPP, POLYESTER, PVC, THERMAL Films",
+    105,
+    42,
+    "center"
+  );
+  doc.text(
+    "Adhesives for Lamination, Bookbinding, and Pasting, UV Coats",
+    105,
+    48,
+    "center"
+  );
+
+  doc.line(0, 51, 210, 51);
+
+  doc.setFontSize(12);
+  doc.text(`(${copyType})`, 105, 56, "center");
+
+  doc.setFontSize(12);
+  doc.text(`DELIVERY CHALLAN #${this.invoiceDetail.invoiceNumber}`, 14, 62);
+  doc.text(
+    `Date: ${this.formatDate(this.invoiceDetail.createdAt)}`,
+    200,
+    62,
+    "right"
+  );
+
+  // Start y position for customer details
+  let y = 70;
+
+  // CUSTOMER NAME (bold)
+  doc.setFont("helvetica", "bold");
+  let nameLines = doc.splitTextToSize(
+    `M/s ${this.invoiceDetail.customer?.name || "N/A"}`,
+    180
+  );
+  nameLines.forEach(line => {
+    doc.text(line, 105, y, "center");
+    y += 5;
+  });
+
+  // CUSTOMER ADDRESS (normal)
+  doc.setFont("helvetica", "normal");
+  let addressText = `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ` +
+                    `${this.invoiceDetail.customer?.address?.city || "N/A"}-` +
+                    `${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
+  let addressLines = doc.splitTextToSize(addressText, 180);
+  addressLines.forEach(line => {
+    doc.text(line, 105, y, "center");
+    y += 5;
+  });
+
+  // CONTACT
+  let contactLines = doc.splitTextToSize(
+    `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
+    180
+  );
+  contactLines.forEach(line => {
+    doc.text(line, 105, y, "center");
+    y += 5;
+  });
+
+  // GSTIN
+  let gstLines = doc.splitTextToSize(
+    `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
+    180
+  );
+  gstLines.forEach(line => {
+    doc.text(line, 105, y, "center");
+    y += 5;
+  });
+
+  doc.setFont("helvetica", "bold");
+  // TRANSPORTER
+  let transporterLines = doc.splitTextToSize(
+    `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
+    180
+  );
+  transporterLines.forEach(line => {
+    doc.text(line, 105, y, "center");
+    y += 5;
+  });
+
+  return y + 0; // Return new startY for the table
+}
+,
 
     addFooter(
       doc,

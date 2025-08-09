@@ -6,7 +6,7 @@
       <v-card-text>
         <v-row>
           <v-col cols="12">
-            <v-select
+            <v-autocomplete
               v-model="batchProduct.productId"
               :items="allProducts"
               item-text="name"

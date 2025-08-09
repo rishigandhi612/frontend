@@ -4,10 +4,13 @@
     <!-- Loader Spinner -->
     <v-row v-if="loading">
       <v-col class="d-flex justify-center align-center">
-        <v-progress-circular indeterminate color="primary"></v-progress-circular>
+        <v-progress-circular
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
       </v-col>
     </v-row>
-    
+
     <v-row v-if="!loading">
       <v-col md="2" cols="12">
         <v-row>
@@ -18,7 +21,7 @@
           </v-col>
         </v-row>
       </v-col>
-      
+
       <v-col md="8" cols="12">
         <v-row>
           <v-col>
@@ -28,7 +31,7 @@
             </div>
           </v-col>
         </v-row>
-        
+
         <!-- Invoice Number - Only show input field in edit mode -->
         <v-row class="mt-3" v-if="isEditing">
           <v-col cols="12" md="6" offset-md="3">
@@ -38,13 +41,14 @@
               :rules="[rules.required]"
               required
               :disabled="!canEditInvoiceNumber"
-              :hint="!canEditInvoiceNumber ? 'Invoice number cannot be modified' : ''"
+              :hint="
+                !canEditInvoiceNumber ? 'Invoice number cannot be modified' : ''
+              "
               persistent-hint
             />
           </v-col>
         </v-row>
-        
-        
+
         <!-- Form -->
         <v-form ref="form" v-model="valid">
           <v-autocomplete
@@ -56,6 +60,15 @@
             return-object
             required
           />
+          <v-autocomplete
+            v-model="selectedTransporterId"
+            :items="allTransporters"
+            item-text="name"
+            item-value="_id"
+            label="Select Transporter"
+            clearable
+            return-object
+          />
 
           <!-- Products Component -->
           <product-list
@@ -65,21 +78,33 @@
             @product-removed="removeProduct"
             @product-total-update="updateTotals"
           />
-          
+
           <!-- Action Buttons - Updated with new inventory button -->
           <v-row class="mt-3">
             <v-col cols="4" class="d-flex justify-end">
-              <v-btn color="primary" @click="addProduct" aria-label="Add Product">
+              <v-btn
+                color="primary"
+                @click="addProduct"
+                aria-label="Add Product"
+              >
                 <v-icon left>mdi-plus</v-icon> Add Product
               </v-btn>
             </v-col>
             <v-col cols="4" class="d-flex justify-center">
-              <v-btn color="info" @click="openBatchDialog" aria-label="Batch Add Product">
+              <v-btn
+                color="info"
+                @click="openBatchDialog"
+                aria-label="Batch Add Product"
+              >
                 <v-icon left>mdi-playlist-plus</v-icon> Batch Add
               </v-btn>
             </v-col>
             <v-col cols="4" class="d-flex justify-start">
-              <v-btn color="success" @click="openInventoryDialog" aria-label="Add from Inventory">
+              <v-btn
+                color="success"
+                @click="openInventoryDialog"
+                aria-label="Add from Inventory"
+              >
                 <v-icon left>mdi-warehouse</v-icon> Add from Inventory
               </v-btn>
             </v-col>
@@ -118,7 +143,7 @@
           </v-col>
         </v-form>
       </v-col>
-      
+
       <!-- Error Alert -->
       <v-alert v-if="error" type="error" dismissible>
         {{ error }}
@@ -147,22 +172,23 @@
 
 <script>
 import { mapActions, mapGetters, mapState } from "vuex";
-import ProductList from './addInvoiceProductList.vue';
-import InvoiceTotals from './InvoiceTotals.vue';
-import BatchDialog from './BatchDialog.vue';
-import InventoryDialog from './InventoryDialog.vue';
+import ProductList from "./addInvoiceProductList.vue";
+import InvoiceTotals from "./InvoiceTotals.vue";
+import BatchDialog from "./BatchDialog.vue";
+import InventoryDialog from "./InventoryDialog.vue";
 
 export default {
   components: {
     ProductList,
     InvoiceTotals,
     BatchDialog,
-    InventoryDialog
+    InventoryDialog,
   },
-  
+
   data() {
     return {
       selectedCustomerId: null,
+      selectedTransporterId: null,
       invoiceProducts: [],
       error: null,
       valid: false,
@@ -171,59 +197,68 @@ export default {
       originalInvoice: null,
       loading: false,
       otherCharges: 0,
-      isIntraStateTransaction: true, 
+      isIntraStateTransaction: true,
       cgst: 0,
       sgst: 0,
       igst: 0,
-      invoiceNumber: '',
+      invoiceNumber: "",
       canEditInvoiceNumber: false,
       rules: {
         required: (value) => !!value || "Required.",
         numeric: (value) => !isNaN(value) || "Must be a number.",
       },
       batchDialog: false,
-      inventoryDialog: false // New data property for inventory dialog
+      inventoryDialog: false, // New data property for inventory dialog
     };
   },
 
   computed: {
     ...mapGetters("customers", ["allCustomers"]),
+    ...mapGetters("transporter", ["allTransporters"]),
     ...mapGetters("products", ["allProducts"]),
     ...mapState("invoices", {
-      isSubmitting: state => state.loadingState.createUpdateInvoice
+      isSubmitting: (state) => state.loadingState.createUpdateInvoice,
     }),
     getSelectedCustomerObject() {
       console.log("Selected customer ID:", this.selectedCustomerId);
-      
+
       if (!this.selectedCustomerId) {
         console.log("No customer selected");
         return null;
       }
-      
-      if (typeof this.selectedCustomerId === 'object' && this.selectedCustomerId !== null) {
-        console.log("Selected customer is already an object:", this.selectedCustomerId);
+
+      if (
+        typeof this.selectedCustomerId === "object" &&
+        this.selectedCustomerId !== null
+      ) {
+        console.log(
+          "Selected customer is already an object:",
+          this.selectedCustomerId
+        );
         return this.selectedCustomerId;
       }
-      
-      const customer = this.allCustomers.find(c => c._id === this.selectedCustomerId);
+
+      const customer = this.allCustomers.find(
+        (c) => c._id === this.selectedCustomerId
+      );
       console.log("Found customer:", customer);
       return customer;
-    }
+    },
   },
 
   async created() {
     this.loading = true;
     await this.fetchCustomersAndProducts();
-
+    await this.fetchTransporters();
     if (this.$route.params.id) {
       this.isEditing = true;
       this.invoiceId = this.$route.params.id;
       await this.fetchInvoiceDetail(this.invoiceId);
       this.canEditInvoiceNumber = this.checkPermissionToEditInvoiceNumber();
     } else {
-      this.invoiceNumber = 'Will be auto-generated';
+      this.invoiceNumber = "Will be auto-generated";
     }
-    
+
     this.loading = false;
   },
 
@@ -235,6 +270,7 @@ export default {
     ]),
     ...mapActions("customers", ["fetchCustomers"]),
     ...mapActions("products", ["fetchProducts"]),
+    ...mapActions("transporter", ["fetchTransporters"]),
 
     checkPermissionToEditInvoiceNumber() {
       return true;
@@ -251,10 +287,14 @@ export default {
 
     async fetchInvoiceDetail(id) {
       try {
-        const response = await this.$store.dispatch("invoices/fetchInvoiceById", id);
+        const response = await this.$store.dispatch(
+          "invoices/fetchInvoiceById",
+          id
+        );
         if (response && response.success) {
           const invoice = response.data;
           this.selectedCustomerId = invoice.customer._id;
+          this.selectedTransporterId = invoice.transporter?._id || null;
           this.invoiceProducts = invoice.products.map((product) => ({
             productId: product.product._id,
             width: product.width,
@@ -263,7 +303,7 @@ export default {
             totalPrice: (product.unit_price * product.quantity).toFixed(2),
           }));
           this.otherCharges = invoice.otherCharges || 0;
-          this.invoiceNumber = invoice.invoiceNumber || '';
+          this.invoiceNumber = invoice.invoiceNumber || "";
           this.isIntraStateTransaction = invoice.igst === 0;
           this.originalInvoice = { ...invoice };
         } else {
@@ -284,7 +324,7 @@ export default {
         totalPrice: 0,
       });
     },
-    
+
     removeProduct(index) {
       this.invoiceProducts.splice(index, 1);
     },
@@ -292,7 +332,7 @@ export default {
     openBatchDialog() {
       this.batchDialog = true;
     },
-    
+
     addBatchProductsToInvoice(batchProducts) {
       this.invoiceProducts = [...this.invoiceProducts, ...batchProducts];
       this.batchDialog = false;
@@ -302,12 +342,12 @@ export default {
     openInventoryDialog() {
       this.inventoryDialog = true;
     },
-    
+
     addInventoryProductsToInvoice(inventoryProducts) {
       // Add inventory products to the existing invoice products
       this.invoiceProducts = [...this.invoiceProducts, ...inventoryProducts];
       this.inventoryDialog = false;
-      
+
       // Show success message
       this.$toast?.success?.(
         `Added ${inventoryProducts.length} items from inventory to invoice.`
@@ -317,21 +357,21 @@ export default {
     updateTotals() {
       // This method can be called when needed to update any dependent calculations
     },
-    
+
     handleGstTypeChange(isIntraState) {
       console.log("GST Type Changed:", isIntraState ? "CGST+SGST" : "IGST");
       this.isIntraStateTransaction = isIntraState;
     },
-    
+
     async addInvoice() {
       this.error = null;
-      
+
       const invoicePayload = this.prepareInvoicePayload();
-      
+
       if (!this.isEditing) {
         delete invoicePayload.invoiceNumber;
       }
-      
+
       if (!this.validateInvoicePayload(invoicePayload)) {
         return;
       }
@@ -347,20 +387,25 @@ export default {
 
     async updateInvoice() {
       this.error = null;
-      
+
       const invoicePayload = this.prepareInvoicePayload();
-      
+
       if (!this.validateInvoicePayload(invoicePayload)) {
         return;
       }
 
-      if (JSON.stringify(invoicePayload) === JSON.stringify(this.originalInvoice)) {
+      if (
+        JSON.stringify(invoicePayload) === JSON.stringify(this.originalInvoice)
+      ) {
         this.error = "No changes detected.";
         return;
       }
 
       try {
-        await this.updateInvoiceInStore({ id: this.invoiceId, data: invoicePayload });
+        await this.updateInvoiceInStore({
+          id: this.invoiceId,
+          data: invoicePayload,
+        });
         this.$router.push("/invoice");
       } catch (err) {
         console.error("API Error:", err);
@@ -370,107 +415,117 @@ export default {
 
     // Fixed prepareInvoicePayload method for InvoiceForm.vue
 
-prepareInvoicePayload() {
-  const totalItemsPrice = this.calculateTotalItemsPrice();
-  const otherCharges = parseFloat(this.otherCharges) || 0;
-  const totalWithOtherCharges = totalItemsPrice + otherCharges;
-  
-  let cgstAmount = 0;
-  let sgstAmount = 0;
-  let igstAmount = 0;
-  
-  if (this.isIntraStateTransaction) {
-    cgstAmount = totalWithOtherCharges * 0.09;
-    sgstAmount = totalWithOtherCharges * 0.09;
-  } else {
-    igstAmount = totalWithOtherCharges * 0.18;
-  }
-  
-  const grandTotal = Math.round(totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount);
+    prepareInvoicePayload() {
+      const totalItemsPrice = this.calculateTotalItemsPrice();
+      const otherCharges = parseFloat(this.otherCharges) || 0;
+      const totalWithOtherCharges = totalItemsPrice + otherCharges;
 
-  // ✅ FIXED: Properly handle product structure
-  const products = this.invoiceProducts.map((product) => {
-    // Handle both cases: when productId is a string and when it's an object
-    let productReference;
-    
-    if (typeof product.productId === 'string') {
-      // Normal case: productId is just the ID string
-      productReference = { _id: product.productId };
-    } else if (product.productId && product.productId._id) {
-      // From inventory dialog: productId is already an object with _id
-      productReference = product.productId;
-    } else {
-      // Fallback: try to find the product in allProducts
-      const foundProduct = this.allProducts.find(p => p._id === product.productId);
-      productReference = foundProduct || { _id: product.productId };
-    }
+      let cgstAmount = 0;
+      let sgstAmount = 0;
+      let igstAmount = 0;
 
-    return {
-      product: productReference,
-      width: parseFloat(product.width || 0),
-      quantity: parseFloat(product.quantity),
-      unit_price: parseFloat(product.unit_price),
-      totalPrice: parseFloat(product.quantity * product.unit_price),
-      // Include inventory reference if available
-      ...(product.rollId && { rollId: product.rollId }),
-      ...(product.inventoryItemId && { inventoryItemId: product.inventoryItemId })
-    };
-  });
+      if (this.isIntraStateTransaction) {
+        cgstAmount = totalWithOtherCharges * 0.09;
+        sgstAmount = totalWithOtherCharges * 0.09;
+      } else {
+        igstAmount = totalWithOtherCharges * 0.18;
+      }
 
-  // ✅ Also collect all rollIds for inventory tracking
-  const rollIds = this.invoiceProducts
-    .filter(product => product.rollId)
-    .map(product => product.rollId);
+      const grandTotal = Math.round(
+        totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount
+      );
 
-  return {
-    customer: this.selectedCustomerId,
-    invoiceNumber: this.invoiceNumber,
-    products,
-    rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
-    otherCharges,
-    cgst: cgstAmount,
-    sgst: sgstAmount,
-    igst: igstAmount,
-    grandTotal,
-  };
-},
+      // ✅ FIXED: Properly handle product structure
+      const products = this.invoiceProducts.map((product) => {
+        // Handle both cases: when productId is a string and when it's an object
+        let productReference;
+
+        if (typeof product.productId === "string") {
+          // Normal case: productId is just the ID string
+          productReference = { _id: product.productId };
+        } else if (product.productId && product.productId._id) {
+          // From inventory dialog: productId is already an object with _id
+          productReference = product.productId;
+        } else {
+          // Fallback: try to find the product in allProducts
+          const foundProduct = this.allProducts.find(
+            (p) => p._id === product.productId
+          );
+          productReference = foundProduct || { _id: product.productId };
+        }
+
+        return {
+          product: productReference,
+          width: parseFloat(product.width || 0),
+          quantity: parseFloat(product.quantity),
+          unit_price: parseFloat(product.unit_price),
+          totalPrice: parseFloat(product.quantity * product.unit_price),
+          // Include inventory reference if available
+          ...(product.rollId && { rollId: product.rollId }),
+          ...(product.inventoryItemId && {
+            inventoryItemId: product.inventoryItemId,
+          }),
+        };
+      });
+
+      // ✅ Also collect all rollIds for inventory tracking
+      const rollIds = this.invoiceProducts
+        .filter((product) => product.rollId)
+        .map((product) => product.rollId);
+
+      return {
+        customer: this.selectedCustomerId,
+        transporter: this.selectedTransporterId || "By Hand",
+        invoiceNumber: this.invoiceNumber,
+        products,
+        rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
+        otherCharges,
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        igst: igstAmount,
+        grandTotal,
+      };
+    },
 
     validateInvoicePayload(payload) {
       if (!payload.customer) {
         this.error = "Please select a customer.";
         return false;
       }
-      
+
       if (this.isEditing && !payload.invoiceNumber) {
         this.error = "Invoice number is required.";
         return false;
       }
-      
+
       if (payload.products.length === 0) {
         this.error = "Please add at least one product.";
         return false;
       }
-      
-      if (payload.products.some(
-        (product) =>
-          !product.product ||
-          isNaN(product.quantity) ||
-          isNaN(product.unit_price)
-      )) {
+
+      if (
+        payload.products.some(
+          (product) =>
+            !product.product ||
+            isNaN(product.quantity) ||
+            isNaN(product.unit_price)
+        )
+      ) {
         this.error = "Please fill out all product details correctly.";
         return false;
       }
-      
+
       return true;
     },
 
     calculateTotalItemsPrice() {
       return this.invoiceProducts.reduce((sum, product) => {
-        const totalPrice = parseFloat(product.quantity * product.unit_price) || 0;
+        const totalPrice =
+          parseFloat(product.quantity * product.unit_price) || 0;
         return sum + totalPrice;
       }, 0);
     },
-    
+
     goBack() {
       this.$router.go(-1);
     },

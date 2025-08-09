@@ -51,6 +51,7 @@
                       <p><strong>Email:</strong> {{ invoiceDetail.customer?.email_id || "N/A" }}</p>
                       <p><strong>Phone No:</strong> {{ invoiceDetail.customer?.phone_no || "N/A" }}</p>
                       <p><strong>GSTIN:</strong> {{ invoiceDetail.customer?.gstin || "N/A" }}</p>
+                      <p><strong>Transporter Name:</strong> {{ invoiceDetail.transporter?.name || "N/A" }}</p>
                     </v-col>
                     <v-col cols="12" sm="6">
                       <p>

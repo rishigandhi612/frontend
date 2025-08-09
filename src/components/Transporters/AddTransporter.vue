@@ -66,8 +66,7 @@
               <v-text-field
                 label="GST Number"
                 v-model="transporter.gstNumber"
-                :rules="[rules.required, rules.gst]"
-                required
+                :rules="[rules.gst]"
               ></v-text-field>
             </v-col>
 
@@ -94,8 +93,6 @@
                 multiple
                 chips
                 deletable-chips
-                :rules="[rules.required]"
-                required
               ></v-select>
             </v-col>
           </v-row>

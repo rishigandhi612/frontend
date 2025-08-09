@@ -545,7 +545,7 @@ export default {
       currentY += 5;
       
       doc.text(
-        `Dispatch through: ${this.invoiceDetail.transporter || "N/A"}`,
+        `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
         105,
         currentY,
         "center"
