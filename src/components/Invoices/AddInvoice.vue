@@ -475,7 +475,7 @@ export default {
 
       return {
         customer: this.selectedCustomerId,
-        transporter: this.selectedTransporterId || "By Hand",
+        transporter: this.selectedTransporterId || "",
         invoiceNumber: this.invoiceNumber,
         products,
         rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
