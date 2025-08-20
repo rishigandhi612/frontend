@@ -78,6 +78,21 @@ export default {
             (width) => !width.hasZeroWidth
           ).length;
 
+          // Check if zero-width entries have same net weights
+          Object.values(product.widths).forEach((width) => {
+            if (width.hasZeroWidth && width.rolls.length > 1) {
+              const firstQuantity = parseFloat(width.rolls[0].quantity);
+              const allSameWeight = width.rolls.every(
+                (roll) => parseFloat(roll.quantity) === firstQuantity
+              );
+              width.allSameWeight = allSameWeight;
+              if (allSameWeight) {
+                width.singleQuantity = firstQuantity;
+                width.rollCount = width.rolls.length;
+              }
+            }
+          });
+
           return {
             ...product,
             totalQuantity: totalQuantity.toFixed(3),
@@ -447,31 +462,15 @@ export default {
       // For each width, add individual rolls followed by subtotal (if needed)
       Object.entries(group.widths).forEach(([width, data]) => {
         if (data.hasZeroWidth) {
-          // For zero width items, only show quantity without width column
-          for (let i = 0; i < data.rolls.length; i++) {
-            const isSingleRoll = data.rolls.length === 1;
-            const cellStyle = {
-              halign: "center",
-              fillColor: null,
-              ...(isSingleRoll
-                ? { fontStyle: "bold", textColor: [0, 0, 0] }
-                : {}),
-            };
-
+          // Check if all weights are the same for zero-width items
+          if (data.allSameWeight && data.rollCount > 1) {
+            // Show: "3 x 50.000 Kgs = 150.000 Kgs" format
             tableData.push([
               {
-                content: `${data.rolls[i].quantity} Kgs`,
+                content: `${data.rollCount} x ${data.singleQuantity.toFixed(
+                  3
+                )} Kgs = ${data.total.toFixed(3)} Kgs`,
                 colSpan: 2,
-                styles: cellStyle,
-              },
-            ]);
-          }
-
-          // Add width subtotal with proper singular/plural
-          if (data.rolls.length > 1) {
-            tableData.push([
-              {
-                content: `Total (${data.rolls.length})`,
                 styles: {
                   halign: "center",
                   fontStyle: "bold",
@@ -479,8 +478,13 @@ export default {
                   fillColor: null,
                 },
               },
+            ]);
+          } else {
+            // For zero width items, show only the total weight directly (no individual rolls)
+            tableData.push([
               {
                 content: `${data.total.toFixed(3)} Kgs`,
+                colSpan: 2,
                 styles: {
                   halign: "center",
                   fontStyle: "bold",
@@ -574,7 +578,7 @@ export default {
 
         // Create a full-width bordered box for better visibility
         const boxX = 15;
-        const boxY = pageHeight - 40;
+        const boxY = pageHeight - 45;
         const boxWidth = 180; // Full width
         const boxHeight = 25;
 
