@@ -1,6 +1,5 @@
 <template>
-  <div v-if="invoiceDetail">
-  </div>
+  <div v-if="invoiceDetail"></div>
 </template>
 <script>
 import jsPDF from "jspdf";
@@ -11,13 +10,13 @@ export default {
     invoiceDetail: {
       type: Object,
       default: () => null, // Provide a default value
-      validator: (value) => value === null || typeof value === 'object'
-    }
+      validator: (value) => value === null || typeof value === "object",
+    },
   },
 
   methods: {
     formatDate(dateString) {
-      if (!dateString) return 'N/A';
+      if (!dateString) return "N/A";
       const date = new Date(dateString);
       const day = String(date.getDate()).padStart(2, "0");
       const month = date.toLocaleString("default", { month: "short" });
@@ -28,10 +27,10 @@ export default {
     groupProducts() {
       // First, organize products by name and width
       const organizedProducts = {};
-      
-      this.invoiceDetail.products.forEach(product => {
+
+      this.invoiceDetail.products.forEach((product) => {
         const productName = product.product.name;
-        
+
         // Handle width = 0 case differently - don't include width info
         const widthStr =
           product.width === 0
@@ -100,6 +99,11 @@ export default {
       if (!this.invoiceDetail) {
         alert("Invoice details are not available.");
         return;
+      } else if (this.invoiceDetail.products.length === 0) {
+        alert("No products found in the invoice.");
+        return;
+      } else {
+        console.log("Generating PDF for invoice:", this.invoiceDetail);
       }
       const doc = new jsPDF();
       const groupedProducts = this.groupProducts();
@@ -361,7 +365,7 @@ export default {
       doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
 
       // Add the text
-      doc.setFontSize(13);
+      doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 0, 0);
 
@@ -559,125 +563,228 @@ export default {
     },
 
     addSignatureLines(doc, pageHeight) {
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Receiver's Signature", 14, pageHeight - 25);
-      doc.line(10, pageHeight - 18, 80, pageHeight - 18);
-      doc.text("For Hemant Traders", 140, pageHeight - 25);
-      doc.line(140, pageHeight - 18, 200, pageHeight - 18);
+      // Check if transporter exists and is not 'By Hand' or empty
+      const hasTransporter =
+        this.invoiceDetail.transporter?.name &&
+        this.invoiceDetail.transporter.name !== "By Hand" &&
+        this.invoiceDetail.transporter.name.trim() !== "";
+
+      if (hasTransporter) {
+        // Show transporter details with full width design
+
+        // Create a full-width bordered box for better visibility
+        const boxX = 15;
+        const boxY = pageHeight - 40;
+        const boxWidth = 180; // Full width
+        const boxHeight = 25;
+
+        // Draw background box with subtle gradient effect
+        doc.setFillColor(255, 255, 255); // Very light gray background
+        doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
+
+        // Draw border with rounded appearance (multiple thin lines)
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.5);
+        doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
+
+        // Add inner border for professional look
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.2);
+        doc.rect(boxX + 1, boxY + 1, boxWidth - 2, boxHeight - 2, "S");
+
+        // Add transporter label at top center
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(80, 80, 80);
+        doc.text("BOOKING DETAILS", boxX + boxWidth / 2, boxY + 7, "center");
+
+        // Add separator line under label
+        doc.setDrawColor(150, 150, 150);
+        doc.setLineWidth(0.3);
+        doc.line(boxX + 20, boxY + 9, boxX + boxWidth - 20, boxY + 9);
+
+        // Add transporter name (centered)
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 0, 0);
+        const transporterName = this.invoiceDetail.transporter.name;
+        const maxWidth = boxWidth - 10;
+        const nameLines = doc.splitTextToSize(transporterName, maxWidth);
+
+        // Center the name vertically in remaining space
+        const nameY = boxY + 16;
+        nameLines.forEach((line, index) => {
+          if (index < 1) {
+            // Limit to 1 line for better design
+            doc.text(line, boxX + boxWidth / 2, nameY, "center");
+          }
+        });
+
+        // Add contact number (centered)
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(60, 60, 60);
+        const contactText = `Contact: ${
+          this.invoiceDetail.transporter.phone || "N/A"
+        }`;
+        doc.text(
+          contactText,
+          boxX + boxWidth / 2,
+          boxY + boxHeight - 4,
+          "center"
+        );
+      } else {
+        // Show receiver's signature with full width design
+
+        // Create a full-width signature area
+        // const boxX = 15;
+        // const boxY = pageHeight - 35;
+        // const boxWidth = 180;
+        // const boxHeight = 20;
+
+        // Add subtle background
+        // doc.setFillColor(255, 255, 255);
+        // doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
+
+        // Add border
+        // doc.setDrawColor(150, 150, 150);
+        // doc.setLineWidth(0.3);
+        // doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
+
+        // Add label
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0, 0, 0);
+
+        doc.setDrawColor(0, 0, 0);
+        // doc.text(
+        //   "Receiver's Signature",
+        //   boxX + boxWidth / 2,
+        //   boxY + 8,
+        //   "center"
+        // );
+        doc.text("Receiver's Signature", 14, pageHeight - 30);
+        doc.line(14, pageHeight - 20, 80, pageHeight - 20);
+        doc.text("For Hemant Traders", 140, pageHeight - 30);
+        doc.line(140, pageHeight - 20, 200, pageHeight - 20);
+
+        // Add signature line
+        // doc.setDrawColor(0, 0, 0);
+        // doc.setLineWidth(0.5);
+        // doc.line(boxX + 20, boxY + 15, boxX + boxWidth - 20, boxY + 15);
+      }
     },
 
-   addHeader(doc, copyType) {
-  const logoPath = require("@/assets/HoloLogo.png");
-  doc.addImage(logoPath, "PNG", 5, 8, 25, 25);
+    addHeader(doc, copyType) {
+      const logoPath = require("@/assets/HoloLogo.png");
+      doc.addImage(logoPath, "PNG", 5, 8, 25, 25);
 
-  doc.setFontSize(36);
-  doc.setFont("helvetica", "bold");
-  doc.text("HEMANT TRADERS", 105, 20, "center");
+      doc.setFontSize(36);
+      doc.setFont("helvetica", "bold");
+      doc.text("HEMANT TRADERS", 105, 20, "center");
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    "1281, Sadashiv Peth, Vertex Arcade, Pune - 411030",
-    105,
-    25,
-    "center"
-  );
-  doc.text(
-    "Contact: (+91) 9422080922 / 9420699675    Web: hemanttraders.vercel.app",
-    105,
-    32,
-    "center"
-  );
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        "1281, Sadashiv Peth, Vertex Arcade, Pune - 411030",
+        105,
+        25,
+        "center"
+      );
+      doc.text(
+        "Contact: (+91) 9422080922 / 9420699675    Web: hemanttraders.vercel.app",
+        105,
+        32,
+        "center"
+      );
 
-  doc.line(0, 36, 210, 36);
-  doc.text(
-    "Dealers in BOPP, POLYESTER, PVC, THERMAL Films",
-    105,
-    42,
-    "center"
-  );
-  doc.text(
-    "Adhesives for Lamination, Bookbinding, and Pasting, UV Coats",
-    105,
-    48,
-    "center"
-  );
+      doc.line(0, 36, 210, 36);
+      doc.text(
+        "Dealers in BOPP, POLYESTER, PVC, THERMAL Films",
+        105,
+        42,
+        "center"
+      );
+      doc.text(
+        "Adhesives for Lamination, Bookbinding, and Pasting, UV Coats",
+        105,
+        48,
+        "center"
+      );
 
-  doc.line(0, 51, 210, 51);
+      doc.line(0, 51, 210, 51);
 
-  doc.setFontSize(12);
-  doc.text(`(${copyType})`, 105, 56, "center");
+      doc.setFontSize(12);
+      doc.text(`(${copyType})`, 105, 56, "center");
 
-  doc.setFontSize(12);
-  doc.text(`DELIVERY CHALLAN #${this.invoiceDetail.invoiceNumber}`, 14, 62);
-  doc.text(
-    `Date: ${this.formatDate(this.invoiceDetail.createdAt)}`,
-    200,
-    62,
-    "right"
-  );
+      doc.setFontSize(12);
+      doc.text(`DELIVERY CHALLAN #${this.invoiceDetail.invoiceNumber}`, 14, 62);
+      doc.text(
+        `Date: ${this.formatDate(this.invoiceDetail.createdAt)}`,
+        200,
+        62,
+        "right"
+      );
 
-  // Start y position for customer details
-  let y = 70;
+      // Start y position for customer details
+      let y = 70;
 
-  // CUSTOMER NAME (bold)
-  doc.setFont("helvetica", "bold");
-  let nameLines = doc.splitTextToSize(
-    `M/s ${this.invoiceDetail.customer?.name || "N/A"}`,
-    180
-  );
-  nameLines.forEach(line => {
-    doc.text(line, 105, y, "center");
-    y += 5;
-  });
+      // CUSTOMER NAME (bold)
+      doc.setFont("helvetica", "bold");
+      let nameLines = doc.splitTextToSize(
+        `M/s ${this.invoiceDetail.customer?.name || "N/A"}`,
+        180
+      );
+      nameLines.forEach((line) => {
+        doc.text(line, 105, y, "center");
+        y += 5;
+      });
 
-  // CUSTOMER ADDRESS (normal)
-  doc.setFont("helvetica", "normal");
-  let addressText = `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ` +
-                    `${this.invoiceDetail.customer?.address?.city || "N/A"}-` +
-                    `${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
-  let addressLines = doc.splitTextToSize(addressText, 180);
-  addressLines.forEach(line => {
-    doc.text(line, 105, y, "center");
-    y += 5;
-  });
+      // CUSTOMER ADDRESS (normal)
+      doc.setFont("helvetica", "normal");
+      let addressText =
+        `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ` +
+        `${this.invoiceDetail.customer?.address?.city || "N/A"}-` +
+        `${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
+      let addressLines = doc.splitTextToSize(addressText, 180);
+      addressLines.forEach((line) => {
+        doc.text(line, 105, y, "center");
+        y += 5;
+      });
 
-  // CONTACT
-  let contactLines = doc.splitTextToSize(
-    `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
-    180
-  );
-  contactLines.forEach(line => {
-    doc.text(line, 105, y, "center");
-    y += 5;
-  });
+      // CONTACT
+      let contactLines = doc.splitTextToSize(
+        `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
+        180
+      );
+      contactLines.forEach((line) => {
+        doc.text(line, 105, y, "center");
+        y += 5;
+      });
 
-  // GSTIN
-  let gstLines = doc.splitTextToSize(
-    `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
-    180
-  );
-  gstLines.forEach(line => {
-    doc.text(line, 105, y, "center");
-    y += 5;
-  });
+      // GSTIN
+      let gstLines = doc.splitTextToSize(
+        `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
+        180
+      );
+      gstLines.forEach((line) => {
+        doc.text(line, 105, y, "center");
+        y += 5;
+      });
 
-  doc.setFont("helvetica", "bold");
-  // TRANSPORTER
-  let transporterLines = doc.splitTextToSize(
-    `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
-    180
-  );
-  transporterLines.forEach(line => {
-    doc.text(line, 105, y, "center");
-    y += 5;
-  });
+      // doc.setFont("helvetica", "bold");
+      // // TRANSPORTER
+      // let transporterLines = doc.splitTextToSize(
+      //   `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
+      //   180
+      // );
+      // transporterLines.forEach((line) => {
+      //   doc.text(line, 105, y, "center");
+      //   y += 5;
+      // });
 
-  return y + 0; // Return new startY for the table
-}
-,
-
+      return y + 0; // Return new startY for the table
+    },
     addFooter(
       doc,
       pageHeight,
