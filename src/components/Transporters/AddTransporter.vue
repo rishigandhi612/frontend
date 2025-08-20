@@ -1,6 +1,6 @@
 <template>
   <v-container fluid>
-    <v-row v-if="isLoading">
+    <v-row v-if="isComponentLoading">
       <v-col class="d-flex justify-center align-center">
         <v-progress-circular
           indeterminate
@@ -8,7 +8,7 @@
         ></v-progress-circular>
       </v-col>
     </v-row>
-    <v-row v-if="!isLoading">
+    <v-row v-if="!isComponentLoading">
       <v-col cols="12" md="2">
         <v-btn @click="goBack" block>
           <v-icon left>mdi-arrow-left</v-icon> Back
@@ -25,7 +25,7 @@
             <v-col cols="12">
               <h3 class="mb-3">Basic Information</h3>
             </v-col>
-            
+
             <v-col cols="12" md="6">
               <v-text-field
                 label="Transporter Name"
@@ -84,7 +84,7 @@
             <v-col cols="12">
               <h3 class="mb-3">Vehicle Types</h3>
             </v-col>
-            
+
             <v-col cols="12" md="6">
               <v-select
                 v-model="transporter.vehicleTypes"
@@ -102,19 +102,19 @@
             <v-col cols="12">
               <h3 class="mb-3">Sending Locations</h3>
             </v-col>
-            
+
             <v-col cols="12">
-              <v-btn
-                color="primary"
-                @click="addLocation"
-                class="mb-3"
-              >
+              <v-btn color="primary" @click="addLocation" class="mb-3">
                 <v-icon left>mdi-plus</v-icon>
                 Add Location
               </v-btn>
             </v-col>
 
-            <v-col cols="12" v-for="(location, index) in transporter.sendingLocations" :key="index">
+            <v-col
+              cols="12"
+              v-for="(location, index) in transporter.sendingLocations"
+              :key="index"
+            >
               <v-card class="mb-3">
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>Location {{ index + 1 }}</span>
@@ -171,7 +171,7 @@
 
             <v-col cols="12" md="4">
               <v-btn
-                :disabled="!isFormValid || isLoading || !hasChanges"
+                :disabled="!isFormValid || isComponentLoading || !hasChanges"
                 color="primary"
                 @click="saveTransporter"
                 large
@@ -196,7 +196,7 @@
 </template>
 
 <script>
-import { mapActions, mapState } from "vuex";
+import { mapActions, mapGetters } from "vuex";
 
 export default {
   data() {
@@ -213,11 +213,11 @@ export default {
             name: "",
             city: "",
             state: "",
-            pincode: ""
-          }
+            pincode: "",
+          },
         ],
         vehicleTypes: [],
-        isActive: true
+        isActive: true,
       },
       initialTransporter: null, // To store the initial transporter data
       transporterId: this.$route.params.id, // transporter ID from route
@@ -230,7 +230,7 @@ export default {
         "Trailer",
         "Pick-up",
         "Van",
-        "Auto"
+        "Auto",
       ],
       rules: {
         required: (value) => !!value || "This field is required",
@@ -240,52 +240,124 @@ export default {
         },
         phone: (value) => {
           const pattern = /^[6-9]\d{9}$/;
-          return pattern.test(value) || "Please enter a valid 10-digit phone number";
+          return (
+            pattern.test(value) || "Please enter a valid 10-digit phone number"
+          );
         },
         gst: (value) => {
-          const pattern = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+          if (!value) return true; // GST is optional
+          const pattern =
+            /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
           return pattern.test(value) || "Please enter a valid GST number";
         },
         pincode: (value) => {
           const pattern = /^[1-9][0-9]{5}$/;
           return pattern.test(value) || "Please enter a valid 6-digit pincode";
-        }
+        },
       },
       error: null, // To store the error message
     };
   },
   computed: {
-    ...mapState("transporter", ["loading"]), // Map loading state from Vuex store
-    isLoading() {
-      return this.loading;
+    ...mapGetters("transporter", ["currentTransporter", "isLoading"]),
+
+    isComponentLoading() {
+      return (
+        this.isLoading("fetchOne") ||
+        this.isLoading("create") ||
+        this.isLoading("update")
+      );
     },
+
     hasChanges() {
       // Compare the current transporter with the initial transporter
-      return JSON.stringify(this.transporter) !== JSON.stringify(this.initialTransporter);
+      return (
+        JSON.stringify(this.transporter) !==
+        JSON.stringify(this.initialTransporter)
+      );
     },
   },
-  created() {
-    console.log('transporterId from route params:', this.transporterId);  // Debug log
+
+  async mounted() {
+    console.log("Component mounted - Edit mode:", this.isEditMode);
+    console.log("Transporter ID:", this.transporterId);
+
     if (this.isEditMode) {
-      this.fetchTransporterDetail(); // Fetch transporter details for edit mode
+      await this.fetchTransporterData(); // Fetch transporter details for edit mode
     } else {
       // Store initial state for new transporter
       this.initialTransporter = JSON.parse(JSON.stringify(this.transporter));
     }
   },
+
   methods: {
-    ...mapActions("transporter", ["createTransporter", "updateTransporter", "fetchTransporterDetail"]),
+    ...mapActions("transporter", [
+      "createTransporter",
+      "updateTransporter",
+      "fetchTransporterById",
+      "clearMessages",
+    ]),
 
     // Fetch transporter details if in edit mode
-    async fetchTransporterDetail() {
+    async fetchTransporterData() {
+      this.error = null;
+
       try {
-        await this.$store.dispatch("transporter/fetchTransporterDetail", this.transporterId);
-        // Populate form with transporter details after fetching
-        this.transporter = { ...this.$store.state.transporter.transporterDetail };
-        this.initialTransporter = JSON.parse(JSON.stringify(this.transporter)); // Store the initial transporter data
+        console.log("Fetching transporter with ID:", this.transporterId);
+        console.log("ID type:", typeof this.transporterId);
+
+        // Ensure we have a valid string ID
+        if (!this.transporterId || typeof this.transporterId !== "string") {
+          throw new Error("Invalid transporter ID");
+        }
+
+        const transporterData = await this.fetchTransporterById(
+          this.transporterId
+        );
+        console.log("Fetched transporter data:", transporterData);
+
+        if (transporterData) {
+          // Populate form with fetched data
+          this.transporter = {
+            name: transporterData.name || "",
+            contactPerson: transporterData.contactPerson || "",
+            phone: transporterData.phone || "",
+            email: transporterData.email || "",
+            gstNumber: transporterData.gstNumber || "",
+            vehicleTypes: transporterData.vehicleTypes || [],
+            isActive:
+              transporterData.isActive !== undefined
+                ? transporterData.isActive
+                : true,
+            sendingLocations:
+              transporterData.sendingLocations &&
+              transporterData.sendingLocations.length > 0
+                ? transporterData.sendingLocations
+                : [
+                    {
+                      name: "",
+                      city: "",
+                      state: "",
+                      pincode: "",
+                    },
+                  ],
+          };
+
+          // Store initial state for change detection
+          this.initialTransporter = JSON.parse(
+            JSON.stringify(this.transporter)
+          );
+
+          console.log("Form populated with:", this.transporter);
+        } else {
+          this.error = "Transporter not found or could not be loaded.";
+        }
       } catch (error) {
         console.error("Error fetching transporter details:", error);
-        this.error = "Error fetching transporter details.";
+        this.error =
+          error.response?.data?.message ||
+          error.message ||
+          "Error fetching transporter details.";
       }
     },
 
@@ -299,7 +371,7 @@ export default {
         name: "",
         city: "",
         state: "",
-        pincode: ""
+        pincode: "",
       });
     },
 
@@ -312,27 +384,84 @@ export default {
 
     // Save transporter (create or update)
     async saveTransporter() {
+      this.error = null;
+
       try {
-        if (this.isEditMode) {
-          console.log('Updating transporter with ID:', this.transporterId);  // Debug log
-          await this.$store.dispatch("transporter/updateTransporter", {
-            transporterId: this.transporterId,
-            transporterData: this.transporter,
-          });
-        } else {
-          await this.$store.dispatch("transporter/createTransporter", this.transporter);
+        // Validate form first
+        if (!this.$refs.transporterForm.validate()) {
+          this.error = "Please fix the validation errors before submitting.";
+          return;
         }
-        this.$router.push("/transporter"); // Redirect to transporter list after save
-      } catch (err) {
-        console.log(err);
-        // Check for duplicate key error or other API errors
-        if (err.response && err.response.data) {
-          const errorMessage = err.response.data.message;
-          this.error = errorMessage; // Show the exact error message
+
+        console.log("Saving transporter:", this.transporter);
+
+        if (this.isEditMode) {
+          console.log("Updating transporter with ID:", this.transporterId);
+          await this.updateTransporter({
+            id: this.transporterId,
+            data: this.transporter,
+          });
+          console.log("Transporter updated successfully");
         } else {
-          this.error = "Error saving transporter."; // Generic error message
+          console.log("Creating new transporter");
+          await this.createTransporter(this.transporter);
+          console.log("Transporter created successfully");
+        }
+
+        // Navigate back to transporter list
+        this.$router.push("/transporter");
+      } catch (err) {
+        console.error("Error saving transporter:", err);
+
+        // Handle different types of errors
+        if (err.response?.data?.message) {
+          this.error = err.response.data.message;
+        } else if (err.message) {
+          this.error = err.message;
+        } else {
+          this.error = `Error ${
+            this.isEditMode ? "updating" : "creating"
+          } transporter.`;
         }
       }
+    },
+  },
+
+  // Watch for route changes
+  watch: {
+    "$route.params.id": {
+      async handler(newId) {
+        console.log("Route param changed to:", newId);
+        this.transporterId = newId;
+        this.isEditMode = !!newId;
+
+        if (this.isEditMode) {
+          await this.fetchTransporterData();
+        } else {
+          // Reset form for new transporter
+          this.transporter = {
+            name: "",
+            contactPerson: "",
+            phone: "",
+            email: "",
+            gstNumber: "",
+            sendingLocations: [
+              {
+                name: "",
+                city: "",
+                state: "",
+                pincode: "",
+              },
+            ],
+            vehicleTypes: [],
+            isActive: true,
+          };
+          this.initialTransporter = JSON.parse(
+            JSON.stringify(this.transporter)
+          );
+        }
+      },
+      immediate: false,
     },
   },
 };

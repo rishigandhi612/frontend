@@ -1,7 +1,7 @@
 <template>
   <v-app>
     <v-container fluid>
-      <v-alert v-if="!Transporter" type="error" dismissible>
+      <v-alert v-if="!Transporter && !loading" type="error" dismissible>
         Failed to load Transporter details. Please try again later.
       </v-alert>
 
@@ -40,7 +40,7 @@
                           text-color="white"
                           class="ml-2"
                         >
-                          {{ Transporter.isActive ? 'Active' : 'Inactive' }}
+                          {{ Transporter.isActive ? "Active" : "Inactive" }}
                         </v-chip>
                       </span>
                     </v-card-title>
@@ -77,13 +77,20 @@
                           <v-row>
                             <v-col>
                               <strong>Country:</strong>
-                              {{ Transporter.address?.country || "Not specified" }}
+                              {{
+                                Transporter.address?.country || "Not specified"
+                              }}
                             </v-col>
                           </v-row>
                           <v-row>
                             <v-col>
                               <strong>Vehicle Types:</strong>
-                              <v-chip-group v-if="Transporter.vehicleTypes && Transporter.vehicleTypes.length">
+                              <v-chip-group
+                                v-if="
+                                  Transporter.vehicleTypes &&
+                                  Transporter.vehicleTypes.length
+                                "
+                              >
                                 <v-chip
                                   v-for="vehicle in Transporter.vehicleTypes"
                                   :key="vehicle"
@@ -106,13 +113,18 @@
                         <v-col cols="12">
                           <h3>Sending Locations</h3>
                           <v-card
-                            v-if="Transporter.sendingLocations && Transporter.sendingLocations.length"
+                            v-if="
+                              Transporter.sendingLocations &&
+                              Transporter.sendingLocations.length
+                            "
                             class="mt-3"
                             outlined
                           >
                             <v-list>
                               <v-list-item
-                                v-for="(location, index) in Transporter.sendingLocations"
+                                v-for="(
+                                  location, index
+                                ) in Transporter.sendingLocations"
                                 :key="index"
                                 class="border-bottom"
                               >
@@ -121,7 +133,8 @@
                                     <strong>{{ location.name }}</strong>
                                   </v-list-item-title>
                                   <v-list-item-subtitle>
-                                    {{ location.city }}, {{ location.state }} - {{ location.pincode }}
+                                    {{ location.city }}, {{ location.state }} -
+                                    {{ location.pincode }}
                                   </v-list-item-subtitle>
                                 </v-list-item-content>
                                 <v-list-item-icon>
@@ -151,7 +164,7 @@
 
                   <!-- If no Transporter is found -->
                   <v-card
-                    v-if="!Transporter"
+                    v-if="!Transporter && !loading"
                     class="mx-auto elevation-4"
                     max-width="800"
                   >
@@ -170,6 +183,7 @@
                     color="primary"
                     @click="updateTransporter"
                     class="w-100 text-uppercase"
+                    :disabled="!Transporter"
                   >
                     <v-icon left>mdi-pencil</v-icon> Update
                   </v-btn>
@@ -179,9 +193,12 @@
                     :color="Transporter?.isActive ? 'orange' : 'success'"
                     @click="toggleStatus"
                     class="w-100 text-uppercase"
+                    :disabled="!Transporter"
                   >
-                    <v-icon left>{{ Transporter?.isActive ? 'mdi-pause' : 'mdi-play' }}</v-icon>
-                    {{ Transporter?.isActive ? 'Deactivate' : 'Activate' }}
+                    <v-icon left>{{
+                      Transporter?.isActive ? "mdi-pause" : "mdi-play"
+                    }}</v-icon>
+                    {{ Transporter?.isActive ? "Deactivate" : "Activate" }}
                   </v-btn>
                 </v-col>
                 <v-col>
@@ -189,6 +206,7 @@
                     color="error"
                     @click="openDeleteConfirmation"
                     class="w-100 text-uppercase"
+                    :disabled="!Transporter"
                   >
                     <v-icon left>mdi-delete</v-icon> Delete
                   </v-btn>
@@ -208,12 +226,14 @@
           <v-card>
             <v-card-title class="headline">Confirm Deletion</v-card-title>
             <v-card-text>
-              Are you sure you want to delete this Transporter? This action cannot be
-              undone.
+              Are you sure you want to delete this Transporter? This action
+              cannot be undone.
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="green" text @click="deleteTransporter">Yes, Delete</v-btn>
+              <v-btn color="green" text @click="deleteTransporter"
+                >Yes, Delete</v-btn
+              >
               <v-btn color="red" text @click="deleteDialog = false"
                 >Cancel</v-btn
               >
@@ -226,11 +246,16 @@
           <v-card>
             <v-card-title class="headline">Confirm Status Change</v-card-title>
             <v-card-text>
-              Are you sure you want to {{ Transporter?.isActive ? 'deactivate' : 'activate' }} this transporter?
+              Are you sure you want to
+              {{ Transporter?.isActive ? "deactivate" : "activate" }} this
+              transporter?
             </v-card-text>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="green" text @click="confirmToggleStatus">Yes, {{ Transporter?.isActive ? 'Deactivate' : 'Activate' }}</v-btn>
+              <v-btn color="green" text @click="confirmToggleStatus"
+                >Yes,
+                {{ Transporter?.isActive ? "Deactivate" : "Activate" }}</v-btn
+              >
               <v-btn color="red" text @click="statusDialog = false"
                 >Cancel</v-btn
               >
@@ -243,7 +268,7 @@
 </template>
 
 <script>
-import { mapActions } from "vuex";
+import { mapActions, mapGetters } from "vuex";
 
 export default {
   data() {
@@ -255,43 +280,78 @@ export default {
     };
   },
   computed: {
+    // Use mapGetters for better Vuex integration
+    ...mapGetters("transporter", ["currentTransporter", "isLoading"]),
+
     // Get transporter data from Vuex store
     Transporter() {
-      return this.$store.state.transporter.transporterDetail; // Get transporter detail from store
+      return this.currentTransporter;
     },
-    // Loading state
+
+    // Loading state - check specific loading type
     loading() {
-      return this.$store.state.transporter.loading; // Access loading state from Vuex
+      return this.isLoading("fetchOne");
     },
   },
   methods: {
     // Vuex actions mapping
-    ...mapActions("transporter", ["fetchTransporterDetail", "updateTransporter", "deleteTransporter", "toggleTransporterStatus"]),
+    ...mapActions("transporter", [
+      "fetchTransporterById",
+      "updateTransporter",
+      "deleteTransporter",
+      "toggleTransporterStatus",
+      "clearMessages",
+    ]),
 
     // Load the transporter details
     async loadTransporterDetail() {
+      // Clear any previous error
+      this.error = null;
+
       try {
-        this.$store.commit("transporter/SET_LOADING", true); // Start loading spinner
-        await this.fetchTransporterDetail(this.TransporterId); // Fetch transporter data by ID
+        console.log("Loading transporter detail for ID:", this.TransporterId);
+
+        // Validate transporter ID
+        if (!this.TransporterId) {
+          this.error = "Invalid transporter ID";
+          return;
+        }
+
+        const result = await this.fetchTransporterById(this.TransporterId);
+        console.log("Transporter loaded:", result);
       } catch (err) {
-        this.error = "Error fetching Transporter details.";
-      } finally {
-        this.$store.commit("transporter/SET_LOADING", false); // Stop loading spinner
+        console.error("Error fetching Transporter details:", err);
+        this.error =
+          err.response?.data?.message ||
+          err.message ||
+          "Error fetching Transporter details.";
       }
     },
 
     // Update transporter
     updateTransporter() {
+      if (!this.Transporter) {
+        this.error = "No transporter data available to update";
+        return;
+      }
       this.$router.push(`/addtransporter/${this.TransporterId}`); // Redirect to update page
     },
 
     // Open delete confirmation dialog
     openDeleteConfirmation() {
+      if (!this.Transporter) {
+        this.error = "No transporter data available to delete";
+        return;
+      }
       this.deleteDialog = true; // Open the confirmation dialog
     },
 
     // Toggle status confirmation
     toggleStatus() {
+      if (!this.Transporter) {
+        this.error = "No transporter data available to toggle status";
+        return;
+      }
       this.statusDialog = true; // Open the status confirmation dialog
     },
 
@@ -300,12 +360,17 @@ export default {
       try {
         await this.toggleTransporterStatus({
           id: this.TransporterId,
-          isActive: !this.Transporter.isActive
+          isActive: !this.Transporter.isActive,
         });
-        const statusText = !this.Transporter.isActive ? 'activated' : 'deactivated';
+        const statusText = !this.Transporter.isActive
+          ? "activated"
+          : "deactivated";
         alert(`Transporter ${statusText} successfully.`);
       } catch (err) {
-        this.error = "Error updating transporter status.";
+        this.error =
+          err.response?.data?.message ||
+          err.message ||
+          "Error updating transporter status.";
         console.error("Error toggling transporter status:", err);
       } finally {
         this.statusDialog = false; // Close the confirmation dialog
@@ -316,10 +381,16 @@ export default {
     async deleteTransporter() {
       try {
         // Call the Vuex action
-        await this.$store.dispatch("transporter/deleteTransporter", this.TransporterId);
+        await this.$store.dispatch(
+          "transporter/deleteTransporter",
+          this.TransporterId
+        );
         await this.$router.push("/transporter"); // Navigate to the transporter list
       } catch (err) {
-        this.error = "Error deleting Transporter."; // Handle error
+        this.error =
+          err.response?.data?.message ||
+          err.message ||
+          "Error deleting Transporter."; // Handle error
         console.error("Error deleting transporter:", err);
       } finally {
         this.deleteDialog = false; // Close the confirmation dialog
@@ -328,7 +399,7 @@ export default {
 
     // Format date for display
     formatDate(dateString) {
-      if (!dateString) return 'Not available';
+      if (!dateString) return "Not available";
       return new Date(dateString).toLocaleString();
     },
 
@@ -337,8 +408,30 @@ export default {
       this.$router.go(-1); // Go back to the previous page
     },
   },
-  created() {
-    this.loadTransporterDetail(); // Load transporter details when the component is created
+
+  // Use mounted instead of created for better debugging
+  async mounted() {
+    console.log("Component mounted with TransporterId:", this.TransporterId);
+    console.log("Route params:", this.$route.params);
+
+    // Clear any previous messages
+    this.clearMessages();
+
+    await this.loadTransporterDetail(); // Load transporter details when the component is mounted
+  },
+
+  // Watch for route changes
+  watch: {
+    "$route.params.id": {
+      handler(newId) {
+        console.log("Route param changed to:", newId);
+        this.TransporterId = newId;
+        if (newId) {
+          this.loadTransporterDetail();
+        }
+      },
+      immediate: true,
+    },
   },
 };
 </script>
