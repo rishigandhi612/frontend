@@ -90,10 +90,10 @@
               v-model="searchFilters.search"
               label="Search Transporters"
               placeholder="Search by name, city, state, contact..."
-              prepend-inner-icon="mdi-magnify"
+              append-icon="mdi-magnify"
               clearable
               dense
-              outlined
+              underlined
               @input="debouncedSearch"
             />
           </v-col>
@@ -107,6 +107,7 @@
           item-key="_id"
           class="elevation-1"
           v-if="searchResults.length > 0 || isSearchLoading"
+          hide-default-footer
         >
           <template v-slot:item="{ item }">
             <tr
