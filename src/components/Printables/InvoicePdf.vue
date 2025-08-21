@@ -4,8 +4,8 @@
 
 <script>
 import jsPDF from "jspdf";
-import "jspdf-autotable"; 
-import { toWords } from "number-to-words"; 
+import "jspdf-autotable";
+import { toWords } from "number-to-words";
 
 export default {
   props: {
@@ -24,415 +24,72 @@ export default {
     // Helper function to split text into multiple lines based on width
     splitTextToFitWidth(doc, text, maxWidth, fontSize = 12) {
       doc.setFontSize(fontSize);
-      const words = text.split(' ');
+      const words = text.split(" ");
       const lines = [];
-      let currentLine = '';
+      let currentLine = "";
 
       for (let word of words) {
         const testLine = currentLine ? `${currentLine} ${word}` : word;
         const textWidth = doc.getTextWidth(testLine);
-        
+
         if (textWidth <= maxWidth) {
           currentLine = testLine;
-} else {
-           if (currentLine) {
-             lines.push(currentLine);
-             currentLine = word;
-           } else {
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
             // If single word is too long, break it at character level
             let remainingWord = word;
             while (remainingWord.length > 0) {
               let charCount = 1;
-              while (charCount <= remainingWord.length && 
-                     doc.getTextWidth(remainingWord.substring(0, charCount)) <= maxWidth) {
+              while (
+                charCount <= remainingWord.length &&
+                doc.getTextWidth(remainingWord.substring(0, charCount)) <=
+                  maxWidth
+              ) {
                 charCount++;
               }
               lines.push(remainingWord.substring(0, charCount - 1));
               remainingWord = remainingWord.substring(charCount - 1);
             }
-           }
-         }
+          }
+        }
       }
-      
+
       if (currentLine) {
         lines.push(currentLine);
       }
-      
+
       return lines;
-    },
-
-    // Helper function to calculate the height needed for wrapped text
-    calculateTextHeight(lines, lineHeight = 5) {
-      return lines.length * lineHeight;
-    },
-
-    downloadPdf() {
-      const doc = new jsPDF();
-      
-      // Calculate dynamic start position for the table based on header height
-      const headerInfo = this.calculateHeaderHeight(doc);
-      const tableStartY = headerInfo.height + 15; // Add more padding to ensure no overlap
-
-      // Step 1: First aggregation by name-hsn-width (same as before)
-      const initialAggregation = this.invoiceDetail.products.reduce(
-        (acc, product) => {
-          const key = `${product.product.name}-${product.product.hsn_code}-${product.width}`;
-          if (!acc[key]) {
-            acc[key] = { 
-              ...product, 
-              quantity: 0,
-              nos: 0
-            };
-          }
-          acc[key].quantity += product.quantity;
-          acc[key].nos += 1;
-          return acc;
-        },
-        {}
-      );
-
-      // Step 2: Group by product name and HSN to check width count
-      const productGroups = {};
-      Object.values(initialAggregation).forEach(product => {
-        const groupKey = `${product.product.name}-${product.product.hsn_code}`;
-        if (!productGroups[groupKey]) {
-          productGroups[groupKey] = [];
-        }
-        productGroups[groupKey].push(product);
-      });
-
-      // Step 3: Final aggregation - merge if 4+ different widths
-      const finalAggregatedProducts = {};
-      Object.entries(productGroups).forEach(([groupKey, products]) => {
-        if (products.length >= 4) {
-          // Merge all widths for this product group
-          const mergedProduct = {
-            product: products[0].product, // Use first product's details
-            width: "DIFF", // Replace width with "DIFF"
-            unit_price: products[0].unit_price, // Assuming same unit price
-            quantity: products.reduce((sum, p) => sum + p.quantity, 0),
-            nos: products.reduce((sum, p) => sum + p.nos, 0)
-          };
-          finalAggregatedProducts[groupKey] = mergedProduct;
-        } else {
-          // Keep separate entries for each width
-          products.forEach((product, index) => {
-            const key = `${groupKey}-${index}`;
-            finalAggregatedProducts[key] = product;
-          });
-        }
-      });
-
-      // Step 4: Create products array for the table
-      const products = Object.values(finalAggregatedProducts).map((product) => [
-        product.product.name,
-        product.product.hsn_code || "N/A",
-        product.width === "DIFF" ? "DIFF" : (product.width + (product.width > 70 ? " mm " : "''")),
-        product.nos, // Number of pieces/entries merged
-        `${product.quantity.toFixed(3)} Kgs`,
-        `Rs.${product.unit_price.toFixed(2)}`,
-        `Rs.${(product.quantity * product.unit_price).toFixed(2)}`,
-      ]);
-
-      // Calculate total nos (total number of individual product entries)
-      const totalNos = Object.values(finalAggregatedProducts)
-        .reduce((total, product) => total + product.nos, 0);
-
-      // Calculate total quantity
-      const totalQuantity = Object.values(finalAggregatedProducts)
-        .reduce((total, product) => total + product.quantity, 0)
-        .toFixed(3);
-
-      products.push(["", "", "", "", "", "",""]);
-      products.push([
-        "",
-        "",
-        "",
-        "",
-        "",
-        "Sub Total",
-        `Rs.${this.invoiceDetail.totalAmount.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-      if (this.invoiceDetail.otherCharges !== 0) { 
-        products.push([
-          "add:",
-          "",
-          "",
-          "",
-          "",
-          "Other Charges",
-          `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`, // Format to 2 decimal places
-        ]);
-      }
-      
-      // Conditionally add tax rows based on what's in the invoice
-      if (this.invoiceDetail.cgst > 0 || this.invoiceDetail.sgst > 0) {
-        products.push([
-          "add:",
-          "",
-          "",
-          "","",
-          "CGST @ 9%",
-          `Rs.${this.invoiceDetail.cgst.toFixed(2)}`, // Format to 2 decimal places
-        ]);
-        products.push([
-          "add:",
-          "",
-          "",
-          "","",
-          "SGST @ 9%",
-          `Rs.${this.invoiceDetail.sgst.toFixed(2)}`, // Format to 2 decimal places
-        ]);
-      }
-      
-      // Add IGST if present
-      if (this.invoiceDetail.igst > 0) {
-        products.push([
-          "add:",
-          "",
-          "",
-          "","",
-          "IGST @ 18%",
-          `Rs.${this.invoiceDetail.igst.toFixed(2)}`, // Format to 2 decimal places
-        ]);
-      }
-      
-      products.push([
-        "Grand Total",
-        "",
-        "",
-        totalNos,
-        `${totalQuantity} Kgs`,
-        "",
-        `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`, // Format to 2 decimal places
-      ]);
-
-      // Render the product table
-      doc.autoTable({
-        startY: tableStartY,
-        head: [
-            ["Product Name", "HSN/SAC", "Width", "Nos", "Quantity", "Rate", "Amount"],
-        ],
-        body: products,
-        styles: { 
-            fontSize: 10,
-            cellPadding: 2,  // Adds some space inside the cells for a cleaner look
-        },
-        headStyles: { 
-            fillColor: [255, 255, 255], // Lighter gray background for header
-            textColor: [0, 0, 0],  // Black text
-            fontStyle: 'bold',
-            halign: 'center', // Center-align header text
-            valign: 'middle', // Center-align vertically
-            border: true,  // Border for header cells
-            lineWidth: 0.2,  // Slightly thicker line for the header
-            lineColor: [0, 0, 0],  // Black border for header
-        },
-        bodyStyles: {
-          fillColor: [255, 255, 255], // Lighter gray background for header
-          textColor: [0, 0, 0],  // Black text
-            halign: 'center', // Left-align body text
-            valign: 'middle', // Center-align vertically
-            border: false,  // Border for body cells
-            // lineWidth: 0.1,  // Thin line for body cells
-            // lineColor: [0, 0, 0], // Black border for body
-        },
-        didDrawPage: () => {
-            this.addHeader(doc);
-            this.addFooter(doc, doc.internal.pageSize.height);
-        },
-        didParseCell: function (data) {
-            if (data.section === "body") {
-                // Bold Quantity Column (index 3) and Amount Column (index 5)
-                if (data.column.index === 3 || data.column.index === 5) {
-                    data.cell.styles.fontStyle = "bold";
-                }
-            }
-        },
-        tableLineWidth: 0.1,  // Adding fine line for the entire table
-        tableLineColor: [0, 0, 0], // Line color for the whole table
-      });
-
-      doc.setFontSize(10);
-
-      // Handle new page addition properly
-      let amountTextY = doc.lastAutoTable.finalY + 7;
-
-      // Check if a new page is added due to lack of space
-      const availableHeight =
-        doc.internal.pageSize.height - doc.lastAutoTable.finalY - 40; // Approximate space needed for footnotes
-      let newPageAddedForHSN = false;
-
-      if (availableHeight < 50) {
-        doc.addPage();
-        this.addHeader(doc);
-        newPageAddedForHSN = true;
-        amountTextY = this.calculateHeaderHeight(doc).height + 10; // Adjust based on dynamic header height
-      }
-
-      // Print the "AMOUNT CHARGEABLE (in words)"
-      const amountText = "AMOUNT CHARGEABLE (in words):";
-      doc.text(amountText, 14, amountTextY);
-
-      // Group by HSN Code and handle both CGST/SGST and IGST scenarios
-      const hsnSummary = this.invoiceDetail.products.reduce(
-        (summary, product) => {
-          const hsn = product.product.hsn_code || "N/A";
-          if (!summary[hsn]) {
-            // Initialize with all tax types
-            summary[hsn] = { amount: 0, cgst: 0, sgst: 0, igst: 0 };
-          }
-          const amount = parseFloat(product.quantity * product.unit_price);
-          summary[hsn].amount += amount;
-          
-          // Calculate taxes based on what's in the invoice
-          if (this.invoiceDetail.igst > 0) {
-            // For inter-state: calculate IGST
-            const igstRate = 0.18; // 18%
-            summary[hsn].igst += amount * igstRate;
-          } else {
-            // For intra-state: calculate CGST and SGST
-            const cgstRate = 0.09; // 9%
-            const sgstRate = 0.09; // 9%
-            summary[hsn].cgst += amount * cgstRate;
-            summary[hsn].sgst += amount * sgstRate;
-          }
-          
-          return summary;
-        },
-        {}
-      );
-
-      // Prepare HSN summary data based on which taxes are present
-      let hsnSummaryData = [];
-      let hsnTableHeaders = [];
-      
-      if (this.invoiceDetail.igst > 0) {
-        // Inter-state transaction: Show IGST column only
-        hsnTableHeaders = [["HSN/SAC", "Integrated Tax"]];
-        hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
-          hsn,
-          `Rs.${hsnSummary[hsn].igst.toFixed(2)}`,
-        ]);
-      } else {
-        // Intra-state transaction: Show CGST and SGST columns
-        hsnTableHeaders = [["HSN/SAC", "Central Tax", "State Tax"]];
-        hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
-          hsn,
-          `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
-          `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
-        ]);
-      }
-
-      const grandTotalInWords = toWords(
-        Math.round(this.invoiceDetail.grandTotal)
-      ).toUpperCase();
-      doc.setFont("helvetica", "bold");
-      doc.text(
-        `INR ${grandTotalInWords} Only`,
-        14,
-        doc.lastAutoTable.finalY + 14
-      );
-
-      // Render the HSN Summary Table with dynamic headers
-      doc.autoTable({
-        startY: doc.lastAutoTable.finalY + (availableHeight < 50 ? 10 : 18),
-        head: hsnTableHeaders,
-        body: hsnSummaryData,
-        styles: { 
-          cellPadding: 1,  // Adds some space inside the cells for a cleaner look
-        },
-        headStyles: { 
-          fillColor: [255, 255, 255], // Lighter gray background for header
-          textColor: [0, 0, 0],  // Black text
-          fontStyle: 'bold',
-          halign: 'right', // Center-align header text
-          valign: 'middle', // Center-align vertically
-          border: true,  // Border for header cells
-          lineWidth: 0.2,  // Slightly thicker line for the header
-          lineColor: [0, 0, 0],  // Black border for header
-        },
-        bodyStyles: {
-          fillColor: [255, 255, 255], // Lighter gray background for header
-          textColor: [0, 0, 0],  // Black text
-          halign: 'right', // Left-align body text
-          valign: 'middle', // Center-align vertically
-          border: false,  // Border for body cells
-          lineWidth: 0.1,  // Thin line for body cells
-          lineColor: [0, 0, 0], // Black border for body
-        },
-        didDrawPage: () => {
-          if (newPageAddedForHSN) {
-            this.addFooter(doc, doc.internal.pageSize.height);
-          }
-        },
-      });
-
-      // Calculate total tax amount based on tax type
-      let totalTaxAmount = 0;
-      if (this.invoiceDetail.igst > 0) {
-        totalTaxAmount = this.invoiceDetail.igst;
-      } else {
-        totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
-      }
-      
-      const totalTaxInWords = toWords(Math.round(totalTaxAmount)).toUpperCase();
-
-      // Print "Tax Amount(in words)" text and total tax amount in words
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Tax Amount(in words):`, 14, doc.lastAutoTable.finalY + 7);
-      doc.setFont("helvetica", "bold");
-      doc.text(
-        `INR ${totalTaxInWords} Only`,
-        14,
-        doc.lastAutoTable.finalY + 14
-      );
-
-      // Create the PDF blob and open it
-      const blob = doc.output("blob");
-      const pdfUrl = URL.createObjectURL(blob);
-      const newWindow = window.open(pdfUrl, "_blank");
-      if (!newWindow) {
-        alert("Please allow pop-ups to view and print the PDF.");
-      } else {
-        newWindow.onload = function () {
-          if (!/Mobi|Android/i.test(navigator.userAgent)) {
-            newWindow.focus();
-            newWindow.print();
-          } else {
-            alert(
-              "PDF opened in a new tab. Use your device's options to print."
-            );
-          }
-        };
-      }
     },
 
     // Function to calculate the total height needed for the header
     calculateHeaderHeight(doc) {
       // Base header elements height (static parts)
       let currentY = 56; // Starting from the static header elements
-      
+
       // Calculate customer name height
       const customerName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;
       const nameLines = this.splitTextToFitWidth(doc, customerName, 180, 12);
       currentY += nameLines.length * 5; // 5 is line height for customer name
-      
+
       // Calculate address height
-      const addressText = `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-        this.invoiceDetail.customer?.address?.city || "N/A"
-      },${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
+      const addressText = `${
+        this.invoiceDetail.customer?.address?.line1 || "N/A"
+      }, ${this.invoiceDetail.customer?.address?.city || "N/A"},${
+        this.invoiceDetail.customer?.address?.pincode || "N/A"
+      }`;
       const addressLines = this.splitTextToFitWidth(doc, addressText, 180, 12);
       currentY += addressLines.length * 5; // 5 is line height for address
-      
+
       // Add space for other fixed elements (phone, GSTIN, dispatch)
       currentY += 15; // 3 lines * 5 line height each
-      
+
       return {
         height: currentY,
         nameLines: nameLines.length,
-        addressLines: addressLines.length
+        addressLines: addressLines.length,
       };
     },
 
@@ -487,7 +144,7 @@ export default {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text(`(Original For Recipient)`, 105, 56, "center");
-      
+
       // Add Invoice Title
       doc.setFontSize(12);
       doc.text(`Invoice #${this.invoiceDetail.invoiceNumber}`, 14, 62);
@@ -506,24 +163,26 @@ export default {
       let currentY = 70;
       const customerName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;
       const nameLines = this.splitTextToFitWidth(doc, customerName, 180, 12);
-      
+
       doc.setFontSize(12);
       doc.setFont("helvetica", "bold");
       nameLines.forEach((line, index) => {
-        doc.text(line, 105, currentY + (index * 5), "center");
+        doc.text(line, 105, currentY + index * 5, "center");
       });
       currentY += nameLines.length * 5;
 
       // Dynamic address handling
-      const addressText = `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ${
-        this.invoiceDetail.customer?.address?.city || "N/A"
-      },${this.invoiceDetail.customer?.address?.pincode || "N/A"}`;
+      const addressText = `${
+        this.invoiceDetail.customer?.address?.line1 || "N/A"
+      }, ${this.invoiceDetail.customer?.address?.city || "N/A"},${
+        this.invoiceDetail.customer?.address?.pincode || "N/A"
+      }`;
       const addressLines = this.splitTextToFitWidth(doc, addressText, 180, 12);
-      
+
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       addressLines.forEach((line, index) => {
-        doc.text(line, 105, currentY + (index * 5), "center");
+        doc.text(line, 105, currentY + index * 5, "center");
       });
       currentY += addressLines.length * 5;
 
@@ -535,7 +194,7 @@ export default {
         "center"
       );
       currentY += 5;
-      
+
       doc.text(
         `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
         105,
@@ -543,7 +202,7 @@ export default {
         "center"
       );
       currentY += 5;
-      
+
       doc.text(
         `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
         105,
@@ -579,7 +238,7 @@ export default {
         105,
         pageHeight - 25,
         "left"
-      );          
+      );
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text(
@@ -589,6 +248,361 @@ export default {
         "center"
       );
     },
+
+    // NEW: Reusable method to create PDF document (extracted from downloadPdf)
+    createPdfDocument() {
+      const doc = new jsPDF();
+
+      // Calculate dynamic start position for the table based on header height
+      const headerInfo = this.calculateHeaderHeight(doc);
+      const tableStartY = headerInfo.height + 15;
+
+      // Step 1: First aggregation by name-hsn-width (same as before)
+      const initialAggregation = this.invoiceDetail.products.reduce(
+        (acc, product) => {
+          const key = `${product.product.name}-${product.product.hsn_code}-${product.width}`;
+          if (!acc[key]) {
+            acc[key] = {
+              ...product,
+              quantity: 0,
+              nos: 0,
+            };
+          }
+          acc[key].quantity += product.quantity;
+          acc[key].nos += 1;
+          return acc;
+        },
+        {}
+      );
+
+      // Step 2: Group by product name and HSN to check width count
+      const productGroups = {};
+      Object.values(initialAggregation).forEach((product) => {
+        const groupKey = `${product.product.name}-${product.product.hsn_code}`;
+        if (!productGroups[groupKey]) {
+          productGroups[groupKey] = [];
+        }
+        productGroups[groupKey].push(product);
+      });
+
+      // Step 3: Final aggregation - merge if 4+ different widths
+      const finalAggregatedProducts = {};
+      Object.entries(productGroups).forEach(([groupKey, products]) => {
+        if (products.length >= 4) {
+          const mergedProduct = {
+            product: products[0].product,
+            width: "DIFF",
+            unit_price: products[0].unit_price,
+            quantity: products.reduce((sum, p) => sum + p.quantity, 0),
+            nos: products.reduce((sum, p) => sum + p.nos, 0),
+          };
+          finalAggregatedProducts[groupKey] = mergedProduct;
+        } else {
+          products.forEach((product, index) => {
+            const key = `${groupKey}-${index}`;
+            finalAggregatedProducts[key] = product;
+          });
+        }
+      });
+
+      // Step 4: Create products array for the table
+      const products = Object.values(finalAggregatedProducts).map((product) => [
+        product.product.name,
+        product.product.hsn_code || "N/A",
+        product.width === "DIFF"
+          ? "DIFF"
+          : product.width + (product.width > 70 ? " mm " : "''"),
+        product.nos,
+        `${product.quantity.toFixed(3)} Kgs`,
+        `Rs.${product.unit_price.toFixed(2)}`,
+        `Rs.${(product.quantity * product.unit_price).toFixed(2)}`,
+      ]);
+
+      // Calculate totals
+      const totalNos = Object.values(finalAggregatedProducts).reduce(
+        (total, product) => total + product.nos,
+        0
+      );
+      const totalQuantity = Object.values(finalAggregatedProducts)
+        .reduce((total, product) => total + product.quantity, 0)
+        .toFixed(3);
+
+      // Add summary rows
+      products.push(["", "", "", "", "", "", ""]);
+      products.push([
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Sub Total",
+        `Rs.${this.invoiceDetail.totalAmount.toFixed(2)}`,
+      ]);
+
+      if (this.invoiceDetail.otherCharges !== 0) {
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "",
+          "Other Charges",
+          `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`,
+        ]);
+      }
+
+      // Add tax rows
+      if (this.invoiceDetail.cgst > 0 || this.invoiceDetail.sgst > 0) {
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "",
+          "CGST @ 9%",
+          `Rs.${this.invoiceDetail.cgst.toFixed(2)}`,
+        ]);
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "",
+          "SGST @ 9%",
+          `Rs.${this.invoiceDetail.sgst.toFixed(2)}`,
+        ]);
+      }
+
+      if (this.invoiceDetail.igst > 0) {
+        products.push([
+          "add:",
+          "",
+          "",
+          "",
+          "",
+          "IGST @ 18%",
+          `Rs.${this.invoiceDetail.igst.toFixed(2)}`,
+        ]);
+      }
+
+      products.push([
+        "Grand Total",
+        "",
+        "",
+        totalNos,
+        `${totalQuantity} Kgs`,
+        "",
+        `Rs.${this.invoiceDetail.grandTotal.toFixed(2)}`,
+      ]);
+
+      // Render the product table
+      doc.autoTable({
+        startY: tableStartY,
+        head: [
+          [
+            "Product Name",
+            "HSN/SAC",
+            "Width",
+            "Nos",
+            "Quantity",
+            "Rate",
+            "Amount",
+          ],
+        ],
+        body: products,
+        styles: {
+          fontSize: 10,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          fontStyle: "bold",
+          halign: "center",
+          valign: "middle",
+          border: true,
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          halign: "center",
+          valign: "middle",
+          border: false,
+        },
+        didDrawPage: () => {
+          this.addHeader(doc);
+          this.addFooter(doc, doc.internal.pageSize.height);
+        },
+        didParseCell: function (data) {
+          if (data.section === "body") {
+            if (data.column.index === 3 || data.column.index === 5) {
+              data.cell.styles.fontStyle = "bold";
+            }
+          }
+        },
+        tableLineWidth: 0.1,
+        tableLineColor: [0, 0, 0],
+      });
+
+      // Add amount in words and HSN summary
+      doc.setFontSize(10);
+      let amountTextY = doc.lastAutoTable.finalY + 7;
+
+      const availableHeight =
+        doc.internal.pageSize.height - doc.lastAutoTable.finalY - 40;
+      let newPageAddedForHSN = false;
+
+      if (availableHeight < 50) {
+        doc.addPage();
+        this.addHeader(doc);
+        newPageAddedForHSN = true;
+        amountTextY = this.calculateHeaderHeight(doc).height + 10;
+      }
+
+      const amountText = "AMOUNT CHARGEABLE (in words):";
+      doc.text(amountText, 14, amountTextY);
+
+      // HSN Summary
+      const hsnSummary = this.invoiceDetail.products.reduce(
+        (summary, product) => {
+          const hsn = product.product.hsn_code || "N/A";
+          if (!summary[hsn]) {
+            summary[hsn] = { amount: 0, cgst: 0, sgst: 0, igst: 0 };
+          }
+          const amount = parseFloat(product.quantity * product.unit_price);
+          summary[hsn].amount += amount;
+
+          if (this.invoiceDetail.igst > 0) {
+            const igstRate = 0.18;
+            summary[hsn].igst += amount * igstRate;
+          } else {
+            const cgstRate = 0.09;
+            const sgstRate = 0.09;
+            summary[hsn].cgst += amount * cgstRate;
+            summary[hsn].sgst += amount * sgstRate;
+          }
+
+          return summary;
+        },
+        {}
+      );
+
+      let hsnSummaryData = [];
+      let hsnTableHeaders = [];
+
+      if (this.invoiceDetail.igst > 0) {
+        hsnTableHeaders = [["HSN/SAC", "Integrated Tax"]];
+        hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
+          hsn,
+          `Rs.${hsnSummary[hsn].igst.toFixed(2)}`,
+        ]);
+      } else {
+        hsnTableHeaders = [["HSN/SAC", "Central Tax", "State Tax"]];
+        hsnSummaryData = Object.keys(hsnSummary).map((hsn) => [
+          hsn,
+          `Rs.${hsnSummary[hsn].cgst.toFixed(2)}`,
+          `Rs.${hsnSummary[hsn].sgst.toFixed(2)}`,
+        ]);
+      }
+
+      const grandTotalInWords = toWords(
+        Math.round(this.invoiceDetail.grandTotal)
+      ).toUpperCase();
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `INR ${grandTotalInWords} Only`,
+        14,
+        doc.lastAutoTable.finalY + 14
+      );
+
+      // Render HSN Summary Table
+      doc.autoTable({
+        startY: doc.lastAutoTable.finalY + (availableHeight < 50 ? 10 : 18),
+        head: hsnTableHeaders,
+        body: hsnSummaryData,
+        styles: {
+          cellPadding: 1,
+        },
+        headStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          fontStyle: "bold",
+          halign: "right",
+          valign: "middle",
+          border: true,
+          lineWidth: 0.2,
+          lineColor: [0, 0, 0],
+        },
+        bodyStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          halign: "right",
+          valign: "middle",
+          border: false,
+          lineWidth: 0.1,
+          lineColor: [0, 0, 0],
+        },
+        didDrawPage: () => {
+          if (newPageAddedForHSN) {
+            this.addFooter(doc, doc.internal.pageSize.height);
+          }
+        },
+      });
+
+      // Tax amount in words
+      let totalTaxAmount = 0;
+      if (this.invoiceDetail.igst > 0) {
+        totalTaxAmount = this.invoiceDetail.igst;
+      } else {
+        totalTaxAmount = this.invoiceDetail.cgst + this.invoiceDetail.sgst;
+      }
+
+      const totalTaxInWords = toWords(Math.round(totalTaxAmount)).toUpperCase();
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Tax Amount(in words):`, 14, doc.lastAutoTable.finalY + 7);
+      doc.setFont("helvetica", "bold");
+      doc.text(
+        `INR ${totalTaxInWords} Only`,
+        14,
+        doc.lastAutoTable.finalY + 14
+      );
+
+      return doc;
+    },
+
+    // Original download method now uses the reusable createPdfDocument
+    downloadPdf() {
+      const doc = this.createPdfDocument();
+
+      // Create the PDF blob and open it
+      const blob = doc.output("blob");
+      const pdfUrl = URL.createObjectURL(blob);
+      const newWindow = window.open(pdfUrl, "_blank");
+      if (!newWindow) {
+        alert("Please allow pop-ups to view and print the PDF.");
+      } else {
+        newWindow.onload = function () {
+          if (!/Mobi|Android/i.test(navigator.userAgent)) {
+            newWindow.focus();
+            newWindow.print();
+          } else {
+            alert(
+              "PDF opened in a new tab. Use your device's options to print."
+            );
+          }
+        };
+      }
+    },
+
+    // NEW: Method to get PDF as blob for email
+    getPdfBlob() {
+      const doc = this.createPdfDocument();
+      return doc.output("blob");
+    },
   },
 };
 </script>
@@ -596,7 +610,7 @@ export default {
 <style scoped>
 #invoice-pdf {
   padding: 20px;
-} 
+}
 
 table {
   width: 100%;
