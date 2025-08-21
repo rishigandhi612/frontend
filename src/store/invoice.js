@@ -1,5 +1,5 @@
 //  Updated Vuex store module for invoices with loading states
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 const state = {
   invoices: [],
   invoiceDetail: null,
@@ -8,17 +8,18 @@ const state = {
     fetchInvoices: false,
     deleteInvoice: false,
     createUpdateInvoice: false, // Added loading state for create/update operations
-    fetchInvoiceDetail: false
+    fetchInvoiceDetail: false,
+    sendEmail: false, // Added email sending state
   },
   pagination: {
     page: 1,
     itemsPerPage: 10,
     totalItems: 0,
-    totalPages: 0
+    totalPages: 0,
   },
-  sortBy: 'createdAt',
+  sortBy: "createdAt",
   sortDesc: true,
-  search: ''
+  search: "",
 };
 
 const getters = {
@@ -28,135 +29,144 @@ const getters = {
   pagination: (state) => state.pagination,
   sortBy: (state) => state.sortBy,
   sortDesc: (state) => state.sortDesc,
-  search: (state) => state.search
+  search: (state) => state.search,
+  isEmailSending: (state) => state.loadingState.sendEmail,
 };
 
 const actions = {
   // Modified to accept a skipFetch parameter to prevent automatic data fetching
   setPage({ commit }, page) {
-    commit('SET_PAGE', page);
+    commit("SET_PAGE", page);
   },
-  
+
   setItemsPerPage({ commit }, itemsPerPage) {
-    commit('SET_ITEMS_PER_PAGE', itemsPerPage);
-    commit('SET_PAGE', 1); // Reset to first page when changing items per page
+    commit("SET_ITEMS_PER_PAGE", itemsPerPage);
+    commit("SET_PAGE", 1); // Reset to first page when changing items per page
   },
-  
+
   setSorting({ commit }, { sortBy, sortDesc }) {
-    commit('SET_SORTING', { sortBy, sortDesc });
+    commit("SET_SORTING", { sortBy, sortDesc });
   },
-  
+
   setSearch({ commit }, search) {
-    commit('SET_SEARCH', search);
-    commit('SET_PAGE', 1); // Reset to first page when searching
+    commit("SET_SEARCH", search);
+    commit("SET_PAGE", 1); // Reset to first page when searching
   },
 
   async fetchInvoices({ commit, state }) {
-    commit('SET_LOADING_STATE', { type: 'fetchInvoices', value: true });
+    commit("SET_LOADING_STATE", { type: "fetchInvoices", value: true });
     try {
       // Build query parameters for pagination and sorting
       const params = {
         page: state.pagination.page,
         itemsPerPage: state.pagination.itemsPerPage,
         sortBy: state.sortBy,
-        sortDesc: state.sortDesc
+        sortDesc: state.sortDesc,
       };
-      
+
       // Only add search parameter if it's not empty
-      if (state.search && state.search.trim() !== '') {
+      if (state.search && state.search.trim() !== "") {
         params.search = state.search.trim();
       }
-      
+
       // Convert params object to query string
       const queryString = Object.keys(params)
-        .map(key => `${key}=${encodeURIComponent(params[key])}`)
-        .join('&');
-      
-      console.log('Fetching with query:', queryString);
-      
+        .map((key) => `${key}=${encodeURIComponent(params[key])}`)
+        .join("&");
+
+      console.log("Fetching with query:", queryString);
+
       const response = await apiClient.get(`/custprod?${queryString}`);
-      
+
       if (response.data.success) {
-        commit('SET_INVOICES', response.data.data);
-        commit('SET_PAGINATION', response.data.pagination);
+        commit("SET_INVOICES", response.data.data);
+        commit("SET_PAGINATION", response.data.pagination);
       } else {
-        console.error('Failed to fetch invoices.');
+        console.error("Failed to fetch invoices.");
       }
     } catch (error) {
-      console.error('Error fetching invoices:', error);
+      console.error("Error fetching invoices:", error);
       throw error;
     } finally {
-      commit('SET_LOADING_STATE', { type: 'fetchInvoices', value: false });
+      commit("SET_LOADING_STATE", { type: "fetchInvoices", value: false });
     }
   },
 
-  // Keep existing actions...
   async fetchInvoiceDetail({ commit, dispatch }, id) {
-    commit('SET_LOADING_STATE', { type: 'fetchInvoiceDetail', value: true });
+    commit("SET_LOADING_STATE", { type: "fetchInvoiceDetail", value: true });
     try {
-      const response = await dispatch('fetchInvoiceById', id);
+      const response = await dispatch("fetchInvoiceById", id);
 
       if (response.success) {
         const invoice = response.data;
-        commit('SET_INVOICE_DETAIL', invoice);
-        commit('SET_CUSTOMER_ID', invoice.customer ? invoice.customer._id : null);
-        invoice.products.forEach(product => {
-          commit('SET_PRODUCT_ID', product._id);
+        commit("SET_INVOICE_DETAIL", invoice);
+        commit(
+          "SET_CUSTOMER_ID",
+          invoice.customer ? invoice.customer._id : null
+        );
+        invoice.products.forEach((product) => {
+          commit("SET_PRODUCT_ID", product._id);
         });
       } else {
-        throw new Error('Failed to load invoice details.');
+        throw new Error("Failed to load invoice details.");
       }
     } catch (err) {
-      console.error('Error fetching invoice details:', err);
-      throw new Error('Failed to fetch invoice details.');
+      console.error("Error fetching invoice details:", err);
+      throw new Error("Failed to fetch invoice details.");
     } finally {
-      commit('SET_LOADING_STATE', { type: 'fetchInvoiceDetail', value: false });
+      commit("SET_LOADING_STATE", { type: "fetchInvoiceDetail", value: false });
     }
   },
 
-  async fetchInvoiceById(_, id ) {
+  async fetchInvoiceById(_, id) {
     try {
       const response = await apiClient.get(`/custprod/${id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching invoice:', error);
-      throw new Error('Failed to load invoice details.');
-    } 
+      console.error("Error fetching invoice:", error);
+      throw new Error("Failed to load invoice details.");
+    }
   },
 
   async createInvoiceInStore({ commit }, invoiceData) {
-    commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: true });
+    commit("SET_LOADING_STATE", { type: "createUpdateInvoice", value: true });
     try {
-      const response = await apiClient.post('/custprod', invoiceData);
+      const response = await apiClient.post("/custprod", invoiceData);
       if (response.data.success) {
-        commit('ADD_INVOICE', response.data.data);
+        commit("ADD_INVOICE", response.data.data);
       } else {
-        throw new Error('Invoice creation failed');
+        throw new Error("Invoice creation failed");
       }
     } catch (error) {
-      console.error('Error creating invoice:', error);
+      console.error("Error creating invoice:", error);
       throw error;
     } finally {
-      commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: false });
+      commit("SET_LOADING_STATE", {
+        type: "createUpdateInvoice",
+        value: false,
+      });
     }
   },
 
   async updateInvoiceInStore({ commit }, { id, data }) {
-    commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: true });
+    commit("SET_LOADING_STATE", { type: "createUpdateInvoice", value: true });
     try {
       const response = await apiClient.put(`/custprod/${id}`, data);
-      commit('UPDATE_INVOICE', response.data.data);
+      commit("UPDATE_INVOICE", response.data.data);
     } catch (error) {
-      console.error('Error updating invoice:', error);
+      console.error("Error updating invoice:", error);
       throw error;
     } finally {
-      commit('SET_LOADING_STATE', { type: 'createUpdateInvoice', value: false });
+      commit("SET_LOADING_STATE", {
+        type: "createUpdateInvoice",
+        value: false,
+      });
     }
   },
 
   async deleteInvoiceDetail({ commit }, invoiceId) {
     console.log("deleteInvoiceDetail action called with ID:", invoiceId);
-    commit('SET_LOADING_STATE', { type: 'deleteInvoice', value: true });
+    commit("SET_LOADING_STATE", { type: "deleteInvoice", value: true });
     try {
       const response = await apiClient.delete(`/custprod/${invoiceId}`);
       if (response.data.success) {
@@ -166,11 +176,84 @@ const actions = {
       }
     } catch (error) {
       console.error("Error deleting invoice:", error);
-      throw new Error(error.response?.data?.message || "Failed to delete the invoice.");
+      throw new Error(
+        error.response?.data?.message || "Failed to delete the invoice."
+      );
     } finally {
-      commit('SET_LOADING_STATE', { type: 'deleteInvoice', value: false });
+      commit("SET_LOADING_STATE", { type: "deleteInvoice", value: false });
     }
-  }
+  },
+  async sendInvoiceEmail({ commit }, { emailData, pdfBlob }) {
+    commit("SET_LOADING_STATE", { type: "sendEmail", value: true });
+    try {
+      const formData = new FormData();
+      formData.append(
+        "invoice",
+        pdfBlob,
+        `invoice-${emailData.invoiceNumber}.pdf`
+      );
+      formData.append("email", emailData.email);
+      formData.append("invoiceNumber", emailData.invoiceNumber);
+      formData.append("customerName", emailData.customerName);
+      formData.append("subject", emailData.subject);
+      formData.append("message", emailData.message);
+
+      const response = await apiClient.post("/email/invoice", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 30000, // 30 second timeout for file upload
+      });
+
+      // Check if the response indicates success
+      if (response.status === 200 || (response.data && response.data.success)) {
+        return {
+          success: true,
+          message: response.data.message || "Invoice sent successfully!",
+        };
+      } else {
+        // If response doesn't have success: true, treat as error
+        throw new Error(response.data?.message || "Failed to send email");
+      }
+    } catch (error) {
+      console.error("Error sending invoice email:", error);
+
+      // Enhanced error handling
+      let errorMessage = "Failed to send email. Please try again.";
+
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || error.response.data;
+
+        switch (status) {
+          case 401:
+            errorMessage = "Authentication failed. Please login again.";
+            break;
+          case 413:
+            errorMessage = "File too large. Please try again.";
+            break;
+          case 422:
+            errorMessage = `Validation error: ${message}`;
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage = `Failed to send email: ${message}`;
+        }
+      } else if (error.request) {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (error.message) {
+        // This catches our custom thrown errors from the success check above
+        errorMessage = error.message;
+      }
+
+      // Re-throw the error with the appropriate message
+      throw new Error(errorMessage);
+    } finally {
+      commit("SET_LOADING_STATE", { type: "sendEmail", value: false });
+    }
+  },
 };
 
 const mutations = {
@@ -200,7 +283,9 @@ const mutations = {
     state.invoiceDetail = { ...invoice };
   },
   UPDATE_INVOICE(state, updatedInvoice) {
-    const index = state.invoices.findIndex((invoice) => invoice._id === updatedInvoice._id);
+    const index = state.invoices.findIndex(
+      (invoice) => invoice._id === updatedInvoice._id
+    );
     if (index !== -1) {
       state.invoices.splice(index, 1, updatedInvoice);
     }
@@ -209,12 +294,14 @@ const mutations = {
     }
   },
   REMOVE_INVOICE(state, invoiceId) {
-    state.invoices = state.invoices.filter((invoice) => invoice._id !== invoiceId);
-  
+    state.invoices = state.invoices.filter(
+      (invoice) => invoice._id !== invoiceId
+    );
+
     if (state.invoiceDetail && state.invoiceDetail._id === invoiceId) {
       state.invoiceDetail = null;
     }
-  },  
+  },
   SET_LOADING(state, loading) {
     state.loading = loading;
   },
@@ -233,7 +320,7 @@ const mutations = {
       }
       state.invoiceDetail.productIds.push(productId);
     }
-  }
+  },
 };
 
 export default {
@@ -241,5 +328,5 @@ export default {
   state,
   getters,
   actions,
-  mutations
+  mutations,
 };

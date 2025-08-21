@@ -2,7 +2,11 @@
   <v-app>
     <!-- Loading -->
     <v-row v-if="loading" align="center" justify="center" class="fill-height">
-      <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="48"
+      ></v-progress-circular>
     </v-row>
 
     <!-- Main Content -->
@@ -41,11 +45,26 @@
             <v-sheet class="pa-4 mt-4 rounded-lg" color="grey lighten-4">
               <v-row>
                 <v-col sm="6">
-                  <p><strong>Name:</strong> {{ invoiceDetail.customer?.name || "N/A" }}</p>
-                  <p><strong>Email:</strong> {{ invoiceDetail.customer?.email_id || "N/A" }}</p>
-                  <p><strong>Phone:</strong> {{ invoiceDetail.customer?.phone_no || "N/A" }}</p>
-                  <p><strong>GSTIN:</strong> {{ invoiceDetail.customer?.gstin || "N/A" }}</p>
-                  <p><strong>Transporter:</strong> {{ invoiceDetail.transporter?.name || "N/A" }}</p>
+                  <p>
+                    <strong>Name:</strong>
+                    {{ invoiceDetail.customer?.name || "N/A" }}
+                  </p>
+                  <p>
+                    <strong>Email:</strong>
+                    {{ invoiceDetail.customer?.email_id || "N/A" }}
+                  </p>
+                  <p>
+                    <strong>Phone:</strong>
+                    {{ invoiceDetail.customer?.phone_no || "N/A" }}
+                  </p>
+                  <p>
+                    <strong>GSTIN:</strong>
+                    {{ invoiceDetail.customer?.gstin || "N/A" }}
+                  </p>
+                  <p>
+                    <strong>Transporter:</strong>
+                    {{ invoiceDetail.transporter?.name || "N/A" }}
+                  </p>
                 </v-col>
                 <v-col sm="6">
                   <p>
@@ -53,7 +72,8 @@
                     {{ invoiceDetail.customer?.address?.line1 || "N/A" }},
                     {{ invoiceDetail.customer?.address?.city || "N/A" }},
                     {{ invoiceDetail.customer?.address?.state || "N/A" }}
-                    | <strong>Pin:</strong> {{ invoiceDetail.customer?.address?.pincode || "N/A" }}
+                    | <strong>Pin:</strong>
+                    {{ invoiceDetail.customer?.address?.pincode || "N/A" }}
                   </p>
                 </v-col>
               </v-row>
@@ -69,13 +89,10 @@
                 :headers="productHeaders"
                 :items="formattedProducts"
                 dense
-                hide-default-footer
                 class="elevation-1"
-              ><template slot="item.amount" slot-scope="{ item }">
-  ₹{{ item.amount }}
-</template>
-
-
+                ><template slot="item.amount" slot-scope="{ item }">
+                  ₹{{ item.amount }}
+                </template>
               </v-data-table>
             </v-card>
 
@@ -87,29 +104,51 @@
               </v-card-title>
               <v-list dense>
                 <v-list-item>
-                  <v-list-item-title class="text-right">Sub Total</v-list-item-title>
-                  <v-list-item-subtitle class="text-center">₹{{ invoiceDetail.totalAmount }}</v-list-item-subtitle>
+                  <v-list-item-title class="text-right"
+                    >Sub Total</v-list-item-title
+                  >
+                  <v-list-item-subtitle class="text-center"
+                    >₹{{ invoiceDetail.totalAmount }}</v-list-item-subtitle
+                  >
                 </v-list-item>
                 <v-list-item>
-                  <v-list-item-title class="text-right">Other Charges</v-list-item-title>
-                  <v-list-item-subtitle class="text-center">₹{{ invoiceDetail.otherCharges }}</v-list-item-subtitle>
+                  <v-list-item-title class="text-right"
+                    >Other Charges</v-list-item-title
+                  >
+                  <v-list-item-subtitle class="text-center"
+                    >₹{{ invoiceDetail.otherCharges }}</v-list-item-subtitle
+                  >
                 </v-list-item>
-                <v-list-item v-if="invoiceDetail.cgst > 0 || invoiceDetail.sgst > 0">
+                <v-list-item
+                  v-if="invoiceDetail.cgst > 0 || invoiceDetail.sgst > 0"
+                >
                   <v-list-item-title class="text-right">CGST</v-list-item-title>
-                  <v-list-item-subtitle class="text-center">₹{{ invoiceDetail.cgst }}</v-list-item-subtitle>
+                  <v-list-item-subtitle class="text-center"
+                    >₹{{ invoiceDetail.cgst }}</v-list-item-subtitle
+                  >
                 </v-list-item>
-                <v-list-item v-if="invoiceDetail.cgst > 0 || invoiceDetail.sgst > 0">
+                <v-list-item
+                  v-if="invoiceDetail.cgst > 0 || invoiceDetail.sgst > 0"
+                >
                   <v-list-item-title class="text-right">SGST</v-list-item-title>
-                  <v-list-item-subtitle class="text-center">₹{{ invoiceDetail.sgst }}</v-list-item-subtitle>
+                  <v-list-item-subtitle class="text-center"
+                    >₹{{ invoiceDetail.sgst }}</v-list-item-subtitle
+                  >
                 </v-list-item>
                 <v-list-item v-if="invoiceDetail.igst > 0">
                   <v-list-item-title class="text-right">IGST</v-list-item-title>
-                  <v-list-item-subtitle class="text-center">₹{{ invoiceDetail.igst }}</v-list-item-subtitle>
+                  <v-list-item-subtitle class="text-center"
+                    >₹{{ invoiceDetail.igst }}</v-list-item-subtitle
+                  >
                 </v-list-item>
                 <v-divider class="my-2"></v-divider>
                 <v-list-item>
-                  <v-list-item-title class="text-right font-weight-bold">Grand Total</v-list-item-title>
-                  <v-list-item-title class="text-center font-weight-bold text-h6">
+                  <v-list-item-title class="text-right font-weight-bold"
+                    >Grand Total</v-list-item-title
+                  >
+                  <v-list-item-title
+                    class="text-center font-weight-bold text-h6"
+                  >
                     ₹{{ invoiceDetail.grandTotal }}
                   </v-list-item-title>
                 </v-list-item>
@@ -126,17 +165,30 @@
 
       <!-- Action Buttons Column -->
       <v-col cols="12" md="2" class="pt-5">
-        <v-sheet class="pa-3 rounded-lg elevation-2" style="position: sticky; top: 20px;">
+        <v-sheet
+          class="pa-3 rounded-lg elevation-2"
+          style="position: sticky; top: 20px"
+        >
           <v-btn color="primary" block @click="updateInvoice">
             <v-icon left>mdi-pencil</v-icon> Update
           </v-btn>
-          <v-btn color="error" block class="mt-2" @click="confirmAndDeleteInvoice">
+          <v-btn
+            color="error"
+            block
+            class="mt-2"
+            @click="confirmAndDeleteInvoice"
+          >
             <v-icon left>mdi-delete</v-icon> Delete
           </v-btn>
           <v-btn color="success" block class="mt-2" @click="downloadInvoicePdf">
             <v-icon left>mdi-download</v-icon> Invoice
           </v-btn>
-          <v-btn color="info" block class="mt-2" @click="downloadDeliveryChallan">
+          <v-btn
+            color="info"
+            block
+            class="mt-2"
+            @click="downloadDeliveryChallan"
+          >
             <v-icon left>mdi-truck-delivery</v-icon> Challan
           </v-btn>
           <v-btn color="lime" block class="mt-2" @click="sendemail">
@@ -147,7 +199,14 @@
 
       <!-- Hidden Print Components -->
       <InvoicePdf :invoiceDetail="invoiceDetail" ref="invoicePdfComponent" />
-      <DeliveryChallan :invoiceDetail="invoiceDetail" ref="deliveryChallanComponent" />
+      <DeliveryChallan
+        :invoiceDetail="invoiceDetail"
+        ref="deliveryChallanComponent"
+      />
+      <InvoiceEmailSender
+        :invoiceDetail="invoiceDetail"
+        ref="emailSenderComponent"
+      />
     </v-row>
   </v-app>
 </template>
@@ -156,9 +215,10 @@
 import { mapState, mapActions } from "vuex";
 import InvoicePdf from "@/components/Printables/InvoicePdf.vue";
 import DeliveryChallan from "@/components/Printables/DeliveryChallan.vue";
+import InvoiceEmailSender from "@/components/InvoiceEmailSender.vue";
 
 export default {
-  components: { InvoicePdf, DeliveryChallan },
+  components: { InvoicePdf, DeliveryChallan, InvoiceEmailSender },
   data() {
     return {
       errorMessage: null,
@@ -168,25 +228,29 @@ export default {
         { text: "Width", value: "width" },
         { text: "Quantity", value: "quantity" },
         { text: "Rate (₹/kg)", value: "rate" },
-        { text: "Amount (₹)", value: "amount" }
-      ]
+        { text: "Amount (₹)", value: "amount" },
+      ],
     };
   },
   computed: {
     ...mapState("invoices", ["invoiceDetail", "loading"]),
     formattedProducts() {
-      return (this.invoiceDetail?.products || []).map(p => ({
+      return (this.invoiceDetail?.products || []).map((p) => ({
         name: p.product?.name || "N/A",
         hsn: p.product?.hsn_code || "N/A",
         width: `${p.width} ${p.width > 70 ? "mm" : "inches"}`,
         quantity: `${p.quantity} Kgs`,
         rate: p.unit_price,
-        amount: (p.quantity * p.unit_price).toFixed(3)
+        amount: (p.quantity * p.unit_price).toFixed(3),
       }));
-    }
+    },
   },
   methods: {
-    ...mapActions("invoices", ["fetchInvoiceDetail", "updateInvoiceDetail", "deleteInvoiceDetail"]),
+    ...mapActions("invoices", [
+      "fetchInvoiceDetail",
+      "updateInvoiceDetail",
+      "deleteInvoiceDetail",
+    ]),
     async loadInvoiceDetails() {
       try {
         this.$store.commit("invoices/SET_LOADING", true);
@@ -199,7 +263,10 @@ export default {
     },
     formatDate(dateString) {
       const date = new Date(dateString);
-      return `${String(date.getDate()).padStart(2, "0")} ${date.toLocaleString("default", { month: "short" })} ${date.getFullYear()}`;
+      return `${String(date.getDate()).padStart(2, "0")} ${date.toLocaleString(
+        "default",
+        { month: "short" }
+      )} ${date.getFullYear()}`;
     },
     updateInvoice() {
       this.$router.push(`/addinvoice/${this.invoiceDetail._id}`);
@@ -226,17 +293,19 @@ export default {
         : alert("Challan component not loaded");
     },
     sendemail() {
-      this.$refs.sendEmailComponent
-        ? this.$refs.sendEmailComponent.sendEmail()
-        : alert("Email component not loaded!");
-    }
+      if (this.$refs.emailSenderComponent) {
+        this.$refs.emailSenderComponent.openDialog();
+      } else {
+        alert("Email component not loaded!");
+      }
+    },
   },
   watch: {
-    "$route.params.id": "loadInvoiceDetails"
+    "$route.params.id": "loadInvoiceDetails",
   },
   mounted() {
     this.loadInvoiceDetails();
-  }
+  },
 };
 </script>
 
