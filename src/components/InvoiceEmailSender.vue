@@ -172,21 +172,26 @@ export default {
       // Set default subject
       this.subject = `Invoice #${this.invoiceDetail.invoiceNumber} - Hemant Traders`;
       // Set default email body
-      this.emailBody = `Dear ${this.invoiceDetail.customer?.name || "Customer"},
+      this.emailBody = `Dear <strong>${
+        this.invoiceDetail.customer?.name || "Customer"
+      }</strong>,
 
-Please find attached the invoice for your recent purchase.
+Please find attached the invoice for your purchase.
 
 Invoice Details:
-- Invoice Number: ${this.invoiceDetail.invoiceNumber}
-- Date: ${this.formatDate(this.invoiceDetail.createdAt)}
-- Amount: ₹${this.invoiceDetail.grandTotal}
+- Invoice Number:<strong> ${this.invoiceDetail.invoiceNumber}</strong>
+- Date:<strong> ${this.formatDate(this.invoiceDetail.createdAt)}</strong>
+- Amount:<strong> ₹${this.invoiceDetail.grandTotal}</strong>
 
-Thank you for your business!
-
-Best regards,
-Hemant Traders
-Contact: (+91) 9422080922 / 9420699675
-Web: hemanttraders.vercel.app`;
+<strong>
+Thanks & regards,
+HEMANT TRADERS
+BOPP, POLYESTER, PVC, THERMAL FILMS & LAMINATION ADHESIVES, BOOKBINDING ADHESIVES, PASTING ADHESIVES, UV COATS Phone: (020) 24467833 / 24497533 / 24473403
+Mobile: 9422080922 / 9420699675
+Website: hemanttraders.vercel.app
+email:hemanttraders111@yahoo.in
+Address: 1281, Vertex Arcade, Sadashiv Peth, Pune
+</strong>`;
 
       this.dialog = true;
     },
@@ -248,6 +253,8 @@ Web: hemanttraders.vercel.app`;
           pdfBlob: invoicePdfBlob,
           challanPdfData: challanPdfData, // Pass challan data if available
         });
+
+        console.log("Email send result:", emailData, result);
 
         if (result && result.success) {
           this.successMessage = result.message;

@@ -436,7 +436,8 @@ export default {
 
       doc.line(0, 51, 210, 51);
 
-      doc.setFontSize(12);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
       doc.text(`(${copyType})`, 105, 56, "center");
 
       doc.setFontSize(12);
@@ -464,6 +465,7 @@ export default {
 
       // CUSTOMER ADDRESS (normal)
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
       let addressText =
         `${this.invoiceDetail.customer?.address?.line1 || "N/A"}, ` +
         `${this.invoiceDetail.customer?.address?.city || "N/A"}-` +
