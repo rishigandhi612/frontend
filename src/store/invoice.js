@@ -183,15 +183,31 @@ const actions = {
       commit("SET_LOADING_STATE", { type: "deleteInvoice", value: false });
     }
   },
-  async sendInvoiceEmail({ commit }, { emailData, pdfBlob }) {
+  async sendInvoiceEmail(
+    { commit },
+    { emailData, pdfBlob, challanPdfData = null }
+  ) {
     commit("SET_LOADING_STATE", { type: "sendEmail", value: true });
     try {
       const formData = new FormData();
+
+      // Add invoice PDF
       formData.append(
         "invoice",
         pdfBlob,
         `invoice-${emailData.invoiceNumber}.pdf`
       );
+
+      // Add delivery challan PDF if provided
+      if (challanPdfData) {
+        formData.append(
+          "challan",
+          challanPdfData.blob,
+          challanPdfData.filename
+        );
+      }
+
+      // Add email data
       formData.append("email", emailData.email);
       formData.append("invoiceNumber", emailData.invoiceNumber);
       formData.append("customerName", emailData.customerName);

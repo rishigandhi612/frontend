@@ -1,8 +1,13 @@
 <template>
   <div>
-    <!-- PDF Generator Component (hidden) -->
+    <!-- PDF Generator Components (hidden) -->
     <InvoicePdfGenerator
-      ref="pdfGenerator"
+      ref="invoicePdfGenerator"
+      :invoiceDetail="invoiceDetail"
+      style="display: none"
+    />
+    <DeliveryChallanGenerator
+      ref="challanPdfGenerator"
       :invoiceDetail="invoiceDetail"
       style="display: none"
     />
@@ -17,6 +22,13 @@
         <v-card-text class="pt-4">
           <v-container>
             <v-row>
+              <v-col cols="12">
+                <v-checkbox
+                  v-model="includeChallan"
+                  label="Include Delivery Challan"
+                  dense
+                ></v-checkbox>
+              </v-col>
               <v-col cols="12">
                 <v-text-field
                   v-model="emailAddress"
@@ -105,12 +117,14 @@
 
 <script>
 import { mapState, mapActions } from "vuex";
-import InvoicePdfGenerator from "./InvoicePdfGenerator.vue"; // Import the PDF generator component
+import InvoicePdfGenerator from "./Printables/InvoicePdf.vue";
+import DeliveryChallanGenerator from "./Printables/DeliveryChallan.vue";
 
 export default {
   name: "InvoiceEmailSender",
   components: {
     InvoicePdfGenerator,
+    DeliveryChallanGenerator,
   },
   props: {
     invoiceDetail: {
@@ -125,6 +139,7 @@ export default {
       emailAddress: "",
       subject: "",
       emailBody: "",
+      includeChallan: true,
       generating: false,
       progressMessage: "",
       successMessage: "",
@@ -185,6 +200,7 @@ Web: hemanttraders.vercel.app`;
       this.emailAddress = "";
       this.subject = "";
       this.emailBody = "";
+      this.includeChallan = true;
       this.generating = false;
       this.progressMessage = "";
       this.successMessage = "";
@@ -202,13 +218,22 @@ Web: hemanttraders.vercel.app`;
       this.errorMessage = "";
 
       try {
-        // Step 1: Generate PDF using the reusable PDF generator
+        // Step 1: Generate Invoice PDF
         this.generating = true;
         this.progressMessage = "Generating invoice PDF...";
-        const pdfBlob = await this.generateInvoicePDF();
+        const invoicePdfBlob = await this.generateInvoicePDF();
+
+        let challanPdfData = null;
+
+        // Step 2: Generate Delivery Challan PDF if requested
+        if (this.includeChallan) {
+          this.progressMessage = "Generating delivery challan PDF...";
+          challanPdfData = await this.generateChallanPDF();
+        }
+
         this.generating = false;
 
-        // Step 2: Send email using Vuex store action
+        // Step 3: Send email using Vuex store action
         this.progressMessage = "Sending email...";
         const emailData = {
           email: this.emailAddress,
@@ -220,7 +245,8 @@ Web: hemanttraders.vercel.app`;
 
         const result = await this.sendInvoiceEmail({
           emailData,
-          pdfBlob,
+          pdfBlob: invoicePdfBlob,
+          challanPdfData: challanPdfData, // Pass challan data if available
         });
 
         if (result && result.success) {
@@ -242,33 +268,32 @@ Web: hemanttraders.vercel.app`;
       }
     },
 
-    // Use the PDF generator component's method by creating a reference
+    // Generate Invoice PDF
     async generateInvoicePDF() {
       return new Promise((resolve, reject) => {
         try {
-          // Access the PDF generator component reference
-          const pdfGenerator = this.$refs.pdfGenerator;
+          const pdfGenerator = this.$refs.invoicePdfGenerator;
           if (!pdfGenerator) {
-            // Fallback: create temporary instance if ref not available
-            const PdfGeneratorComponent =
-              this.$options.components.InvoicePdfGenerator;
-            const tempGenerator = new (this.$root.constructor.extend(
-              PdfGeneratorComponent
-            ))({
-              parent: this.$root,
-              propsData: {
-                invoiceDetail: this.invoiceDetail,
-              },
-            });
-            tempGenerator.$mount();
-            const blob = tempGenerator.getPdfBlob();
-            tempGenerator.$destroy();
-            resolve(blob);
-          } else {
-            // Use the component reference
-            const blob = pdfGenerator.getPdfBlob();
-            resolve(blob);
+            throw new Error("Invoice PDF generator not available");
           }
+          const pdfData = pdfGenerator.getPdfBlob();
+          resolve(pdfData);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    },
+
+    // Generate Delivery Challan PDF
+    async generateChallanPDF() {
+      return new Promise((resolve, reject) => {
+        try {
+          const challanGenerator = this.$refs.challanPdfGenerator;
+          if (!challanGenerator) {
+            throw new Error("Challan PDF generator not available");
+          }
+          const pdfData = challanGenerator.getPdfBlobWithName();
+          resolve(pdfData);
         } catch (error) {
           reject(error);
         }

@@ -203,7 +203,9 @@
         :invoiceDetail="invoiceDetail"
         ref="deliveryChallanComponent"
       />
+      <!-- Only render email sender when invoiceDetail is available -->
       <InvoiceEmailSender
+        v-if="invoiceDetail"
         :invoiceDetail="invoiceDetail"
         ref="emailSenderComponent"
       />

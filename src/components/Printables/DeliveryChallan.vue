@@ -9,7 +9,7 @@ export default {
   props: {
     invoiceDetail: {
       type: Object,
-      default: () => null, // Provide a default value
+      default: () => null,
       validator: (value) => value === null || typeof value === "object",
     },
   },
@@ -96,9 +96,7 @@ export default {
           return {
             ...product,
             totalQuantity: totalQuantity.toFixed(3),
-            // Count how many widths exist for this product (excluding 0 width entries)
             widthCount: validWidthCount,
-            // Count total number of rolls for this product
             rollCount: Object.values(product.widths).reduce(
               (sum, width) => sum + width.rolls.length,
               0
@@ -108,48 +106,6 @@ export default {
       );
 
       return groupedProducts;
-    },
-
-    downloadPdf() {
-      if (!this.invoiceDetail) {
-        alert("Invoice details are not available.");
-        return;
-      } else if (this.invoiceDetail.products.length === 0) {
-        alert("No products found in the invoice.");
-        return;
-      } else {
-        console.log("Generating PDF for invoice:", this.invoiceDetail);
-      }
-      const doc = new jsPDF();
-      const groupedProducts = this.groupProducts();
-
-      // Generate first copy (Original For Recipient)
-      this.generateInvoiceCopy(doc, groupedProducts, "Original For Recipient");
-
-      // Add a page break
-      doc.addPage();
-
-      // Generate second copy (Duplicate For Supplier)
-      this.generateInvoiceCopy(doc, groupedProducts, "Duplicate For Supplier");
-
-      const blob = doc.output("blob");
-      const pdfUrl = URL.createObjectURL(blob);
-      const newWindow = window.open(pdfUrl, "_blank");
-
-      if (!newWindow) {
-        alert("Please allow pop-ups to view and print the PDF.");
-      } else {
-        newWindow.onload = function () {
-          if (!/Mobi|Android/i.test(navigator.userAgent)) {
-            newWindow.focus();
-            newWindow.print();
-          } else {
-            alert(
-              "PDF opened in a new tab. Use your device's options to print."
-            );
-          }
-        };
-      }
     },
 
     calculateItemCounts(groupedProducts) {
@@ -183,214 +139,6 @@ export default {
     formatItemCount(count, singular, plural) {
       if (count === 0) return "";
       return `${count} ${count === 1 ? singular : plural}`;
-    },
-
-    generateInvoiceCopy(doc, groupedProducts, copyType) {
-      let startY = this.addHeader(doc, copyType);
-      let grandTotal = 0;
-
-      const defaultStartY = startY;
-
-      // Count how many unique product types there are
-      const uniqueProductCount = groupedProducts.length;
-
-      // Track if we're continuing a table from previous page
-      let continuingTable = false;
-      let currentProductIndex = 0;
-
-      // Flag to indicate if we're on the last page (will be set before adding footer)
-      let isLastPage = false;
-
-      // Process each product group
-      while (currentProductIndex < groupedProducts.length) {
-        const group = groupedProducts[currentProductIndex];
-
-        // Check if there's enough space for at least the product header and one row
-        const minimumSpaceRequired = 35;
-        const remainingSpace = doc.internal.pageSize.height - startY - 50;
-
-        if (!continuingTable && remainingSpace < minimumSpaceRequired) {
-          // Not enough space for even starting this product, add a new page
-          doc.addPage();
-          startY = this.addHeader(doc, copyType);
-          continue; // Recheck with new page
-        }
-
-        // Create table data for this product
-        const tableData = this.createProductTableData(
-          group,
-          uniqueProductCount
-        );
-
-        // Configure table options with pagination handling
-        const tableOptions = {
-          body: tableData,
-          startY: startY,
-          styles: {
-            fontSize: 12,
-            cellPadding: 2,
-            halign: "center",
-            lineWidth: 0.2,
-            textColor: [0, 0, 0],
-            fillColor: null,
-          },
-          margin: { bottom: 15, top: 0 },
-          pageBreak: "auto",
-          didDrawPage: (data) => {
-            // When a new page is created, add the header
-            const headerHeight = this.addHeader(doc, copyType);
-
-            // Set the new margin top to be after the header
-            data.settings.margin.top = headerHeight;
-
-            // Critical fix: Update the startY for content on new pages
-            if (data.pageNumber > 1) {
-              data.settings.startY = headerHeight;
-            }
-
-            // Check if this is the last page
-            isLastPage = data.pageNumber === data.pageCount;
-
-            // Pass the isLastPage flag to the footer function
-            this.addFooter(
-              doc,
-              doc.internal.pageSize.height,
-              data.pageNumber,
-              data.pageCount,
-              isLastPage
-            );
-          },
-          didParseCell: function (data) {
-            // Ensure the cell starts after the header on new pages
-            if (
-              data.pageCount > 1 &&
-              data.row.index === 0 &&
-              data.section === "body"
-            ) {
-              data.cell.y = defaultStartY;
-            }
-          },
-          didDrawCell: (data) => {
-            // Add a "Continued..." indicator at the bottom of a table that will continue on next page
-            if (
-              data.row.index === data.table.body.length - 1 &&
-              data.table.pageCount < data.table.finalY / data.settings.pagesplit
-            ) {
-              doc.setFontSize(10);
-              doc.setFont("helvetica", "italic");
-              doc.text(
-                "(Continued on next page...)",
-                105,
-                data.cell.y + data.cell.height + 5,
-                "center"
-              );
-            }
-
-            // Add a "Continued from previous page" indicator at the top of continued tables
-            if (
-              data.row.index === 0 &&
-              data.pageCount > 1 &&
-              data.pageNumber > 1
-            ) {
-              doc.setFontSize(10);
-              doc.setFont("helvetica", "italic");
-              doc.text(
-                "(Continued from previous page)",
-                105,
-                data.cell.y - 5,
-                "center"
-              );
-            }
-          },
-          willDrawCell: (data) => {
-            // Check if this cell will fit on the current page or needs to be moved to next page
-            const cellBottom = data.cell.y + data.cell.height;
-            const pageHeight = doc.internal.pageSize.height;
-            const footerHeight = 50;
-
-            if (cellBottom > pageHeight - footerHeight) {
-              // This cell doesn't fit, set a flag for the current row to be moved to next page
-              data.row.moveToNextPage = true;
-            }
-          },
-          // Ensure no alternating row colors
-          tableLineColor: [0, 0, 0],
-          alternateRowStyles: {
-            fillColor: null,
-          },
-          headStyles: {
-            fillColor: null,
-          },
-        };
-
-        // Draw the table
-        doc.autoTable(tableOptions);
-
-        // Update counter and position
-        grandTotal += parseFloat(group.totalQuantity);
-        startY = doc.lastAutoTable.finalY;
-        currentProductIndex++;
-        continuingTable = false;
-      }
-
-      // Add overall grand total of all products
-      // Check if there's enough space for the grand total (needs about 25mm for proper visibility)
-      const spaceNeeded = 35; // Increased space for better visibility
-      if (doc.internal.pageSize.height - startY < spaceNeeded) {
-        doc.addPage();
-        startY = this.addHeader(doc, copyType);
-        // We're definitely on the last page now
-        isLastPage = true;
-      }
-
-      // Calculate counts for overall total
-      const { rollCount, drumCount, canCount } =
-        this.calculateItemCounts(groupedProducts);
-
-      // Create the item count text with proper singular/plural
-      const itemTexts = [];
-      if (rollCount > 0) {
-        itemTexts.push(this.formatItemCount(rollCount, "Roll", "Rolls"));
-      }
-      if (drumCount > 0) {
-        itemTexts.push(this.formatItemCount(drumCount, "Drum", "Drums"));
-      }
-      if (canCount > 0) {
-        itemTexts.push(this.formatItemCount(canCount, "Can", "Cans"));
-      }
-
-      const itemCountText = itemTexts.join(", ");
-
-      // Add some spacing before the total
-      startY += 8;
-
-      // Add a border around the total for better visibility
-      const boxX = 20;
-      const boxY = startY;
-      const boxWidth = 170;
-      const boxHeight = 16;
-
-      // Draw background box
-      doc.setFillColor(255, 255, 255); // Light gray background
-      doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
-
-      // Draw border
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
-      doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
-
-      // Add the text
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0, 0, 0);
-
-      const overallTotalText = `Overall Total: ${grandTotal.toFixed(
-        3
-      )} Kgs FOR ${itemCountText}`;
-      doc.text(overallTotalText, 105, startY + 10, "center");
-
-      // Add signature lines with proper spacing
-      this.addSignatureLines(doc, doc.internal.pageSize.height);
     },
 
     createProductTableData(group, uniqueProductCount) {
@@ -575,15 +323,13 @@ export default {
 
       if (hasTransporter) {
         // Show transporter details with full width design
-
-        // Create a full-width bordered box for better visibility
         const boxX = 15;
         const boxY = pageHeight - 45;
-        const boxWidth = 180; // Full width
+        const boxWidth = 180;
         const boxHeight = 25;
 
         // Draw background box with subtle gradient effect
-        doc.setFillColor(255, 255, 255); // Very light gray background
+        doc.setFillColor(255, 255, 255);
         doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
 
         // Draw border with rounded appearance (multiple thin lines)
@@ -639,43 +385,15 @@ export default {
         );
       } else {
         // Show receiver's signature with full width design
-
-        // Create a full-width signature area
-        // const boxX = 15;
-        // const boxY = pageHeight - 35;
-        // const boxWidth = 180;
-        // const boxHeight = 20;
-
-        // Add subtle background
-        // doc.setFillColor(255, 255, 255);
-        // doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
-
-        // Add border
-        // doc.setDrawColor(150, 150, 150);
-        // doc.setLineWidth(0.3);
-        // doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
-
-        // Add label
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
 
         doc.setDrawColor(0, 0, 0);
-        // doc.text(
-        //   "Receiver's Signature",
-        //   boxX + boxWidth / 2,
-        //   boxY + 8,
-        //   "center"
-        // );
         doc.text("Receiver's Signature", 14, pageHeight - 30);
         doc.line(14, pageHeight - 20, 80, pageHeight - 20);
         doc.text("For Hemant Traders", 140, pageHeight - 30);
         doc.line(140, pageHeight - 20, 200, pageHeight - 20);
-
-        // Add signature line
-        // doc.setDrawColor(0, 0, 0);
-        // doc.setLineWidth(0.5);
-        // doc.line(boxX + 20, boxY + 15, boxX + boxWidth - 20, boxY + 15);
       }
     },
 
@@ -776,19 +494,9 @@ export default {
         y += 5;
       });
 
-      // doc.setFont("helvetica", "bold");
-      // // TRANSPORTER
-      // let transporterLines = doc.splitTextToSize(
-      //   `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
-      //   180
-      // );
-      // transporterLines.forEach((line) => {
-      //   doc.text(line, 105, y, "center");
-      //   y += 5;
-      // });
-
       return y + 0; // Return new startY for the table
     },
+
     addFooter(
       doc,
       pageHeight,
@@ -821,6 +529,220 @@ export default {
           termsYPosition
         );
       }
+    },
+
+    generateInvoiceCopy(doc, groupedProducts, copyType) {
+      let startY = this.addHeader(doc, copyType);
+      let grandTotal = 0;
+
+      const defaultStartY = startY;
+      console.log("Default Start Y:", defaultStartY);
+      let continuingTable = false;
+      let currentProductIndex = 0;
+      let isLastPage = false;
+
+      // Process each product group
+      while (currentProductIndex < groupedProducts.length) {
+        const group = groupedProducts[currentProductIndex];
+
+        // Check if there's enough space for at least the product header and one row
+        const minimumSpaceRequired = 35;
+        const remainingSpace = doc.internal.pageSize.height - startY - 50;
+
+        if (!continuingTable && remainingSpace < minimumSpaceRequired) {
+          // Not enough space for even starting this product, add a new page
+          doc.addPage();
+          startY = this.addHeader(doc, copyType);
+          continue; // Recheck with new page
+        }
+
+        // Create table data for this product
+        const tableData = this.createProductTableData(
+          group,
+          groupedProducts.length
+        );
+
+        // Configure table options with pagination handling
+        const tableOptions = {
+          body: tableData,
+          startY: startY,
+          styles: {
+            fontSize: 12,
+            cellPadding: 2,
+            halign: "center",
+            lineWidth: 0.2,
+            textColor: [0, 0, 0],
+            fillColor: null,
+          },
+          margin: { bottom: 15, top: 0 },
+          pageBreak: "auto",
+          didDrawPage: (data) => {
+            // When a new page is created, add the header
+            const headerHeight = this.addHeader(doc, copyType);
+
+            // Set the new margin top to be after the header
+            data.settings.margin.top = headerHeight;
+
+            // Critical fix: Update the startY for content on new pages
+            if (data.pageNumber > 1) {
+              data.settings.startY = headerHeight;
+            }
+
+            // Check if this is the last page
+            isLastPage = data.pageNumber === data.pageCount;
+
+            // Pass the isLastPage flag to the footer function
+            this.addFooter(
+              doc,
+              doc.internal.pageSize.height,
+              data.pageNumber,
+              data.pageCount,
+              isLastPage
+            );
+          },
+          tableLineColor: [0, 0, 0],
+          alternateRowStyles: {
+            fillColor: null,
+          },
+          headStyles: {
+            fillColor: null,
+          },
+        };
+
+        // Draw the table
+        doc.autoTable(tableOptions);
+
+        // Update counter and position
+        grandTotal += parseFloat(group.totalQuantity);
+        startY = doc.lastAutoTable.finalY;
+        currentProductIndex++;
+        continuingTable = false;
+      }
+
+      // Add overall grand total of all products
+      const spaceNeeded = 35;
+      if (doc.internal.pageSize.height - startY < spaceNeeded) {
+        doc.addPage();
+        startY = this.addHeader(doc, copyType);
+        isLastPage = true;
+      }
+
+      // Calculate counts for overall total
+      const { rollCount, drumCount, canCount } =
+        this.calculateItemCounts(groupedProducts);
+
+      // Create the item count text with proper singular/plural
+      const itemTexts = [];
+      if (rollCount > 0) {
+        itemTexts.push(this.formatItemCount(rollCount, "Roll", "Rolls"));
+      }
+      if (drumCount > 0) {
+        itemTexts.push(this.formatItemCount(drumCount, "Drum", "Drums"));
+      }
+      if (canCount > 0) {
+        itemTexts.push(this.formatItemCount(canCount, "Can", "Cans"));
+      }
+
+      const itemCountText = itemTexts.join(", ");
+
+      // Add some spacing before the total
+      startY += 8;
+
+      // Add a border around the total for better visibility
+      const boxX = 20;
+      const boxY = startY;
+      const boxWidth = 170;
+      const boxHeight = 16;
+
+      // Draw background box
+      doc.setFillColor(255, 255, 255);
+      doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
+
+      // Draw border
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
+
+      // Add the text
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+
+      const overallTotalText = `Overall Total: ${grandTotal.toFixed(
+        3
+      )} Kgs FOR ${itemCountText}`;
+      doc.text(overallTotalText, 105, startY + 10, "center");
+
+      // Add signature lines with proper spacing
+      this.addSignatureLines(doc, doc.internal.pageSize.height);
+    },
+
+    // NEW: Reusable method to create PDF document
+    createPdfDocument() {
+      if (!this.invoiceDetail) {
+        throw new Error("Invoice details are not available.");
+      } else if (this.invoiceDetail.products.length === 0) {
+        throw new Error("No products found in the invoice.");
+      }
+
+      const doc = new jsPDF();
+      const groupedProducts = this.groupProducts();
+
+      // Generate first copy (Original For Recipient)
+      this.generateInvoiceCopy(doc, groupedProducts, "Original For Recipient");
+
+      // Add a page break
+      doc.addPage();
+
+      // Generate second copy (Duplicate For Supplier)
+      this.generateInvoiceCopy(doc, groupedProducts, "Duplicate For Supplier");
+
+      return doc;
+    },
+
+    // Original download method now uses the reusable createPdfDocument
+    downloadPdf() {
+      try {
+        const doc = this.createPdfDocument();
+
+        const blob = doc.output("blob");
+        const pdfUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(pdfUrl, "_blank");
+
+        if (!newWindow) {
+          alert("Please allow pop-ups to view and print the PDF.");
+        } else {
+          newWindow.onload = function () {
+            if (!/Mobi|Android/i.test(navigator.userAgent)) {
+              newWindow.focus();
+              newWindow.print();
+            } else {
+              alert(
+                "PDF opened in a new tab. Use your device's options to print."
+              );
+            }
+          };
+        }
+      } catch (error) {
+        console.error("PDF generation error:", error);
+        alert(error.message);
+      }
+    },
+
+    // NEW: Method to get PDF as blob for email
+    getPdfBlob() {
+      const doc = this.createPdfDocument();
+      return doc.output("blob");
+    },
+
+    // NEW: Method to get PDF as blob with custom filename
+    getPdfBlobWithName() {
+      const doc = this.createPdfDocument();
+      const filename = `Delivery_Challan_${this.invoiceDetail.invoiceNumber}.pdf`;
+      return {
+        blob: doc.output("blob"),
+        filename: filename,
+      };
     },
 
     calculateTableHeight(tableData) {
