@@ -381,7 +381,16 @@ export default {
         this.$router.push("/invoice");
       } catch (err) {
         console.error("API Error:", err);
-        this.error = "Error adding invoice.";
+        let errorMessage = "Error adding invoice.";
+        if (err.response && err.response.data && err.response.data.message) {
+          // API returned a specific error message
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          // Use the error message if available
+          errorMessage = err.message;
+        }
+
+        this.error = errorMessage;
       }
     },
 
@@ -409,7 +418,17 @@ export default {
         this.$router.push("/invoice");
       } catch (err) {
         console.error("API Error:", err);
-        this.error = "Error updating invoice.";
+        let errorMessage = "Error updating invoice.";
+
+        if (err.response && err.response.data && err.response.data.message) {
+          // API returned a specific error message
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          // Use the error message if available
+          errorMessage = err.message;
+        }
+
+        this.error = errorMessage;
       }
     },
 

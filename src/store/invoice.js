@@ -135,10 +135,22 @@ const actions = {
       if (response.data.success) {
         commit("ADD_INVOICE", response.data.data);
       } else {
-        throw new Error("Invoice creation failed");
+        // If the API returns success: false, throw an error with the message
+        throw new Error(response.data.message || "Invoice creation failed");
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
+
+      // If it's an HTTP error response, extract the message
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        throw new Error(error.response.data.message);
+      }
+
+      // Otherwise, throw the original error
       throw error;
     } finally {
       commit("SET_LOADING_STATE", {
@@ -152,9 +164,25 @@ const actions = {
     commit("SET_LOADING_STATE", { type: "createUpdateInvoice", value: true });
     try {
       const response = await apiClient.put(`/custprod/${id}`, data);
-      commit("UPDATE_INVOICE", response.data.data);
+      if (response.data.success) {
+        commit("UPDATE_INVOICE", response.data.data);
+      } else {
+        // If the API returns success: false, throw an error with the message
+        throw new Error(response.data.message || "Invoice update failed");
+      }
     } catch (error) {
       console.error("Error updating invoice:", error);
+
+      // If it's an HTTP error response, extract the message
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        throw new Error(error.response.data.message);
+      }
+
+      // Otherwise, throw the original error
       throw error;
     } finally {
       commit("SET_LOADING_STATE", {
