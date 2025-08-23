@@ -29,6 +29,30 @@
                   dense
                 ></v-checkbox>
               </v-col>
+
+              <!-- Contact Selection Dropdown -->
+              <v-col cols="12">
+                <v-select
+                  v-model="selectedContact"
+                  :items="predefinedContacts"
+                  item-text="displayText"
+                  item-value="email"
+                  label="Quick Select Contact"
+                  prepend-icon="mdi-contacts"
+                  outlined
+                  dense
+                  clearable
+                  @change="onContactSelect"
+                >
+                  <template v-slot:item="{ item }">
+                    <div>
+                      <div class="font-weight-medium">{{ item.name }}</div>
+                      <div class="text-caption grey--text">{{ item.email }}</div>
+                    </div>
+                  </template>
+                </v-select>
+              </v-col>
+
               <v-col cols="12">
                 <v-text-field
                   v-model="emailAddress"
@@ -131,6 +155,11 @@ export default {
       type: Object,
       required: true,
     },
+    // Optional prop to pass predefined contacts from parent
+    contacts: {
+      type: Array,
+      default: () => [],
+    },
   },
 
   data() {
@@ -140,6 +169,7 @@ export default {
       subject: "",
       emailBody: "",
       includeChallan: true,
+      selectedContact: null,
       generating: false,
       progressMessage: "",
       successMessage: "",
@@ -149,6 +179,29 @@ export default {
         (v) => /.+@.+\..+/.test(v) || "Email must be valid",
       ],
       emailError: "",
+      // Default predefined contacts - can be overridden by props
+      defaultContacts: [
+        {
+          name: "Bajranglal Omprakash",
+          email: "sunil_bo@hotmail.com",
+          displayText: "Bajranglal Omprakash (sunil_bo@hotmail.com)"
+        },
+        {
+          name: "Astra Chemtech Pvt Ltd",
+          email: "logistic@astra1.org",
+          displayText: "Astra Chemtech Pvt Ltd (logistics@astra1.org)"
+        },
+        // {
+        //   name: "Sales Team",
+        //   email: "sales@hemanttraders.com", 
+        //   displayText: "Sales Team (sales@hemanttraders.com)"
+        // },
+        // {
+        //   name: "Customer Support",
+        //   email: "support@hemanttraders.com",
+        //   displayText: "Customer Support (support@hemanttraders.com)"
+        // }
+      ],
     };
   },
 
@@ -159,6 +212,21 @@ export default {
     ...mapState("invoices", ["loadingState"]),
     isEmailSending() {
       return this.loadingState.sendEmail;
+    },
+    // Combine default contacts with any passed via props
+    predefinedContacts() {
+      const combinedContacts = [...this.defaultContacts];
+      
+      // Add contacts from props if provided
+      if (this.contacts && this.contacts.length > 0) {
+        const propsContacts = this.contacts.map(contact => ({
+          ...contact,
+          displayText: `${contact.name} (${contact.email})`
+        }));
+        combinedContacts.unshift(...propsContacts);
+      }
+      
+      return combinedContacts;
     },
   },
 
@@ -208,11 +276,22 @@ Please Note: This is a system generated email, please do not reply to this email
       this.subject = "";
       this.emailBody = "";
       this.includeChallan = true;
+      this.selectedContact = null;
       this.generating = false;
       this.progressMessage = "";
       this.successMessage = "";
       this.errorMessage = "";
       this.emailError = "";
+    },
+
+    // Handle contact selection
+    onContactSelect(selectedEmail) {
+      if (selectedEmail) {
+        this.emailAddress = selectedEmail;
+        // Clear any existing email errors
+        this.emailError = "";
+      }
+      // If cleared (null), keep current email address as is
     },
 
     async sendEmail() {
