@@ -110,11 +110,11 @@ export default {
       this.fetchInitiated = true;
       this.initializeStore();
     }
-    
+
     // Add event listener for debugging
     this.$nextTick(() => {
       if (this.$refs.dataTable) {
-        console.log("Data table mounted and available");
+        // console.log("Data table mounted and available");
       }
     });
   },
@@ -123,7 +123,7 @@ export default {
       this.loading = newLoading;
     },
     // Watch for search changes with debounce
-    searchQuery: debounce(function(newValue) {
+    searchQuery: debounce(function (newValue) {
       if (this.fetchInitiated) {
         // Don't trigger on component initialization
         this.$store.dispatch("invoices/setSearch", newValue);
@@ -135,33 +135,36 @@ export default {
           this.fetchInvoices();
         }
       }
-    }, 500)
+    }, 500),
   },
   methods: {
     setupWatchers() {
       // Setting up debounced search here avoids unnecessary initial calls
     },
-    
+
     initializeStore() {
       // Set initial store state without triggering fetch
       this.$store.commit("invoices/SET_PAGE", this.tableOptions.page);
-      this.$store.commit("invoices/SET_ITEMS_PER_PAGE", this.tableOptions.itemsPerPage);
+      this.$store.commit(
+        "invoices/SET_ITEMS_PER_PAGE",
+        this.tableOptions.itemsPerPage
+      );
       this.$store.commit("invoices/SET_SORTING", {
         sortBy: this.tableOptions.sortBy[0],
         sortDesc: this.tableOptions.sortDesc[0],
       });
       this.$store.commit("invoices/SET_SEARCH", this.searchQuery);
-      
+
       // Now fetch data once
       this.fetchInvoices();
     },
 
     async fetchInvoices() {
-      console.log("Fetching invoices with page:", this.$store.state.invoices.pagination.page);
+      // console.log("Fetching invoices with page:", this.$store.state.invoices.pagination.page);
       this.loading = true;
       try {
         await this.$store.dispatch("invoices/fetchInvoices");
-        console.log("Fetch complete, got invoices:", this.allInvoices.length);
+        // console.log("Fetch complete, got invoices:", this.allInvoices.length);
       } catch (error) {
         console.error("Error fetching invoices:", error);
       } finally {
@@ -178,12 +181,12 @@ export default {
     handleTableOptionsChange(options) {
       // Prevent multiple calls by checking if we're already updating
       if (this.isTableUpdating) return;
-      
+
       this.isTableUpdating = true;
-      
+
       // For debugging
-      console.log("Table options changed:", options);
-      
+      // console.log("Table options changed:", options);
+
       // Always proceed if we're initialized to ensure pagination works
       if (this.fetchInitiated) {
         // Update page
@@ -203,7 +206,7 @@ export default {
         // Always fetch data when table options change
         this.fetchInvoices();
       }
-      
+
       // Reset flag after a short delay to ensure we don't miss events
       setTimeout(() => {
         this.isTableUpdating = false;

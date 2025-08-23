@@ -1,4 +1,4 @@
-//  Updated Vuex store module for invoices with loading states
+//  Updated Vuex store module for invoices with loading states and POD management
 import apiClient from "./apiClient";
 const state = {
   invoices: [],
@@ -7,9 +7,11 @@ const state = {
   loadingState: {
     fetchInvoices: false,
     deleteInvoice: false,
-    createUpdateInvoice: false, // Added loading state for create/update operations
+    createUpdateInvoice: false,
     fetchInvoiceDetail: false,
-    sendEmail: false, // Added email sending state
+    sendEmail: false,
+    uploadPod: false, // Added POD upload loading state
+    fetchPod: false, // Added POD fetch loading state
   },
   pagination: {
     page: 1,
@@ -20,6 +22,7 @@ const state = {
   sortBy: "createdAt",
   sortDesc: true,
   search: "",
+  podData: null, // Store POD data
 };
 
 const getters = {
@@ -31,9 +34,14 @@ const getters = {
   sortDesc: (state) => state.sortDesc,
   search: (state) => state.search,
   isEmailSending: (state) => state.loadingState.sendEmail,
+  isPodUploading: (state) => state.loadingState.uploadPod,
+  isPodFetching: (state) => state.loadingState.fetchPod,
+  podData: (state) => state.podData,
 };
 
 const actions = {
+  // ... (keeping all existing actions)
+
   // Modified to accept a skipFetch parameter to prevent automatic data fetching
   setPage({ commit }, page) {
     commit("SET_PAGE", page);
@@ -74,7 +82,7 @@ const actions = {
         .map((key) => `${key}=${encodeURIComponent(params[key])}`)
         .join("&");
 
-      console.log("Fetching with query:", queryString);
+      // console.log("Fetching with query:", queryString);
 
       const response = await apiClient.get(`/custprod?${queryString}`);
 
@@ -211,6 +219,7 @@ const actions = {
       commit("SET_LOADING_STATE", { type: "deleteInvoice", value: false });
     }
   },
+
   async sendInvoiceEmail(
     { commit },
     { emailData, pdfBlob, challanPdfData = null }
@@ -298,6 +307,151 @@ const actions = {
       commit("SET_LOADING_STATE", { type: "sendEmail", value: false });
     }
   },
+
+  // New POD Actions
+  async uploadPod(
+    { commit },
+    { invoiceId, podFile, deliveryNotes, uploadedBy }
+  ) {
+    commit("SET_LOADING_STATE", { type: "uploadPod", value: true });
+    try {
+      const formData = new FormData();
+      formData.append("podFile", podFile);
+      formData.append("deliveryNotes", deliveryNotes);
+      formData.append("uploadedBy", uploadedBy);
+
+      const response = await apiClient.post(
+        `/custprod/${invoiceId}/pod`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 60000, // 60 second timeout for file upload
+        }
+      );
+
+      if (response.status === 200 || (response.data && response.data.success)) {
+        commit("SET_POD_DATA", response.data.data || response.data);
+        return {
+          success: true,
+          message: response.data.message || "POD uploaded successfully!",
+          data: response.data.data || response.data,
+        };
+      } else {
+        throw new Error(response.data?.message || "Failed to upload POD");
+      }
+    } catch (error) {
+      console.error("Error uploading POD:", error);
+
+      let errorMessage = "Failed to upload POD. Please try again.";
+
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || error.response.data;
+
+        switch (status) {
+          case 401:
+            errorMessage = "Authentication failed. Please login again.";
+            break;
+          case 413:
+            errorMessage =
+              "File too large. Please reduce file size and try again.";
+            break;
+          case 422:
+            errorMessage = `Validation error: ${message}`;
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage = `Failed to upload POD: ${message}`;
+        }
+      } else if (error.request) {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      throw new Error(errorMessage);
+    } finally {
+      commit("SET_LOADING_STATE", { type: "uploadPod", value: false });
+    }
+  },
+
+  async fetchPod({ commit }, invoiceId) {
+    commit("SET_LOADING_STATE", { type: "fetchPod", value: true });
+    try {
+      const response = await apiClient.get(`/custprod/${invoiceId}/pod`);
+
+      if (response.status === 200) {
+        commit("SET_POD_DATA", response.data.data || response.data);
+        return {
+          success: true,
+          data: response.data.data || response.data,
+        };
+      } else {
+        throw new Error("Failed to fetch POD");
+      }
+    } catch (error) {
+      console.error("Error fetching POD:", error);
+
+      let errorMessage = "Failed to fetch POD.";
+
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || error.response.data;
+
+        switch (status) {
+          case 401:
+            errorMessage = "Authentication failed. Please login again.";
+            break;
+          case 404:
+            errorMessage = "POD not found for this invoice.";
+            break;
+          case 500:
+            errorMessage = "Server error. Please try again later.";
+            break;
+          default:
+            errorMessage = `Failed to fetch POD: ${message}`;
+        }
+      } else if (error.request) {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+
+      throw new Error(errorMessage);
+    } finally {
+      commit("SET_LOADING_STATE", { type: "fetchPod", value: false });
+    }
+  },
+
+  async downloadPodFile({ commit }, { invoiceId, filename }) {
+    console.log("commit", commit);
+
+    try {
+      const response = await apiClient.get(`/custprod/${invoiceId}/pod`, {
+        responseType: "blob",
+      });
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename || "pod-document");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      return {
+        success: true,
+        message: "POD downloaded successfully!",
+      };
+    } catch (error) {
+      console.error("Error downloading POD:", error);
+      throw new Error("Failed to download POD. Please try again.");
+    }
+  },
 };
 
 const mutations = {
@@ -364,6 +518,13 @@ const mutations = {
       }
       state.invoiceDetail.productIds.push(productId);
     }
+  },
+  // New POD Mutations
+  SET_POD_DATA(state, podData) {
+    state.podData = podData;
+  },
+  CLEAR_POD_DATA(state) {
+    state.podData = null;
   },
 };
 

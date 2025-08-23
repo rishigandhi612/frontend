@@ -194,6 +194,13 @@
           <v-btn color="lime" block class="mt-2" @click="sendemail">
             <v-icon left>mdi-mail</v-icon> Email
           </v-btn>
+
+          <!-- POD Manager Component -->
+          <PodManager
+            v-if="invoiceDetail"
+            :invoiceId="invoiceDetail._id"
+            :invoiceDetail="invoiceDetail"
+          />
         </v-sheet>
       </v-col>
 
@@ -218,9 +225,15 @@ import { mapState, mapActions } from "vuex";
 import InvoicePdf from "@/components/Printables/InvoicePdf.vue";
 import DeliveryChallan from "@/components/Printables/DeliveryChallan.vue";
 import InvoiceEmailSender from "@/components/InvoiceEmailSender.vue";
+import PodManager from "@/components/Invoices/PodManager.vue";
 
 export default {
-  components: { InvoicePdf, DeliveryChallan, InvoiceEmailSender },
+  components: {
+    InvoicePdf,
+    DeliveryChallan,
+    InvoiceEmailSender,
+    PodManager,
+  },
   data() {
     return {
       errorMessage: null,

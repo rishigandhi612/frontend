@@ -1,228 +1,229 @@
-import Vue from 'vue';
-import Router from 'vue-router';
+import Vue from "vue";
+import Router from "vue-router";
 
 // Import components
-import Login from '../components/Users/LoginUser.vue';
-import UserDashboard from '../components/Users/UserDashboard.vue';
-import CustomerList from '../components/Customers/CustomerList.vue';
-import CustomerDetail from '@/components/Customers/CustomerDetail.vue';
-import ProductList from '@/components/Products/ProductList.vue';
-import ProductDetail from '@/components/Products/ProductDetail.vue';
-import AddProduct from '@/components/Products/AddProduct.vue';
-import AddInventory from '@/components/Inventory/AddInventory.vue';
-import InvoiceList from '@/components/Invoices/InvoiceList.vue';
-import InvoiceDetail from '@/components/Invoices/InvoiceDetail.vue';
-import AddInvoice from '@/components/Invoices/AddInvoice.vue';
-import UserList from '@/components/Users/UserList.vue';
-import UserDetail from '@/components/Users/UserDetail.vue';
-import AddUser from '@/components/Users/AddUser.vue'
-import AddCustomer from '@/components/Customers/AddCustomer.vue'
-import NotFound from '@/components/NotFound.vue';
-import InventoryList from '@/components/Inventory/InventoryList.vue';
-import InventoryDetail from '@/components/Inventory/InventoryDetail.vue';
-import BatchAddInventory from '@/components/Inventory/BatchAddInventory.vue';
-import SendEmail from '@/components/SendEmail.vue';
-import AddTransporter from '@/components/Transporters/AddTransporter.vue';
-import TransporterDetail from '@/components/Transporters/TransporterDetail.vue';
-import TransporterList from '@/components/Transporters/TransporterList.vue';
+import Login from "../components/Users/LoginUser.vue";
+import UserDashboard from "../components/Users/UserDashboard.vue";
+import CustomerList from "../components/Customers/CustomerList.vue";
+import CustomerDetail from "@/components/Customers/CustomerDetail.vue";
+import ProductList from "@/components/Products/ProductList.vue";
+import ProductDetail from "@/components/Products/ProductDetail.vue";
+import AddProduct from "@/components/Products/AddProduct.vue";
+import AddInventory from "@/components/Inventory/AddInventory.vue";
+import InvoiceList from "@/components/Invoices/InvoiceList.vue";
+import InvoiceDetail from "@/components/Invoices/InvoiceDetail.vue";
+import AddInvoice from "@/components/Invoices/AddInvoice.vue";
+import UserList from "@/components/Users/UserList.vue";
+import UserDetail from "@/components/Users/UserDetail.vue";
+import AddUser from "@/components/Users/AddUser.vue";
+import AddCustomer from "@/components/Customers/AddCustomer.vue";
+import NotFound from "@/components/NotFound.vue";
+import InventoryList from "@/components/Inventory/InventoryList.vue";
+import InventoryDetail from "@/components/Inventory/InventoryDetail.vue";
+import BatchAddInventory from "@/components/Inventory/BatchAddInventory.vue";
+import SendEmail from "@/components/SendEmail.vue";
+import AddTransporter from "@/components/Transporters/AddTransporter.vue";
+import TransporterDetail from "@/components/Transporters/TransporterDetail.vue";
+import TransporterList from "@/components/Transporters/TransporterList.vue";
 
 Vue.use(Router);
 
 // Define routes
 const routes = [
   {
-    path: '/',
+    path: "/",
     component: Login,
-    name: 'login',
+    name: "login",
   },
   {
-    path: '/dashboard',
+    path: "/dashboard",
     component: UserDashboard,
-    name: 'userDashboard',
+    name: "userDashboard",
     meta: { requiresAuth: true }, // Route requires authentication
   },
   {
-    path: '/customer',
+    path: "/customer",
     component: CustomerList,
-    name: 'customerList',
+    name: "customerList",
     meta: { requiresAuth: true },
   },
   {
-    path: '/customer/:id',
+    path: "/customer/:id",
     component: CustomerDetail,
-    name: 'customerDetail',
+    name: "customerDetail",
     meta: { requiresAuth: true },
   },
   {
-    path: '/product',
+    path: "/product",
     component: ProductList,
-    name: 'productList',
+    name: "productList",
     meta: { requiresAuth: true },
   },
   {
-    path: '/inventory',
+    path: "/inventory",
     component: InventoryList,
-    name: 'inventoryList',
+    name: "inventoryList",
     meta: { requiresAuth: true },
   },
   {
-    path: '/product/:id',
+    path: "/product/:id",
     component: ProductDetail,
-    name: 'productDetail',
+    name: "productDetail",
     meta: { requiresAuth: true },
   },
-   {
-    path: '/inventory/:id',
+  {
+    path: "/inventory/:id",
     component: InventoryDetail,
-    name: 'inventoryDetail',
+    name: "inventoryDetail",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addproduct',
+    path: "/addproduct",
     component: AddProduct,
-    name: 'addProduct',
+    name: "addProduct",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addproduct/:id?',
+    path: "/addproduct/:id?",
     component: AddProduct,
-    name: 'editProduct',
+    name: "editProduct",
     meta: { requiresAuth: true },
   },
-    {
-    path: '/addinventory',
+  {
+    path: "/addinventory",
     component: AddInventory,
-    name: 'addInventory',
+    name: "addInventory",
     meta: { requiresAuth: true },
   },
-   {
-    path: '/BatchAddinventory',
+  {
+    path: "/BatchAddinventory",
     component: BatchAddInventory,
-    name: 'BatchAddInventory',
+    name: "BatchAddInventory",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addinventory/:id?',
+    path: "/addinventory/:id?",
     component: AddInventory,
-    name: 'editInventory',
+    name: "editInventory",
     meta: { requiresAuth: true },
   },
   {
-    path: '/invoice',
+    path: "/invoice",
     component: InvoiceList,
-    name: 'invoiceList',
+    name: "invoiceList",
     meta: { requiresAuth: true },
   },
   {
-    path: '/invoice/:id',
+    path: "/invoice/:id",
     component: InvoiceDetail,
-    name: 'invoiceDetail',
+    name: "invoiceDetail",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addinvoice/:id?',
+    path: "/addinvoice/:id?",
     component: AddInvoice,
-    name: 'addInvoice',
+    name: "addInvoice",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addcustomer',
+    path: "/addcustomer",
     component: AddCustomer,
-    name: 'editCustomer',
+    name: "editCustomer",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addcustomer/:id?',
+    path: "/addcustomer/:id?",
     component: AddCustomer,
-    name: 'addCustomer',
+    name: "addCustomer",
     meta: { requiresAuth: true },
   },
   {
-    path: '/user',
+    path: "/user",
     component: UserList,
-    name: 'UserList',
+    name: "UserList",
     meta: { requiresAuth: true },
   },
   {
-    path: '/user/:id?',
+    path: "/user/:id?",
     component: UserDetail,
-    name: 'UserDetail',
+    name: "UserDetail",
     meta: { requiresAuth: true },
   },
   {
-    path: '/adduser',
+    path: "/adduser",
     component: AddUser,
-    name: 'addUser',
+    name: "addUser",
     meta: { requiresAuth: true },
   },
   {
-    path: '/adduser/:id?',
+    path: "/adduser/:id?",
     component: AddUser,
-    name: 'EditUser',
+    name: "EditUser",
     meta: { requiresAuth: true },
   },
   {
-    path: '/SendPurchaseOrder',
+    path: "/SendPurchaseOrder",
     component: SendEmail,
-    name: 'SendPurchaseOrder',
+    name: "SendPurchaseOrder",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addtransporter',
+    path: "/addtransporter",
     component: AddTransporter,
-    name: 'AddTransporter',
+    name: "AddTransporter",
     meta: { requiresAuth: true },
   },
   {
-    path: '/addtransporter/:id?',
+    path: "/addtransporter/:id?",
     component: AddTransporter,
-    name: 'EditTransporter',
+    name: "EditTransporter",
     meta: { requiresAuth: true },
   },
   {
-    path: '/transporter/:id',
+    path: "/transporter/:id",
     component: TransporterDetail,
-    name: 'ViewTransporter',
-    meta: { requiresAuth: true },
-  },{
-    path: '/transporter',
-    component: TransporterList,
-    name: 'TransporterList',
+    name: "ViewTransporter",
     meta: { requiresAuth: true },
   },
   {
-    path: '*',
+    path: "/transporter",
+    component: TransporterList,
+    name: "TransporterList",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "*",
     component: NotFound,
-    name: 'notFound',
+    name: "notFound",
   },
 ];
 
 // Create router instance
 const router = new Router({
-  mode: 'history', // Use history mode to avoid hash in URLs
+  mode: "history", // Use history mode to avoid hash in URLs
   routes,
 });
 
 // Navigation Guard
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token'); // Check for authentication token
+  const token = localStorage.getItem("token"); // Check for authentication token
 
   if (to.matched.some((record) => record.meta.requiresAuth)) {
     // Route requires authentication
     if (!token) {
-      console.warn('Access denied: No token found. Redirecting to login.');
-      next({ name: 'login' }); // Redirect to login if not authenticated
+      console.warn("Access denied: No token found. Redirecting to login.");
+      next({ name: "login" }); // Redirect to login if not authenticated
     } else {
-      console.info('Authenticated user. Proceeding to route:', to.name);
+      // console.info('Authenticated user. Proceeding to route:', to.name);
       next(); // User authenticated, proceed to the route
     }
-  } else if (to.name === 'login' && token) {
+  } else if (to.name === "login" && token) {
     // User is already logged in, redirect to dashboard
-    console.info('User is logged in. Redirecting to dashboard.');
-    next({ name: 'userDashboard' });
+    console.info("User is logged in. Redirecting to dashboard.");
+    next({ name: "userDashboard" });
   } else {
     // No authentication required, proceed
-    console.info('Accessing public route:', to.name);
+    console.info("Accessing public route:", to.name);
     next();
   }
 });
