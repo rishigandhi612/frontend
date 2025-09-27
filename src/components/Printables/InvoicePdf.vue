@@ -249,7 +249,6 @@ export default {
       );
     },
 
-    // Enhanced method with robust merging logic
     createPdfDocument() {
       const doc = new jsPDF();
 
@@ -293,35 +292,46 @@ export default {
         productGroups[groupKey].widths.add(product.width);
       });
 
-      // Step 3: Enhanced merging logic - always merge if 4+ widths OR if total products > 4
+      // Step 3: Sophisticated merging logic
       const finalAggregatedProducts = {};
-      const totalProductCount = this.invoiceDetail.products.length;
+      const totalUniqueProducts = Object.keys(initialAggregation).length; // Count of unique product-width-price combinations
 
       Object.entries(productGroups).forEach(([groupKey, groupData]) => {
         const uniqueWidthCount = groupData.widths.size;
-        const shouldMergeBasedOnWidths = uniqueWidthCount >= 4;
-        const shouldMergeBasedOnTotal = totalProductCount > 4;
 
-        // Always merge if either condition is met
-        const shouldMerge = shouldMergeBasedOnWidths || shouldMergeBasedOnTotal;
+        // Check if any width-price combination has more than 5 products
+        let hasWidthWithOver5Products = false;
+        groupData.products.forEach((product) => {
+          if (product.nos > 5) {
+            hasWidthWithOver5Products = true;
+          }
+        });
 
-        if (shouldMerge && uniqueWidthCount > 1) {
-          // Merge all products in this group with "DIFF" width
+        // DIFF merging conditions:
+        // 1. If any product count with same rate and width is beyond 5, OR
+        // 2. If total number of unique products is beyond 5
+        // 3. AND the product has more than 2 different widths (not just 1 or 2 widths)
+        const shouldDiffMerge =
+          (hasWidthWithOver5Products || totalUniqueProducts > 5) &&
+          uniqueWidthCount > 2;
+
+        if (shouldDiffMerge) {
+          // DIFF merge: Merge all products in this group with "DIFF" width
           const mergedProduct = {
             product: groupData.products[0].product,
-            width: "DIFF", // Only use DIFF when actually merging multiple widths
+            width: "DIFF", // Use DIFF when merging multiple widths
             unit_price: groupData.products[0].unit_price,
             quantity: groupData.totalQuantity,
             nos: groupData.totalNos,
           };
           finalAggregatedProducts[groupKey] = mergedProduct;
         } else {
-          // Keep products separate - show actual widths
+          // Keep products separate - show actual widths (already merged by same size/price/name)
           groupData.products.forEach((product, index) => {
             const key = `${groupKey}-${index}`;
             finalAggregatedProducts[key] = {
               ...product,
-              // Keep the original width, don't change to DIFF
+              // Keep the original width, items with same name/price/width already merged in step 1
             };
           });
         }
