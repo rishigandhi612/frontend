@@ -220,9 +220,10 @@ const actions = {
     }
   },
 
+  // Updated sendInvoiceEmail action in your Vuex store
   async sendInvoiceEmail(
     { commit },
-    { emailData, pdfBlob, challanPdfData = null }
+    { emailData, pdfBlob, challanPdfData = null, additionalFiles = [] }
   ) {
     commit("SET_LOADING_STATE", { type: "sendEmail", value: true });
     try {
@@ -244,6 +245,19 @@ const actions = {
         );
       }
 
+      // Add additional files if provided
+      if (additionalFiles && additionalFiles.length > 0) {
+        additionalFiles.forEach((file, index) => {
+          formData.append(`attachment_${index}`, file, file.name);
+        });
+
+        // Also send the count of additional files to help backend processing
+        formData.append(
+          "additionalFilesCount",
+          additionalFiles.length.toString()
+        );
+      }
+
       // Add email data
       formData.append("email", emailData.email);
       formData.append("invoiceNumber", emailData.invoiceNumber);
@@ -255,7 +269,7 @@ const actions = {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-        timeout: 30000, // 30 second timeout for file upload
+        timeout: 60000, // Increased timeout to 60 seconds for multiple file upload
       });
 
       // Check if the response indicates success
@@ -283,7 +297,8 @@ const actions = {
             errorMessage = "Authentication failed. Please login again.";
             break;
           case 413:
-            errorMessage = "File too large. Please try again.";
+            errorMessage =
+              "Files too large. Please reduce file sizes and try again.";
             break;
           case 422:
             errorMessage = `Validation error: ${message}`;

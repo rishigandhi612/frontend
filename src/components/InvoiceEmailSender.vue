@@ -12,7 +12,7 @@
       style="display: none"
     />
 
-    <v-dialog v-model="dialog" max-width="500px" persistent>
+    <v-dialog v-model="dialog" max-width="600px" persistent>
       <v-card>
         <v-card-title class="text-h5 primary white--text">
           <v-icon left color="white">mdi-email-send</v-icon>
@@ -47,7 +47,9 @@
                   <template v-slot:item="{ item }">
                     <div>
                       <div class="font-weight-medium">{{ item.name }}</div>
-                      <div class="text-caption grey--text">{{ item.email }}</div>
+                      <div class="text-caption grey--text">
+                        {{ item.email }}
+                      </div>
                     </div>
                   </template>
                 </v-select>
@@ -86,6 +88,94 @@
                   rows="4"
                   dense
                 ></v-textarea>
+              </v-col>
+
+              <!-- Additional File Attachments Section -->
+              <v-col cols="12">
+                <v-divider class="mb-3"></v-divider>
+                <v-subheader class="px-0">
+                  <v-icon left color="primary">mdi-paperclip</v-icon>
+                  Additional Attachments (Optional)
+                </v-subheader>
+
+                <!-- File Upload Button -->
+                <v-file-input
+                  v-model="additionalFiles"
+                  label="Select additional files to attach"
+                  prepend-icon="mdi-file-plus"
+                  multiple
+                  outlined
+                  dense
+                  chips
+                  show-size
+                  :accept="allowedFileTypes"
+                  :rules="fileRules"
+                  @change="validateFiles"
+                  hint="Supported: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG (Max 5MB each, 10 files total)"
+                  persistent-hint
+                ></v-file-input>
+
+                <!-- Display selected files -->
+                <div
+                  v-if="additionalFiles && additionalFiles.length > 0"
+                  class="mt-2"
+                >
+                  <v-chip
+                    v-for="(file, index) in additionalFiles"
+                    :key="index"
+                    class="ma-1"
+                    close
+                    outlined
+                    small
+                    @click:close="removeFile(index)"
+                  >
+                    <v-icon left small>{{ getFileIcon(file.type) }}</v-icon>
+                    {{ file.name }}
+                    <span class="text-caption ml-1"
+                      >({{ formatFileSize(file.size) }})</span
+                    >
+                  </v-chip>
+                </div>
+
+                <!-- File validation errors -->
+                <v-alert
+                  v-if="fileValidationErrors.length > 0"
+                  type="warning"
+                  dense
+                  outlined
+                  class="mt-2"
+                >
+                  <ul class="mb-0">
+                    <li v-for="error in fileValidationErrors" :key="error">
+                      {{ error }}
+                    </li>
+                  </ul>
+                </v-alert>
+
+                <!-- Attachment summary -->
+                <v-card
+                  v-if="getAttachmentSummary().length > 0"
+                  outlined
+                  class="mt-3"
+                >
+                  <v-card-subtitle class="pb-2">
+                    <v-icon left small>mdi-email-outline</v-icon>
+                    Email will include
+                    {{ getAttachmentSummary().length }} attachment(s):
+                  </v-card-subtitle>
+                  <v-card-text class="pt-0">
+                    <v-chip
+                      v-for="attachment in getAttachmentSummary()"
+                      :key="attachment"
+                      class="ma-1"
+                      small
+                      color="primary"
+                      outlined
+                    >
+                      {{ attachment }}
+                    </v-chip>
+                  </v-card-text>
+                </v-card>
               </v-col>
 
               <!-- Show loading progress -->
@@ -128,7 +218,9 @@
             color="primary"
             @click="sendEmail"
             :loading="isEmailSending || generating"
-            :disabled="!isValidEmail || isEmailSending || generating"
+            :disabled="
+              !isValidEmail || isEmailSending || generating || hasFileErrors
+            "
           >
             <v-icon left>mdi-send</v-icon>
             Send Email
@@ -174,9 +266,21 @@ export default {
       progressMessage: "",
       successMessage: "",
       errorMessage: "",
+      // File attachment properties
+      additionalFiles: [],
+      fileValidationErrors: [],
+      allowedFileTypes: ".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png",
+      maxFileSize: 5 * 1024 * 1024, // 5MB
+      maxFiles: 10,
       emailRules: [
         (v) => !!v || "Email is required",
         (v) => /.+@.+\..+/.test(v) || "Email must be valid",
+      ],
+      fileRules: [
+        (files) =>
+          !files ||
+          files.length <= this.maxFiles ||
+          `Maximum ${this.maxFiles} files allowed`,
       ],
       emailError: "",
       // Default predefined contacts - can be overridden by props
@@ -184,23 +288,13 @@ export default {
         {
           name: "Bajranglal Omprakash",
           email: "sunil_bo@hotmail.com",
-          displayText: "Bajranglal Omprakash (sunil_bo@hotmail.com)"
+          displayText: "Bajranglal Omprakash (sunil_bo@hotmail.com)",
         },
         {
           name: "Astra Chemtech Pvt Ltd",
           email: "logistic@astra1.org",
-          displayText: "Astra Chemtech Pvt Ltd (logistics@astra1.org)"
+          displayText: "Astra Chemtech Pvt Ltd (logistics@astra1.org)",
         },
-        // {
-        //   name: "Sales Team",
-        //   email: "sales@hemanttraders.com", 
-        //   displayText: "Sales Team (sales@hemanttraders.com)"
-        // },
-        // {
-        //   name: "Customer Support",
-        //   email: "support@hemanttraders.com",
-        //   displayText: "Customer Support (support@hemanttraders.com)"
-        // }
       ],
     };
   },
@@ -209,6 +303,9 @@ export default {
     isValidEmail() {
       return this.emailAddress && /.+@.+\..+/.test(this.emailAddress);
     },
+    hasFileErrors() {
+      return this.fileValidationErrors.length > 0;
+    },
     ...mapState("invoices", ["loadingState"]),
     isEmailSending() {
       return this.loadingState.sendEmail;
@@ -216,16 +313,16 @@ export default {
     // Combine default contacts with any passed via props
     predefinedContacts() {
       const combinedContacts = [...this.defaultContacts];
-      
+
       // Add contacts from props if provided
       if (this.contacts && this.contacts.length > 0) {
-        const propsContacts = this.contacts.map(contact => ({
+        const propsContacts = this.contacts.map((contact) => ({
           ...contact,
-          displayText: `${contact.name} (${contact.email})`
+          displayText: `${contact.name} (${contact.email})`,
         }));
         combinedContacts.unshift(...propsContacts);
       }
-      
+
       return combinedContacts;
     },
   },
@@ -282,6 +379,8 @@ Please Note: This is a system generated email, please do not reply to this email
       this.successMessage = "";
       this.errorMessage = "";
       this.emailError = "";
+      this.additionalFiles = [];
+      this.fileValidationErrors = [];
     },
 
     // Handle contact selection
@@ -294,9 +393,102 @@ Please Note: This is a system generated email, please do not reply to this email
       // If cleared (null), keep current email address as is
     },
 
+    // File handling methods
+    validateFiles(files) {
+      this.fileValidationErrors = [];
+
+      if (!files || files.length === 0) return;
+
+      // Check file count
+      if (files.length > this.maxFiles) {
+        this.fileValidationErrors.push(
+          `Maximum ${this.maxFiles} files allowed`
+        );
+      }
+
+      // Check individual files
+      files.forEach((file) => {
+        // Check file size
+        if (file.size > this.maxFileSize) {
+          this.fileValidationErrors.push(
+            `File "${file.name}" is too large (${this.formatFileSize(
+              file.size
+            )}). Maximum size is ${this.formatFileSize(this.maxFileSize)}`
+          );
+        }
+
+        // Check file type
+        const allowedTypes = [
+          "application/pdf",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+          this.fileValidationErrors.push(
+            `File "${file.name}" has an unsupported format (${file.type})`
+          );
+        }
+      });
+    },
+
+    removeFile(index) {
+      this.additionalFiles.splice(index, 1);
+      this.validateFiles(this.additionalFiles);
+    },
+
+    getFileIcon(fileType) {
+      if (fileType.includes("pdf")) return "mdi-file-pdf-box";
+      if (fileType.includes("word") || fileType.includes("document"))
+        return "mdi-file-word-box";
+      if (fileType.includes("excel") || fileType.includes("spreadsheet"))
+        return "mdi-file-excel-box";
+      if (fileType.includes("image")) return "mdi-image";
+      return "mdi-file";
+    },
+
+    formatFileSize(bytes) {
+      if (bytes === 0) return "0 Bytes";
+      const k = 1024;
+      const sizes = ["Bytes", "KB", "MB", "GB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    },
+
+    getAttachmentSummary() {
+      const attachments = [];
+
+      // Always include invoice
+      attachments.push(`Invoice #${this.invoiceDetail.invoiceNumber}.pdf`);
+
+      // Include challan if selected
+      if (this.includeChallan) {
+        attachments.push(`Delivery Challan.pdf`);
+      }
+
+      // Include additional files
+      if (this.additionalFiles && this.additionalFiles.length > 0) {
+        this.additionalFiles.forEach((file) => {
+          attachments.push(file.name);
+        });
+      }
+
+      return attachments;
+    },
+
     async sendEmail() {
       if (!this.isValidEmail) {
         this.emailError = "Please enter a valid email address";
+        return;
+      }
+
+      if (this.hasFileErrors) {
+        this.errorMessage = "Please fix file validation errors before sending";
         return;
       }
 
@@ -333,6 +525,7 @@ Please Note: This is a system generated email, please do not reply to this email
           emailData,
           pdfBlob: invoicePdfBlob,
           challanPdfData: challanPdfData, // Pass challan data if available
+          additionalFiles: this.additionalFiles, // Pass additional files
         });
 
         console.log("Email send result:", emailData, result);

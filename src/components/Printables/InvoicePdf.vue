@@ -249,7 +249,7 @@ export default {
       );
     },
 
-    // NEW: Reusable method to create PDF document (extracted from downloadPdf)
+    // Enhanced method with robust merging logic
     createPdfDocument() {
       const doc = new jsPDF();
 
@@ -257,10 +257,10 @@ export default {
       const headerInfo = this.calculateHeaderHeight(doc);
       const tableStartY = headerInfo.height + 15;
 
-      // Step 1: First aggregation by name-hsn-width (same as before)
+      // Step 1: First aggregation by name-hsn-width-price (group by all key attributes)
       const initialAggregation = this.invoiceDetail.products.reduce(
         (acc, product) => {
-          const key = `${product.product.name}-${product.product.hsn_code}-${product.width}`;
+          const key = `${product.product.name}-${product.product.hsn_code}-${product.width}-${product.unit_price}`;
           if (!acc[key]) {
             acc[key] = {
               ...product,
@@ -275,32 +275,54 @@ export default {
         {}
       );
 
-      // Step 2: Group by product name and HSN to check width count
+      // Step 2: Group by product name, HSN, and price to analyze width patterns
       const productGroups = {};
       Object.values(initialAggregation).forEach((product) => {
-        const groupKey = `${product.product.name}-${product.product.hsn_code}`;
+        const groupKey = `${product.product.name}-${product.product.hsn_code}-${product.unit_price}`;
         if (!productGroups[groupKey]) {
-          productGroups[groupKey] = [];
+          productGroups[groupKey] = {
+            products: [],
+            totalQuantity: 0,
+            totalNos: 0,
+            widths: new Set(),
+          };
         }
-        productGroups[groupKey].push(product);
+        productGroups[groupKey].products.push(product);
+        productGroups[groupKey].totalQuantity += product.quantity;
+        productGroups[groupKey].totalNos += product.nos;
+        productGroups[groupKey].widths.add(product.width);
       });
 
-      // Step 3: Final aggregation - merge if 4+ different widths
+      // Step 3: Enhanced merging logic - always merge if 4+ widths OR if total products > 4
       const finalAggregatedProducts = {};
-      Object.entries(productGroups).forEach(([groupKey, products]) => {
-        if (products.length >= 4) {
+      const totalProductCount = this.invoiceDetail.products.length;
+
+      Object.entries(productGroups).forEach(([groupKey, groupData]) => {
+        const uniqueWidthCount = groupData.widths.size;
+        const shouldMergeBasedOnWidths = uniqueWidthCount >= 4;
+        const shouldMergeBasedOnTotal = totalProductCount > 4;
+
+        // Always merge if either condition is met
+        const shouldMerge = shouldMergeBasedOnWidths || shouldMergeBasedOnTotal;
+
+        if (shouldMerge && uniqueWidthCount > 1) {
+          // Merge all products in this group with "DIFF" width
           const mergedProduct = {
-            product: products[0].product,
-            width: "DIFF",
-            unit_price: products[0].unit_price,
-            quantity: products.reduce((sum, p) => sum + p.quantity, 0),
-            nos: products.reduce((sum, p) => sum + p.nos, 0),
+            product: groupData.products[0].product,
+            width: "DIFF", // Only use DIFF when actually merging multiple widths
+            unit_price: groupData.products[0].unit_price,
+            quantity: groupData.totalQuantity,
+            nos: groupData.totalNos,
           };
           finalAggregatedProducts[groupKey] = mergedProduct;
         } else {
-          products.forEach((product, index) => {
+          // Keep products separate - show actual widths
+          groupData.products.forEach((product, index) => {
             const key = `${groupKey}-${index}`;
-            finalAggregatedProducts[key] = product;
+            finalAggregatedProducts[key] = {
+              ...product,
+              // Keep the original width, don't change to DIFF
+            };
           });
         }
       });
