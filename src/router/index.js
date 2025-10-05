@@ -25,6 +25,7 @@ import SendEmail from "@/components/SendEmail.vue";
 import AddTransporter from "@/components/Transporters/AddTransporter.vue";
 import TransporterDetail from "@/components/Transporters/TransporterDetail.vue";
 import TransporterList from "@/components/Transporters/TransporterList.vue";
+import montlySummary from "@/components/InvoiceSummary/montlySummary.vue";
 
 Vue.use(Router);
 
@@ -189,6 +190,12 @@ const routes = [
     path: "/transporter",
     component: TransporterList,
     name: "TransporterList",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/monthlysummary",
+    component: montlySummary,
+    name: "monthlySummary",
     meta: { requiresAuth: true },
   },
   {

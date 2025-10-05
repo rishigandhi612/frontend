@@ -1,11 +1,12 @@
 <template>
   <v-app>
     <!-- Top App Bar -->
-    
-    <v-app-bar v-if="isAuthenticated" app elevation="0" shaped><AppBar @toggleDrawer="drawer = !drawer"/>
+
+    <v-app-bar v-if="isAuthenticated" app elevation="0" shaped
+      ><AppBar @toggleDrawer="drawer = !drawer" />
     </v-app-bar>
     <!-- Navigation Drawer (placed below the App Bar) -->
-    
+
     <v-navigation-drawer
       app
       temporary
@@ -20,17 +21,19 @@
               alt="Holo Logo"
               class=""
               contain
-              src='../src/assets/HoloLogo.png'
+              src="../src/assets/HoloLogo.png"
               transition="scale-transition"
               width="55"
             />
           </v-list-item-avatar>
         </v-list-item>
 
-        <v-list-item link >
+        <v-list-item link>
           <v-list-item-content>
             <v-list-item-title class="text-h6">Rishi Gandhi</v-list-item-title>
-            <v-list-item-subtitle>rishigandhi021@gmail.com</v-list-item-subtitle>
+            <v-list-item-subtitle
+              >rishigandhi021@gmail.com</v-list-item-subtitle
+            >
           </v-list-item-content>
         </v-list-item>
       </v-list>
@@ -38,7 +41,7 @@
       <v-divider></v-divider>
 
       <v-list nav dense>
-        <v-list-item link @click="$router.push('/customer')" >
+        <v-list-item link @click="$router.push('/customer')">
           <v-list-item-icon>
             <v-icon>mdi-account-multiple</v-icon>
           </v-list-item-icon>
@@ -50,7 +53,7 @@
           </v-list-item-icon>
           <v-list-item-title>Products</v-list-item-title>
         </v-list-item>
-        <v-list-item link @click="$router.push('/invoice')"> 
+        <v-list-item link @click="$router.push('/invoice')">
           <v-list-item-icon>
             <v-icon>mdi-star</v-icon>
           </v-list-item-icon>
@@ -61,20 +64,31 @@
             <v-icon>mdi-account</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Users</v-list-item-title>
-        </v-list-item> 
+        </v-list-item>
         <v-list-item link @click="$router.push('/inventory')">
           <v-list-item-icon>
             <v-icon>mdi-store-check</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Inventory</v-list-item-title>
         </v-list-item>
-          <v-list-item link @click="$router.push('/transporter')">
+        <v-list-item link @click="$router.push('/transporter')">
           <v-list-item-icon>
             <v-icon>mdi-truck</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Transporters</v-list-item-title>
         </v-list-item>
-        
+        <v-list-item link @click="$router.push('/SendPurchaseOrder')">
+          <v-list-item-icon>
+            <v-icon>mdi-chart-histogram</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Purchase Order</v-list-item-title>
+        </v-list-item>
+        <v-list-item link @click="$router.push('/monthlysummary')">
+          <v-list-item-icon>
+            <v-icon>mdi-chart-histogram</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Sales Summary</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 
@@ -89,8 +103,7 @@
 
 <script>
 import { mapGetters } from "vuex";
-import AppBar from './components/AppBar.vue';
-
+import AppBar from "./components/AppBar.vue";
 
 export default {
   components: {
@@ -99,7 +112,7 @@ export default {
   data() {
     return {
       drawer: false,
-    };  
+    };
   },
   computed: {
     ...mapGetters(["isAuthenticated"]), // Get the isAuthenticated state from Vuex
