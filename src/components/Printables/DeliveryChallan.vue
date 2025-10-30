@@ -314,86 +314,68 @@ export default {
       return tableData;
     },
 
-    addSignatureLines(doc, pageHeight) {
-      // Check if transporter exists and is not 'By Hand' or empty
+    addSignatureLines(doc, pageHeight, contentEndY = null) {
       const hasTransporter =
         this.invoiceDetail.transporter?.name &&
         this.invoiceDetail.transporter.name !== "By Hand" &&
         this.invoiceDetail.transporter.name.trim() !== "";
 
+      // Calculate minimum spacing needed from last content
+      const minSpacingFromContent = 10;
+
       if (hasTransporter) {
-        // Show transporter details with full width design
+        // Compact minimalist design
         const boxX = 15;
-        const boxY = pageHeight - 45;
         const boxWidth = 180;
-        const boxHeight = 25;
+        const boxHeight = 12;
 
-        // Draw background box with subtle gradient effect
-        doc.setFillColor(255, 255, 255);
-        doc.rect(boxX, boxY, boxWidth, boxHeight, "F");
+        // Position box at least minSpacingFromContent below the last content
+        // but not lower than pageHeight - 32
+        let boxY = pageHeight - 32;
+        if (contentEndY !== null) {
+          const minYPosition = contentEndY + minSpacingFromContent;
+          boxY = Math.max(minYPosition, pageHeight - 32);
+        }
 
-        // Draw border with rounded appearance (multiple thin lines)
-        doc.setDrawColor(100, 100, 100);
-        doc.setLineWidth(0.5);
+        // Simple thin border box
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.3);
         doc.rect(boxX, boxY, boxWidth, boxHeight, "S");
 
-        // Add inner border for professional look
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.2);
-        doc.rect(boxX + 1, boxY + 1, boxWidth - 2, boxHeight - 2, "S");
-
-        // Add transporter label at top center
+        // Header
+        doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(80, 80, 80);
-        doc.text("BOOKING DETAILS", boxX + boxWidth / 2, boxY + 7, "center");
-
-        // Add separator line under label
-        doc.setDrawColor(150, 150, 150);
-        doc.setLineWidth(0.3);
-        doc.line(boxX + 20, boxY + 9, boxX + boxWidth - 20, boxY + 9);
-
-        // Add transporter name (centered)
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
-        const transporterName = this.invoiceDetail.transporter.name;
-        const maxWidth = boxWidth - 10;
-        const nameLines = doc.splitTextToSize(transporterName, maxWidth);
+        doc.text("BOOKING DETAILS:", 105, boxY + 5, "center");
 
-        // Center the name vertically in remaining space
-        const nameY = boxY + 16;
-        nameLines.forEach((line, index) => {
-          if (index < 1) {
-            // Limit to 1 line for better design
-            doc.text(line, boxX + boxWidth / 2, nameY, "center");
-          }
-        });
-
-        // Add contact number (centered)
-        doc.setFontSize(12);
+        // Transporter name + contact in same line
         doc.setFont("helvetica", "normal");
-        doc.setTextColor(60, 60, 60);
-        const contactText = `Contact: ${
-          this.invoiceDetail.transporter.phone || "N/A"
-        }`;
-        doc.text(
-          contactText,
-          boxX + boxWidth / 2,
-          boxY + boxHeight - 4,
-          "center"
-        );
+        doc.setFontSize(10);
+        const transporterName = this.invoiceDetail.transporter.name || "N/A";
+        const contact = this.invoiceDetail.transporter.phone
+          ? ` | Contact: ${this.invoiceDetail.transporter.phone}`
+          : "";
+
+        const detailText = `${transporterName}${contact}`;
+        doc.text(detailText, 105, boxY + 10, "center");
       } else {
-        // Show receiver's signature with full width design
+        // Receiver & company signature layout
+        let signatureY = pageHeight - 30;
+        if (contentEndY !== null) {
+          const minYPosition = contentEndY + minSpacingFromContent;
+          signatureY = Math.max(minYPosition, pageHeight - 30);
+        }
+
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 0, 0);
-
         doc.setDrawColor(0, 0, 0);
-        doc.text("Receiver's Signature", 14, pageHeight - 30);
-        doc.line(14, pageHeight - 20, 80, pageHeight - 20);
-        doc.text("For Hemant Traders", 140, pageHeight - 30);
-        doc.line(140, pageHeight - 20, 200, pageHeight - 20);
+
+        doc.text("Receiver's Signature", 14, signatureY);
+        doc.line(14, signatureY + 10, 80, signatureY + 10);
+
+        doc.text("For Hemant Traders", 140, signatureY);
+        doc.line(140, signatureY + 10, 200, signatureY + 10);
       }
     },
 
@@ -521,11 +503,11 @@ export default {
       // Add Terms & Conditions only on the last page
       if (isLastPage) {
         // Position Terms & Conditions based on whether signature lines are added
-        const termsYPosition = hasSignature ? pageHeight - 30 : pageHeight - 15;
+        const termsYPosition = hasSignature ? pageHeight - 15 : pageHeight - 15;
 
         doc.text(
           `Terms & Conditions(Non Negotiable):
-*Please Check the material before use. *Our responsibility ceases once the material leaves our godown. *Subject To Pune Jurisdiction 
+*Please Check the material before use. *Our responsibility ceases once the material leaves our godown. *Subject To Pune Jurisdiction
 *Goods once sold will not be taken back. *Interest @24% will be charged if payments are not made before due date.`,
           14,
           termsYPosition
@@ -538,10 +520,17 @@ export default {
       let grandTotal = 0;
 
       const defaultStartY = startY;
-      console.log("Default Start Y:", defaultStartY);
       let continuingTable = false;
       let currentProductIndex = 0;
       let isLastPage = false;
+
+      // Track the actual page number for this copy
+      let copyPageNumber = 1;
+      console.log(
+        `defaultStartY: ${defaultStartY}, copyPageNumber: ${copyPageNumber}, isLastPage: ${isLastPage}`
+      );
+
+      const startPageNumber = doc.internal.getNumberOfPages();
 
       // Process each product group
       while (currentProductIndex < groupedProducts.length) {
@@ -554,6 +543,7 @@ export default {
         if (!continuingTable && remainingSpace < minimumSpaceRequired) {
           // Not enough space for even starting this product, add a new page
           doc.addPage();
+          copyPageNumber++;
           startY = this.addHeader(doc, copyType);
           continue; // Recheck with new page
         }
@@ -579,6 +569,11 @@ export default {
           margin: { bottom: 15, top: 0 },
           pageBreak: "auto",
           didDrawPage: (data) => {
+            // Calculate the correct page number for this copy
+            const absolutePageNum = doc.internal.getNumberOfPages();
+            const relativePageNum = absolutePageNum - startPageNumber + 1;
+            console.log(` relativePageNum: ${relativePageNum}`);
+
             // When a new page is created, add the header
             const headerHeight = this.addHeader(doc, copyType);
 
@@ -588,19 +583,14 @@ export default {
             // Critical fix: Update the startY for content on new pages
             if (data.pageNumber > 1) {
               data.settings.startY = headerHeight;
+              copyPageNumber++;
             }
 
-            // Check if this is the last page
-            isLastPage = data.pageNumber === data.pageCount;
+            // Check if this is the last page (we'll update this later)
+            isLastPage = false;
 
-            // Pass the isLastPage flag to the footer function
-            this.addFooter(
-              doc,
-              doc.internal.pageSize.height,
-              data.pageNumber,
-              data.pageCount,
-              isLastPage
-            );
+            // Use relative page numbers for this copy
+            // Note: We can't determine total pages here, will update in post-processing
           },
           tableLineColor: [0, 0, 0],
           alternateRowStyles: {
@@ -625,8 +615,8 @@ export default {
       const spaceNeeded = 35;
       if (doc.internal.pageSize.height - startY < spaceNeeded) {
         doc.addPage();
+        copyPageNumber++;
         startY = this.addHeader(doc, copyType);
-        isLastPage = true;
       }
 
       // Calculate counts for overall total
@@ -677,6 +667,36 @@ export default {
 
       // Add signature lines with proper spacing
       this.addSignatureLines(doc, doc.internal.pageSize.height);
+
+      // Mark this as the last page of this copy
+      isLastPage = true;
+
+      // Calculate total pages for this copy
+      const endPageNumber = doc.internal.getNumberOfPages();
+      const totalPagesInCopy = endPageNumber - startPageNumber + 1;
+
+      // Now go back and add footers to all pages in this copy with correct page numbers
+      for (let i = startPageNumber; i <= endPageNumber; i++) {
+        doc.setPage(i);
+        const pageNum = i - startPageNumber + 1;
+        const isLast = i === endPageNumber;
+        const hasSignature =
+          this.invoiceDetail.transporter?.name &&
+          this.invoiceDetail.transporter.name !== "By Hand" &&
+          this.invoiceDetail.transporter.name.trim() !== "";
+
+        this.addFooter(
+          doc,
+          doc.internal.pageSize.height,
+          pageNum,
+          totalPagesInCopy,
+          isLast,
+          hasSignature
+        );
+      }
+
+      // Return to the last page
+      doc.setPage(endPageNumber);
     },
 
     // NEW: Reusable method to create PDF document
