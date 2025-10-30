@@ -26,6 +26,7 @@ import AddTransporter from "@/components/Transporters/AddTransporter.vue";
 import TransporterDetail from "@/components/Transporters/TransporterDetail.vue";
 import TransporterList from "@/components/Transporters/TransporterList.vue";
 import montlySummary from "@/components/InvoiceSummary/montlySummary.vue";
+import visualData from "@/components/DataAnalytics/visualData.vue";
 
 Vue.use(Router);
 
@@ -196,6 +197,12 @@ const routes = [
     path: "/monthlysummary",
     component: montlySummary,
     name: "monthlySummary",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/visualdata",
+    component: visualData,
+    name: "visualData",
     meta: { requiresAuth: true },
   },
   {

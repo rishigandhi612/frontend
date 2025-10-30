@@ -10,7 +10,7 @@ import inventory from "./inventory";
 import sendPO from "./sendPO";
 import transporter from "./transporter";
 import summary from "./summary";
-import auth from "./apiClient";
+// import auth from "./apiClient";
 import store from "./index";
 import router from "@/router";
 
@@ -20,7 +20,7 @@ const BASE_URL = process.env.VUE_APP_API_BASE_URL || "http://localhost:3001";
 
 export default new Vuex.Store({
   modules: {
-    auth,
+    //auth,
     dashboard,
     customers,
     products,
