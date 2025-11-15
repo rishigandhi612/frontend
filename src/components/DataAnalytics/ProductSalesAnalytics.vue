@@ -138,7 +138,7 @@
           <td>
             <div class="py-2">
               <v-btn class="font-weight-bold text-subtitle-2 mb-1" text>
-                {{ item._id.productName }}
+                {{ item.productName }}
               </v-btn>
             </div>
           </td>
@@ -153,8 +153,13 @@
             </div>
           </td>
           <td class="text-center">
+            <v-chip small color="purple" outlined>
+              {{ item.invoiceCount }}
+            </v-chip>
+          </td>
+          <td class="text-center">
             <v-chip small color="orange" outlined>
-              {{ item.invoiceCount }} Invoices
+              {{ item.uniqueInvoiceCount }} Invoices
             </v-chip>
           </td>
           <td class="text-center">
@@ -162,6 +167,7 @@
               {{ item.uniqueCustomerCount }} Customers
             </v-chip>
           </td>
+
           <td class="text-center">
             <div class="font-weight-medium">
               {{ formatNumber(item.averageQuantityPerInvoice) }} Kg
@@ -294,8 +300,14 @@ export default {
           align: "center",
         },
         {
-          text: "Invoices",
+          text: "Total Pieces Sold",
           value: "invoiceCount",
+          sortable: true,
+          align: "center",
+        },
+        {
+          text: "Invoices",
+          value: "uniqueInvoiceCount",
           sortable: true,
           align: "center",
         },
@@ -369,6 +381,10 @@ export default {
         const response = await analyticsService.getProductSales(params);
         this.salesData = response.data || [];
         this.summary = response.summary || null;
+        console.log(
+          "Fetched product sales data:",
+          this.salesData[0]?.productName
+        );
       } catch (error) {
         console.error("Error fetching product sales:", error);
         this.$emit("error", error);
