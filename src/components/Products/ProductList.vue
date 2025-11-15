@@ -6,51 +6,58 @@
           <v-icon left>mdi-arrow-left</v-icon> Back
         </v-btn>
       </v-col>
-      <v-col md="8" cols="12">     <v-row>
-      <v-col>
-        <h1 class="text-center">Products List</h1>
-      </v-col>
-    </v-row>
-    <v-data-table
-      :headers="headers"
-      :items="allProducts"
-      class="elevation-1"
-      :items-per-page="10"
-      :loading="loading"
-      :sort-by.sync="sortBy"
-      :sort-desc.sync="sortDesc"
-    >
-   
+      <v-col md="8" cols="12">
+        <v-row>
+          <v-col>
+            <h1 class="text-center">Products List</h1>
+          </v-col>
+        </v-row>
+        <v-data-table
+          :headers="headers"
+          :items="allProducts"
+          class="elevation-1"
+          :items-per-page="10"
+          :search="search"
+          :loading="loading"
+          :sort-by.sync="sortBy"
+          :sort-desc.sync="sortDesc"
+        >
+          <template v-slot:top>
+            <v-text-field
+              v-model="search"
+              label="Search Product"
+              prepend-inner-icon="mdi-magnify"
+              class="mx-4"
+            ></v-text-field>
+          </template>
 
-      <template v-slot:item="{ item }">
-        <tr @click="handleRowClick(item._id)">
-          <td>{{ capitalizeFirstLetter(item.name) }}</td>
-          <td>{{ item.quantity }}</td>
-          <td>{{ item.hsn_code }}</td>
-          <td>{{ formatDate(item.updatedAt) }}</td>
-        </tr>
-      </template>
-    </v-data-table></v-col>
+          <template v-slot:item="{ item }">
+            <tr @click="handleRowClick(item._id)">
+              <td>{{ capitalizeFirstLetter(item.name) }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>{{ item.hsn_code }}</td>
+              <td>{{ formatDate(item.updatedAt) }}</td>
+            </tr>
+          </template>
+        </v-data-table></v-col
+      >
       <v-col md="2" cols="12">
         <v-row>
           <v-col cols="12" md="12">
             <v-btn @click="fetchProducts" color="primary" block>
-          <v-icon>mdi-refresh</v-icon>
-          Refresh
-        </v-btn>
+              <v-icon>mdi-refresh</v-icon>
+              Refresh
+            </v-btn>
           </v-col>
           <v-col cols="12" md="12">
-             <!-- Add User Button -->
-        <v-btn
-          @click="goToAddProduct"
-          color="success" block>
-          <v-icon>mdi-plus</v-icon> Add Product
-        </v-btn>
+            <!-- Add User Button -->
+            <v-btn @click="goToAddProduct" color="success" block>
+              <v-icon>mdi-plus</v-icon> Add Product
+            </v-btn>
           </v-col>
         </v-row>
       </v-col>
     </v-row>
- 
   </v-container>
 </template>
 
@@ -63,6 +70,7 @@ export default {
     return {
       sortBy: "name",
       sortDesc: false,
+      search: "",
       headers: [
         { text: "Name", value: "name" },
         { text: "Qty", value: "quantity" },

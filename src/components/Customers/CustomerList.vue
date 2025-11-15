@@ -14,10 +14,19 @@
           :items="allCustomers"
           class="elevation-1"
           :items-per-page="10"
+          :search="search"
           :loading="loading"
           :sort-by.sync="sortBy"
           :sort-desc.sync="sortDesc"
         >
+          <template v-slot:top>
+            <v-text-field
+              v-model="search"
+              label="Search Customer"
+              prepend-inner-icon="mdi-magnify"
+              class="mx-4"
+            ></v-text-field>
+          </template>
           <template v-slot:item="{ item }">
             <tr @click="handleRowClick(item._id)">
               <td>{{ capitalizeFirstLetter(item.name) }}</td>
@@ -58,6 +67,7 @@ export default {
   data() {
     return {
       sortBy: "name",
+      search: "",
       sortDesc: false,
       headers: [
         { text: "Name", value: "name" },
