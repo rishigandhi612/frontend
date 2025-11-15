@@ -55,7 +55,7 @@
         </v-list-item>
         <v-list-item link @click="$router.push('/invoice')">
           <v-list-item-icon>
-            <v-icon>mdi-star</v-icon>
+            <v-icon>mdi-invoice-list-outline</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Invoices</v-list-item-title>
         </v-list-item>
@@ -79,7 +79,7 @@
         </v-list-item>
         <v-list-item link @click="$router.push('/SendPurchaseOrder')">
           <v-list-item-icon>
-            <v-icon>mdi-chart-histogram</v-icon>
+            <v-icon>mdi-order-numeric-ascending</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Purchase Order</v-list-item-title>
         </v-list-item>
@@ -88,6 +88,12 @@
             <v-icon>mdi-chart-histogram</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Sales Summary</v-list-item-title>
+        </v-list-item>
+         <v-list-item link @click="$router.push('/visualdata')">
+          <v-list-item-icon>
+            <v-icon>mdi-google-analytics</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Data Analytics</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
