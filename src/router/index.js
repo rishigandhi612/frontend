@@ -27,6 +27,7 @@ import TransporterDetail from "@/components/Transporters/TransporterDetail.vue";
 import TransporterList from "@/components/Transporters/TransporterList.vue";
 import montlySummary from "@/components/InvoiceSummary/montlySummary.vue";
 import visualData from "@/components/DataAnalytics/visualData.vue";
+import CustomerInvoiceSummary from "@/components/Invoices/CustomerInvoice/CustomerInvoiceSummary.vue";
 
 Vue.use(Router);
 
@@ -203,6 +204,12 @@ const routes = [
     path: "/visualdata",
     component: visualData,
     name: "visualData",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/customer-invoices",
+    component: CustomerInvoiceSummary,
+    name: "customerInvoiceSummary",
     meta: { requiresAuth: true },
   },
   {
