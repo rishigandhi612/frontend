@@ -89,11 +89,17 @@
           </v-list-item-icon>
           <v-list-item-title>Sales Summary</v-list-item-title>
         </v-list-item>
-         <v-list-item link @click="$router.push('/visualdata')">
+        <v-list-item link @click="$router.push('/visualdata')">
           <v-list-item-icon>
             <v-icon>mdi-google-analytics</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Data Analytics</v-list-item-title>
+        </v-list-item>
+        <v-list-item link @click="$router.push('/customer-invoices')">
+          <v-list-item-icon>
+            <v-icon>mdi-google-analytics</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Customer Invoices</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-navigation-drawer>
