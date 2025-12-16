@@ -1,9 +1,11 @@
-import apiClient from './apiClient'; // Import the Axios instance
+import apiClient from "./apiClient"; // Import the Axios instance
 
 const state = {
   customers: [],
   loading: false,
   customerDetail: null,
+  customerInvoices: null,
+  loadingCustomerInvoices: false,
 };
 
 const getters = {
@@ -11,21 +13,25 @@ const getters = {
   isLoading: (state) => state.loading,
   customerDetail: (state) => state.customerDetail,
   getCustomerById: (state) => (customerId) => {
-    return state.customers.find(customer => customer.id === customerId) || null;
+    return (
+      state.customers.find((customer) => customer.id === customerId) || null
+    );
   },
+  customerInvoices: (state) => state.customerInvoices,
+  isLoadingCustomerInvoices: (state) => state.loadingCustomerInvoices,
 };
 
 const actions = {
   async fetchCustomers({ commit }) {
-    commit('SET_LOADING', true);
+    commit("SET_LOADING", true);
     try {
-      const response = await apiClient.get('/customer');
-      commit('SET_CUSTOMERS', response.data.data);
+      const response = await apiClient.get("/customer");
+      commit("SET_CUSTOMERS", response.data.data);
     } catch (error) {
       console.error("Error fetching customers:", error);
       throw error;
     } finally {
-      commit('SET_LOADING', false);
+      commit("SET_LOADING", false);
     }
   },
 
@@ -33,9 +39,9 @@ const actions = {
     try {
       const response = await apiClient.get(`/customer/${customerId}`);
       if (response.data.success) {
-        commit('SET_CUSTOMER_DETAIL', response.data.data);
+        commit("SET_CUSTOMER_DETAIL", response.data.data);
       } else {
-        throw new Error('Failed to fetch customer details');
+        throw new Error("Failed to fetch customer details");
       }
     } catch (error) {
       console.error("Error fetching customer detail:", error);
@@ -46,8 +52,8 @@ const actions = {
   async deleteCustomerFromStore({ commit }, customerId) {
     try {
       await apiClient.delete(`/customer/${customerId}`);
-      commit('REMOVE_CUSTOMER_FROM_LIST', customerId);  // Remove customer from list
-      commit('REMOVE_CUSTOMER');  // Clear customer detail from state
+      commit("REMOVE_CUSTOMER_FROM_LIST", customerId); // Remove customer from list
+      commit("REMOVE_CUSTOMER"); // Clear customer detail from state
     } catch (error) {
       console.error("Error deleting customer:", error);
       throw error;
@@ -57,11 +63,11 @@ const actions = {
   // New action to create a customer
   async createCustomer({ commit }, customerData) {
     try {
-      const response = await apiClient.post('/customer', customerData); // API call to create customer
+      const response = await apiClient.post("/customer", customerData); // API call to create customer
       if (response.data.success) {
-        commit('ADD_CUSTOMER', response.data.data); // Add new customer to the state
+        commit("ADD_CUSTOMER", response.data.data); // Add new customer to the state
       } else {
-        throw new Error('Failed to create customer');
+        throw new Error("Failed to create customer");
       }
     } catch (error) {
       console.error("Error creating customer:", error);
@@ -73,19 +79,75 @@ const actions = {
   async updateCustomer({ commit }, { customerId, customerData }) {
     try {
       // Sending a PUT request to update the customer by ID
-      const response = await apiClient.put(`/customer/${customerId}`, customerData); 
+      const response = await apiClient.put(
+        `/customer/${customerId}`,
+        customerData
+      );
 
       // Check if the request was successful
       if (response.data.success) {
         // Commit the mutation to update the customer in the state
-        commit('UPDATE_CUSTOMER', response.data.data); 
+        commit("UPDATE_CUSTOMER", response.data.data);
       } else {
-        throw new Error('Failed to update customer');
+        throw new Error("Failed to update customer");
       }
     } catch (error) {
       console.error("Error updating customer:", error);
       throw error; // Rethrow error to handle it in the component
     }
+  },
+  async fetchCustomerInvoicesByFY({ commit }, params) {
+    const {
+      customerId,
+      financialYear = "current",
+      page = 1,
+      itemsPerPage = 10,
+      sortBy = "createdAt",
+      sortDesc = true,
+      search = "",
+    } = params;
+
+    commit("SET_LOADING_CUSTOMER_INVOICES", true);
+    try {
+      // Build query parameters
+      const queryParams = {
+        financialYear,
+        page,
+        itemsPerPage,
+        sortBy,
+        sortDesc,
+      };
+
+      // Only add search parameter if it's not empty
+      if (search && search.trim() !== "") {
+        queryParams.search = search.trim();
+      }
+
+      // Convert params object to query string
+      const queryString = Object.keys(queryParams)
+        .map((key) => `${key}=${encodeURIComponent(queryParams[key])}`)
+        .join("&");
+
+      const response = await apiClient.get(
+        `/custprod/${customerId}/invoices?${queryString}`
+      );
+
+      if (response.data.success) {
+        commit("SET_CUSTOMER_INVOICES", response.data);
+        return response.data;
+      } else {
+        throw new Error("Failed to fetch customer invoices");
+      }
+    } catch (error) {
+      console.error("Error fetching customer invoices by FY:", error);
+      throw error;
+    } finally {
+      commit("SET_LOADING_CUSTOMER_INVOICES", false);
+    }
+  },
+
+  clearCustomerInvoices({ commit }) {
+    commit("SET_CUSTOMER_INVOICES", null);
   },
 };
 
@@ -100,27 +162,41 @@ const mutations = {
     state.loading = loading;
   },
   REMOVE_CUSTOMER_FROM_LIST(state, customerId) {
-    state.customers = state.customers.filter(customer => customer.id !== customerId);
+    state.customers = state.customers.filter(
+      (customer) => customer.id !== customerId
+    );
   },
   REMOVE_CUSTOMER(state) {
     state.customerDetail = null; // Clear customer detail after deletion
   },
-  
+
   ADD_CUSTOMER(state, customer) {
     state.customers.push(customer); // Add new customer to the array
   },
   // Mutation to update the customer in the store
   UPDATE_CUSTOMER(state, updatedCustomer) {
     // Find and update the customer in the list
-    const index = state.customers.findIndex(customer => customer.id === updatedCustomer.id);
+    const index = state.customers.findIndex(
+      (customer) => customer.id === updatedCustomer.id
+    );
     if (index !== -1) {
       state.customers.splice(index, 1, updatedCustomer); // Replace old customer with updated customer
     }
 
     // If the updated customer is the one in the customerDetail, update it as well
-    if (state.customerDetail && state.customerDetail.id === updatedCustomer.id) {
+    if (
+      state.customerDetail &&
+      state.customerDetail.id === updatedCustomer.id
+    ) {
       state.customerDetail = updatedCustomer;
     }
+  },
+  SET_CUSTOMER_INVOICES(state, data) {
+    state.customerInvoices = data;
+  },
+
+  SET_LOADING_CUSTOMER_INVOICES(state, loading) {
+    state.loadingCustomerInvoices = loading;
   },
 };
 
