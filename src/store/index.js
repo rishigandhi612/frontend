@@ -10,8 +10,10 @@ import inventory from "./inventory";
 import sendPO from "./sendPO";
 import transporter from "./transporter";
 import summary from "./summary";
+import banks from "./banks";
 // import auth from "./apiClient";
 import store from "./index";
+
 import router from "@/router";
 
 Vue.use(Vuex);
@@ -30,6 +32,7 @@ export default new Vuex.Store({
     sendPO,
     transporter,
     summary,
+    banks,
   },
   state: {
     user: null,

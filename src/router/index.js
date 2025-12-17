@@ -28,6 +28,9 @@ import TransporterList from "@/components/Transporters/TransporterList.vue";
 import montlySummary from "@/components/InvoiceSummary/montlySummary.vue";
 import visualData from "@/components/DataAnalytics/visualData.vue";
 import CustomerInvoiceSummary from "@/components/Invoices/CustomerInvoice/CustomerInvoiceSummary.vue";
+import BankList from "@/components/Bank/BankList.vue";
+import BankDetail from "@/components/Bank/BankDetail.vue";
+import AddEditBank from "@/components/Bank/AddEditBank.vue";
 
 Vue.use(Router);
 
@@ -42,7 +45,7 @@ const routes = [
     path: "/dashboard",
     component: UserDashboard,
     name: "userDashboard",
-    meta: { requiresAuth: true }, // Route requires authentication
+    meta: { requiresAuth: true },
   },
   {
     path: "/customer",
@@ -87,7 +90,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/addproduct/:id?",
+    path: "/addproduct/:id",
     component: AddProduct,
     name: "editProduct",
     meta: { requiresAuth: true },
@@ -105,7 +108,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/addinventory/:id?",
+    path: "/addinventory/:id",
     component: AddInventory,
     name: "editInventory",
     meta: { requiresAuth: true },
@@ -123,21 +126,52 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/addinvoice/:id?",
+    path: "/addinvoice",
     component: AddInvoice,
     name: "addInvoice",
     meta: { requiresAuth: true },
   },
   {
+    path: "/addinvoice/:id",
+    component: AddInvoice,
+    name: "editInvoice",
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/addcustomer",
+    component: AddCustomer,
+    name: "addCustomer",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/addcustomer/:id",
     component: AddCustomer,
     name: "editCustomer",
     meta: { requiresAuth: true },
   },
+  // BANK ROUTES - FIXED ORDER AND NAMES
   {
-    path: "/addcustomer/:id?",
-    component: AddCustomer,
-    name: "addCustomer",
+    path: "/banks",
+    component: BankList,
+    name: "bankList",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/bank/:id?",
+    component: BankDetail,
+    name: "bankDetail",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/addbank",
+    component: AddEditBank,
+    name: "addBank",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/addbank/:id",
+    component: AddEditBank,
+    name: "editBank",
     meta: { requiresAuth: true },
   },
   {
@@ -147,7 +181,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/user/:id?",
+    path: "/user/:id",
     component: UserDetail,
     name: "UserDetail",
     meta: { requiresAuth: true },
@@ -159,7 +193,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/adduser/:id?",
+    path: "/adduser/:id",
     component: AddUser,
     name: "EditUser",
     meta: { requiresAuth: true },
@@ -177,7 +211,7 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/addtransporter/:id?",
+    path: "/addtransporter/:id",
     component: AddTransporter,
     name: "EditTransporter",
     meta: { requiresAuth: true },
@@ -221,30 +255,25 @@ const routes = [
 
 // Create router instance
 const router = new Router({
-  mode: "history", // Use history mode to avoid hash in URLs
+  mode: "history",
   routes,
 });
 
 // Navigation Guard
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem("token"); // Check for authentication token
+  const token = localStorage.getItem("token");
 
   if (to.matched.some((record) => record.meta.requiresAuth)) {
-    // Route requires authentication
     if (!token) {
       console.warn("Access denied: No token found. Redirecting to login.");
-      next({ name: "login" }); // Redirect to login if not authenticated
+      next({ name: "login" });
     } else {
-      // console.info('Authenticated user. Proceeding to route:', to.name);
-      next(); // User authenticated, proceed to the route
+      next();
     }
   } else if (to.name === "login" && token) {
-    // User is already logged in, redirect to dashboard
     console.info("User is logged in. Redirecting to dashboard.");
     next({ name: "userDashboard" });
   } else {
-    // No authentication required, proceed
-    console.info("Accessing public route:", to.name);
     next();
   }
 });
