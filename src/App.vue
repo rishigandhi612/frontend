@@ -97,7 +97,7 @@
         </v-list-item>
         <v-list-item link @click="$router.push('/customer-invoices')">
           <v-list-item-icon>
-            <v-icon>mdi-google-analytics</v-icon>
+            <v-icon>mdi-account-card</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Customer Invoices</v-list-item-title>
         </v-list-item>
