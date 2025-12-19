@@ -55,9 +55,8 @@
             </v-card-actions>
           </v-card>
         </v-col>
-     
 
-      <!-- Send PO Card -->
+        <!-- Send PO Card -->
         <v-col cols="12" sm="6" md="4" lg="3">
           <v-card
             class="mx-auto my-4"
@@ -89,7 +88,7 @@
             </v-card-actions>
           </v-card>
         </v-col>
-         </v-row>
+      </v-row>
       <!-- No Data Message -->
       <v-alert v-if="hasNoData" type="error" border="left" colored-border>
         No data available.
@@ -152,7 +151,15 @@ export default {
           buttonText: "View Inventory",
           route: "/inventory",
         },
-          totalTransporters: {
+        totalTransactions: {
+          title: "Total Transactions",
+          icon: "mdi-transfer",
+          iconColor: "white",
+          color: "cyan",
+          buttonText: "View Transactions",
+          route: "/bank",
+        },
+        totalTransporters: {
           title: "Total Transporters",
           icon: "mdi-truck",
           iconColor: "white",
@@ -160,17 +167,25 @@ export default {
           buttonText: "View Transporters",
           route: "/transporter",
         },
-         availableInventory: {
+        totalBanks: {
+          title: "Total Banks",
+          icon: "mdi-bank",
+          iconColor: "white",
+          color: "light-blue darken-2",
+          buttonText: "View Banks",
+          route: "/bank",
+        },
+        availableInventory: {
           title: "Available Inventory",
-          icon: "mdi-store",
+          icon: "mdi-store-check",
           iconColor: "white",
           color: "green",
           buttonText: "View Available Inventory",
           route: "/inventory",
-        }, 
+        },
         reservedInventory: {
           title: "Reserved Inventory",
-          icon: "mdi-store",
+          icon: "mdi-store-clock",
           iconColor: "white",
           color: "orange",
           buttonText: "View Reserved Inventory",
@@ -178,7 +193,7 @@ export default {
         },
         damagedInventory: {
           title: "Damaged Inventory",
-          icon: "mdi-store",
+          icon: "mdi-store-remove",
           iconColor: "white",
           color: "red",
           buttonText: "View Damaged Inventory",

@@ -66,7 +66,7 @@ export default {
   name: "BankList",
   data() {
     return {
-      sortBy: "name",
+      // sortBy: "name",
       search: "",
       sortDesc: false,
       headers: [

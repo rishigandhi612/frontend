@@ -8,7 +8,9 @@
     >
       <div class="product-name-header">
         <h1 class="product-name">
-{{ capitalizeFirstLetter(inventoryItem.productName) || "Product Name" }}
+          {{
+            capitalizeFirstLetter(inventoryItem.productName) || "Product Name"
+          }}
         </h1>
       </div>
 
@@ -23,12 +25,14 @@
           Batch No: <strong>{{ inventoryItem.rollId || "N/A" }} </strong>
         </v-col>
         <v-col cols="6">
-          Net Weight: <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg
+          Net Weight:
+          <strong> {{ inventoryItem.netWeight || "N/A" }} </strong> kg
         </v-col>
       </v-row>
 
       <div class="info-row" v-if="inventoryItem.type === 'film'">
-        Length (Approx): <strong>{{ inventoryItem.mtr || "N/A" }}</strong> meters
+        Length (Approx):
+        <strong>{{ inventoryItem.mtr || "N/A" }}</strong> meters
       </div>
       <div class="info-row" v-if="inventoryItem.type === 'film'">
         Size: <strong>{{ displaySizeInInches() }} </strong>
@@ -77,21 +81,25 @@
 
     <!-- Print Controls -->
     <div class="print-controls no-print">
-      <button 
-        @click="printSticker" 
+      <button
+        @click="printSticker"
         class="print-btn secondary"
         v-if="inventoryItem"
         :disabled="printing"
       >
-        {{ printing ? 'Printing...' : 'Print Single Sticker' }}
+        {{ printing ? "Printing..." : "Print Single Sticker" }}
       </button>
-      <button 
-        @click="printMultipleStickers" 
+      <button
+        @click="printMultipleStickers"
         class="print-btn secondary"
         v-if="inventoryItems && inventoryItems.length > 1"
         :disabled="printing"
       >
-        {{ printing ? 'Printing...' : `Print All Stickers (${inventoryItems.length} items)` }}
+        {{
+          printing
+            ? "Printing..."
+            : `Print All Stickers (${inventoryItems.length} items)`
+        }}
       </button>
     </div>
   </div>
@@ -125,18 +133,18 @@ export default {
           this.generateBarcode();
         });
       },
-      deep: true
-    }
+      deep: true,
+    },
   },
   methods: {
     capitalizeFirstLetter(text) {
       return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
     },
-    
+
     convertToInches(mm) {
       return (parseFloat(mm) / 25.4).toFixed(1);
     },
-    
+
     calculateCoreWeight(item = null) {
       const targetItem = item || this.inventoryItem;
       const gross = parseFloat(targetItem.grossWeight) || 0;
@@ -144,19 +152,19 @@ export default {
       const core = gross - net;
       return core > 0 ? core.toFixed(1) : "N/A";
     },
-    
+
     displaySizeInInches(width = null) {
       const w = width || parseFloat(this.inventoryItem.width);
       if (!w) return "N/A";
       return w > 60 ? `${this.convertToInches(w)}"` : `${w}"`;
     },
-    
+
     displaySizeInMm(width = null) {
       const w = width || parseFloat(this.inventoryItem.width);
       if (!w) return "N/A";
       return w > 60 ? `${w} mm` : `${(w * 25.4).toFixed(1)} mm`;
     },
-    
+
     generateBarcode() {
       if (this.$refs.barcodeCanvas && this.inventoryItem?.rollId) {
         try {
@@ -177,7 +185,7 @@ export default {
     // Generate barcode image data for a specific item with larger size
     async generateBarcodeForItem(item) {
       if (!item?.rollId) return null;
-      
+
       // Check cache first
       if (this.barcodeCache.has(item.rollId)) {
         return this.barcodeCache.get(item.rollId);
@@ -185,7 +193,7 @@ export default {
 
       try {
         // Create a temporary canvas
-        const canvas = document.createElement('canvas');
+        const canvas = document.createElement("canvas");
         JsBarcode(canvas, item.rollId, {
           format: "CODE128",
           displayValue: true,
@@ -194,37 +202,46 @@ export default {
           width: 3,
           margin: 10,
         });
-        
+
         const imageData = canvas.toDataURL("image/png");
-        
+
         // Cache the result
         this.barcodeCache.set(item.rollId, imageData);
-        
+
         return imageData;
       } catch (error) {
         console.error("Error generating barcode for item:", error);
         return null;
       }
     },
-    
+
     // Single sticker print - now uses the same multi-style with one item
     async printSticker() {
       if (this.printing) return;
-      
+
       this.printing = true;
-      
+
       try {
         // Generate barcode image
-        const barcodeImageData = await this.generateBarcodeForItem(this.inventoryItem);
-        
-        const printWindow = window.open("", "_blank", "width=1000vw,height=1000vh");
+        const barcodeImageData = await this.generateBarcodeForItem(
+          this.inventoryItem
+        );
+
+        const printWindow = window.open(
+          "",
+          "_blank",
+          "width=1000vw,height=1000vh"
+        );
         if (!printWindow) {
           throw new Error("Popup blocked. Please allow popups for this site.");
         }
 
         // Use the same multi-page content generator with single item
-        const { pages, styles } = this.generateMultiPageContent([this.inventoryItem], [barcodeImageData]);
-        
+        const { pages, styles } = this.generateMultiPageContent(
+          [this.inventoryItem],
+          [barcodeImageData]
+        );
+
         printWindow.document.write(`
           <!DOCTYPE html>
           <html>
@@ -238,9 +255,9 @@ export default {
             </body>
           </html>
         `);
-        
+
         printWindow.document.close();
-        
+
         // Wait for content to load, then print
         printWindow.onload = () => {
           setTimeout(() => {
@@ -248,7 +265,6 @@ export default {
             printWindow.onafterprint = () => printWindow.close();
           }, 500);
         };
-        
       } catch (error) {
         console.error("Print error:", error);
         alert("Error printing sticker: " + error.message);
@@ -260,23 +276,30 @@ export default {
     // Multiple stickers print - EXACTLY 4 per page
     async printMultipleStickers() {
       if (this.printing || !this.inventoryItems?.length) return;
-      
+
       this.printing = true;
-      
+
       try {
         // Generate all barcodes first
-        const barcodePromises = this.inventoryItems.map(item => 
+        const barcodePromises = this.inventoryItems.map((item) =>
           this.generateBarcodeForItem(item)
         );
         const barcodeImages = await Promise.all(barcodePromises);
-        
-        const printWindow = window.open("", "_blank", "width=1500vw,height=1000vh");
+
+        const printWindow = window.open(
+          "",
+          "_blank",
+          "width=1500vw,height=1000vh"
+        );
         if (!printWindow) {
           throw new Error("Popup blocked. Please allow popups for this site.");
         }
 
-        const { pages, styles } = this.generateMultiPageContent(this.inventoryItems, barcodeImages);
-        
+        const { pages, styles } = this.generateMultiPageContent(
+          this.inventoryItems,
+          barcodeImages
+        );
+
         printWindow.document.write(`
           <!DOCTYPE html>
           <html>
@@ -290,16 +313,15 @@ export default {
             </body>
           </html>
         `);
-        
+
         printWindow.document.close();
-        
+
         printWindow.onload = () => {
           setTimeout(() => {
             printWindow.print();
             printWindow.onafterprint = () => printWindow.close();
           }, 1000);
         };
-        
       } catch (error) {
         console.error("Bulk print error:", error);
         alert("Error printing stickers: " + error.message);
@@ -311,82 +333,132 @@ export default {
     // Generate content for multiple pages - EXACTLY 4 stickers per page
     generateMultiPageContent(items, barcodeImages) {
       const itemsPerPage = 4; // Fixed at 4 stickers per page
-      let pagesHTML = '';
-      
+      let pagesHTML = "";
+
       for (let i = 0; i < items.length; i += itemsPerPage) {
         const pageItems = items.slice(i, i + itemsPerPage);
         const pageBarcodes = barcodeImages.slice(i, i + itemsPerPage);
-        
+
         let pageHTML = '<div class="print-page"><div class="sticker-grid">';
-        
+
         // Always create 4 slots, fill empty ones if needed
         for (let j = 0; j < 4; j++) {
           if (j < pageItems.length) {
             const item = pageItems[j];
-            const isLandscape = item.type === 'non-film';
+            const isLandscape = item.type === "non-film";
             const barcodeImage = pageBarcodes[j];
-            pageHTML += this.generateStickerHTML(item, barcodeImage, isLandscape);
+            pageHTML += this.generateStickerHTML(
+              item,
+              barcodeImage,
+              isLandscape
+            );
           } else {
             // Empty slot to maintain 2x2 grid
             pageHTML += '<div class="empty-slot"></div>';
           }
         }
-        
-        pageHTML += '</div></div>';
+
+        pageHTML += "</div></div>";
         pagesHTML += pageHTML;
       }
-      
+
       return {
         pages: pagesHTML,
-        styles: this.getMultiStickerStyles()
+        styles: this.getMultiStickerStyles(),
       };
     },
 
-    // Generate HTML for a single sticker
     generateStickerHTML(item, barcodeImageData, isLandscape) {
-      const barcodeImg = barcodeImageData ? 
-        `<img src="${barcodeImageData}" style="max-width: 100%; height: 80px; object-fit: contain;" alt="Barcode">` : 
-        `<div style="height: 800px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
+      const barcodeImg = barcodeImageData
+        ? `<img src="${barcodeImageData}" style="max-width: 100%; height: 80px; object-fit: contain;" alt="Barcode">`
+        : `<div style="height: 80px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
 
-      const filmRows = item.type === 'film' ? `
-        <div class="info-row">Roll No: <strong>${item.rollId || "N/A"}</strong></div>
-        <div class="info-row">Length (Approx): <strong>${item.mtr || "N/A"}</strong> meters</div>
-        <div class="info-row">Size: <strong>${this.displaySizeInInches(item.width)}</strong></div>
+      const filmRows =
+        item.type === "film"
+          ? `
+        <div class="info-row">Roll No: <strong>${
+          item.rollId || "N/A"
+        }</strong></div>
+        <div class="info-row">Length (Approx): <strong>${
+          item.mtr || "N/A"
+        }</strong> meters</div>
+        <div class="info-row">Size: <strong>${this.displaySizeInInches(
+          item.width
+        )}</strong></div>
         <div class="info-row">Size: ${this.displaySizeInMm(item.width)}</div>
-        <div class="info-row">Gross Weight: ${item.grossWeight || "N/A"} kg</div>
-        <div class="info-row">Core Weight: ${this.calculateCoreWeight(item)} kg</div>
-        <div class="info-row">Net Weight: <strong>${item.netWeight || "N/A"}</strong> kg</div>
-      ` : `
-        <div class="batch-number">
-          <div style="display: flex; justify-content: space-between; padding: 0 10px;">
-            <div>Batch No: <strong>${item.rollId || "N/A"}</strong></div>
-            <div>Net Weight: <strong>${item.netWeight || "N/A"}</strong> kg</div>
+        <div class="info-row">Gross Weight: ${
+          item.grossWeight || "N/A"
+        } kg</div>
+        <div class="info-row">Core Weight: ${this.calculateCoreWeight(
+          item
+        )} kg</div>
+        <div class="info-row">Net Weight: <strong>${
+          item.netWeight || "N/A"
+        }</strong> kg</div>
+      `
+          : `
+        <div class="nonfilm-content">
+          <div class="batch-number-large">
+            Batch No. ${item.rollId || "N/A"}
+          </div>
+          <div class="net-weight-large">
+            NET WEIGHT - ${item.netWeight || "N/A"} KGS
+          </div>
+          <div class="industrial-use">
+            FOR INDUSTRIAL USE ONLY
           </div>
         </div>
       `;
 
       return `
-        <div class="sticker-content ${isLandscape ? 'landscape' : ''}">
-          <div class="product-name-header">
-            <h1 class="product-name">${this.capitalizeFirstLetter(item.productName) || "Product Name"}</h1>
+        <div class="sticker-content ${isLandscape ? "landscape" : ""}">
+          <div class="sticker-header">
+            <div class="logo-placeholder">LOGO</div>
+            <div class="header-text">
+              <h2 class="company-name-header">HEMANT TRADERS</h2>
+              <p class="company-address-header">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
+            </div>
           </div>
+          
+          <div class="product-name-header">
+            <h1 class="product-name">${
+              this.capitalizeFirstLetter(item.productName) || "Product Name"
+            }</h1>
+          </div>
+          
           ${filmRows}
-          <div class="barcode-section">${barcodeImg}</div>
-          <div class="footer">
-            <p class="address">Marketed By:</p>
-            <h2 class="company-name">HEMANT TRADERS</h2>
-            <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
-            <p class="contact-web">
-              Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br />
-              Web: hemanttraders.vercel.app
-            </p>
-            <div class="separator-line"></div>
-            <h2 class="product-line1">
-              Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong>
-            </h2>
-            <h2 class="product-line2">
-              <strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong>
-            </h2>
+          ${
+            item.type === "film"
+              ? `<div class="barcode-section">${barcodeImg}</div>`
+              : ""
+          }
+          
+          <div class="footer ${isLandscape ? "footer-landscape" : ""}">
+            ${
+              isLandscape
+                ? `
+              <div class="footer-contact">
+                <span><strong>C:</strong> 9422080922 / 9420699675</span>
+                <span><strong>E:</strong> hemanttraders111@yahoo.in</span>
+              </div>
+            `
+                : `
+              <p class="address">Marketed By:</p>
+              <h2 class="company-name">HEMANT TRADERS</h2>
+              <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
+              <p class="contact-web">
+                Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br />
+                Web: hemanttraders.vercel.app
+              </p>
+              <div class="separator-line"></div>
+              <h2 class="product-line1">
+                Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong>
+              </h2>
+              <h2 class="product-line2">
+                <strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong>
+              </h2>
+            `
+            }
           </div>
         </div>
       `;
@@ -594,7 +666,7 @@ export default {
       } else {
         this.printSticker();
       }
-    }
+    },
   },
 };
 </script>

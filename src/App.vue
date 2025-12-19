@@ -67,7 +67,7 @@
         </v-list-item>
         <v-list-item link @click="$router.push('/inventory')">
           <v-list-item-icon>
-            <v-icon>mdi-store-check</v-icon>
+            <v-icon>mdi-store</v-icon>
           </v-list-item-icon>
           <v-list-item-title>Inventory</v-list-item-title>
         </v-list-item>
@@ -101,7 +101,7 @@
           </v-list-item-icon>
           <v-list-item-title>Customer Invoices</v-list-item-title>
         </v-list-item>
-        <v-list-item link @click="$router.push('/Banks')">
+        <v-list-item link @click="$router.push('/bank')">
           <v-list-item-icon>
             <v-icon>mdi-bank</v-icon>
           </v-list-item-icon>

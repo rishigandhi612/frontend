@@ -566,6 +566,7 @@ export default {
             textColor: [0, 0, 0],
             fillColor: null,
           },
+          showHead: "everyPage",
           margin: { bottom: 15, top: 0 },
           pageBreak: "auto",
           didDrawPage: (data) => {

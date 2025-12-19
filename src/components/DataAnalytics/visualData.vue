@@ -2,46 +2,11 @@
   <v-container fluid>
     <v-row>
       <v-col cols="12">
-        <!-- Header Card with Filter Button -->
-        <v-card class="mb-4 elevation-3">
-          <v-card-title
-            class="primary white--text d-flex justify-space-between align-center"
-          >
-            <div class="d-flex align-center">
-              <v-icon left dark size="28">mdi-chart-box-outline</v-icon>
-              <span class="text-h5">Analytics Dashboard</span>
-            </div>
-            <div class="d-flex align-center">
-              <!-- Active Filter Indicator -->
-              <v-chip
-                v-if="hasActiveFilters"
-                small
-                color="white"
-                text-color="primary"
-                class="mr-3"
-              >
-                <v-icon small left>mdi-filter-check</v-icon>
-                Filters Active
-              </v-chip>
-              <!-- Filter Button -->
-              <v-btn
-                color="white"
-                text
-                @click="filterDialog = true"
-                class="text-none"
-              >
-                <v-icon left>mdi-filter-variant</v-icon>
-                Filters
-              </v-btn>
-            </div>
-          </v-card-title>
-        </v-card>
-
         <!-- Navigation Tabs with Enhanced Design -->
         <v-card class="mb-2 elevation-2">
           <v-tabs
             v-model="activeTab"
-            background-color="grey lighten-4"
+            background-color="orange lighten-4"
             color="primary"
             slider-color="primary"
             slider-size="3"
@@ -72,6 +37,26 @@
               Top Products
             </v-tab>
           </v-tabs>
+          <v-chip
+            v-if="hasActiveFilters"
+            small
+            color="white"
+            text-color="primary"
+            class="mr-3"
+          >
+            <v-icon small left>mdi-filter-check</v-icon>
+            Filters Active
+          </v-chip>
+          <!-- Filter Button -->
+          <v-btn
+            color="primary"
+            text
+            @click="filterDialog = true"
+            class="text-none"
+          >
+            <v-icon left>mdi-filter-variant</v-icon>
+            Filters
+          </v-btn>
         </v-card>
 
         <!-- Tab Content -->

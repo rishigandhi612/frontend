@@ -1,14 +1,14 @@
 <template>
   <v-container fluid class="pa-4">
     <!-- Filter Controls -->
-    <v-card class="mb-4 elevation-2">
+    <v-card class="mb-2 elevation-2">
       <v-card-title class="primary white--text py-3">
         <v-icon left color="white">mdi-filter-variant</v-icon>
         Filters & Controls
       </v-card-title>
       <v-card-text class="pt-4">
         <v-row>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="4">
             <v-select
               v-model="localFilters.groupBy"
               :items="groupByOptions"
@@ -18,7 +18,7 @@
               prepend-inner-icon="mdi-group"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="4">
             <v-select
               v-model="localFilters.sortBy"
               :items="sortByOptions"
@@ -28,7 +28,7 @@
               prepend-inner-icon="mdi-sort"
             ></v-select>
           </v-col>
-          <v-col cols="12" md="3">
+          <v-col cols="12" md="4">
             <v-text-field
               v-model.number="localFilters.limit"
               label="Limit Results"
@@ -37,12 +37,6 @@
               dense
               prepend-inner-icon="mdi-numeric"
             ></v-text-field>
-          </v-col>
-          <v-col cols="12" md="3">
-            <v-btn color="primary" block @click="fetchData" large elevation="2">
-              <v-icon left>mdi-reload</v-icon>
-              Refresh Data
-            </v-btn>
           </v-col>
         </v-row>
       </v-card-text>
@@ -109,7 +103,7 @@
                 <div class="text-h4 font-weight-bold mb-1">
                   {{ formatNumber(summary.totalInvoices) }}
                 </div>
-                <div class="text-subtitle-2">Total Invoices</div>
+                <div class="text-subtitle-2">Total Pcs Sold</div>
               </div>
               <v-avatar size="56" color="rgba(255,255,255,0.2)">
                 <v-icon size="32">mdi-file-document-multiple</v-icon>
@@ -122,9 +116,9 @@
 
     <!-- Data Table -->
     <data-table-wrapper
-      title="Product Sales Details"
+      :title="getTableTitle()"
       icon="mdi-chart-bar"
-      :headers="headers"
+      :headers="dynamicHeaders"
       :items="salesData"
       :loading="loading"
       :sort-by="['totalRevenue']"
@@ -135,13 +129,40 @@
     >
       <template v-slot:item="{ item }">
         <tr>
-          <td>
+          <!-- Dynamic first column based on groupBy -->
+          <td v-if="localFilters.groupBy === 'month'">
+            <div class="py-2">
+              <v-chip color="indigo" dark class="font-weight-bold">
+                <v-icon small left>mdi-calendar</v-icon>
+                {{ formatPeriod(item._id) }}
+              </v-chip>
+            </div>
+          </td>
+          <td v-else-if="localFilters.groupBy === 'customer'">
+            <div class="py-2">
+              <v-btn class="font-weight-bold text-subtitle-2 mb-1" text>
+                <v-icon small left>mdi-account</v-icon>
+                {{ item.customerName || "Unknown Customer" }}
+              </v-btn>
+            </div>
+          </td>
+          <td v-else>
             <div class="py-2">
               <v-btn class="font-weight-bold text-subtitle-2 mb-1" text>
                 {{ item.productName }}
               </v-btn>
             </div>
           </td>
+
+          <!-- Product name column for month grouping -->
+          <td v-if="localFilters.groupBy === 'month'">
+            <div class="py-2">
+              <v-btn class="font-weight-bold text-subtitle-2" text small>
+                {{ item.productName }}
+              </v-btn>
+            </div>
+          </td>
+
           <td class="text-center">
             <v-chip small color="blue" dark class="font-weight-medium">
               {{ formatNumber(item.totalQuantitySold) }} Kg
@@ -162,7 +183,7 @@
               {{ item.uniqueInvoiceCount }} Invoices
             </v-chip>
           </td>
-          <td class="text-center">
+          <td v-if="localFilters.groupBy !== 'customer'" class="text-center">
             <v-chip small color="purple" outlined>
               {{ item.uniqueCustomerCount }} Customers
             </v-chip>
@@ -203,7 +224,7 @@
               </template>
               <v-card>
                 <v-card-title class="text-subtitle-1 py-2">
-                  Available Widths (mm)
+                  Available Widths
                 </v-card-title>
                 <v-divider></v-divider>
                 <v-card-text>
@@ -215,7 +236,7 @@
                     color="indigo"
                     dark
                   >
-                    {{ width }} mm
+                    {{ width }}
                   </v-chip>
                 </v-card-text>
               </v-card>
@@ -280,13 +301,52 @@ export default {
         { text: "Revenue", value: "revenue" },
         { text: "Quantity", value: "quantity" },
       ],
-      headers: [
-        {
+    };
+  },
+  computed: {
+    maxRevenue() {
+      if (!this.salesData.length) return 0;
+      return Math.max(...this.salesData.map((item) => item.totalRevenue || 0));
+    },
+    dynamicHeaders() {
+      const baseHeaders = [];
+
+      // First column changes based on groupBy
+      if (this.localFilters.groupBy === "month") {
+        baseHeaders.push({
+          text: "Period",
+          value: "period",
+          sortable: true,
+          width: "150px",
+        });
+      } else if (this.localFilters.groupBy === "customer") {
+        baseHeaders.push({
+          text: "Customer Name",
+          value: "customerName",
+          sortable: true,
+          width: "200px",
+        });
+      } else {
+        baseHeaders.push({
           text: "Product Name",
           value: "productName",
           sortable: true,
           width: "200px",
-        },
+        });
+      }
+
+      // Add product name column for month grouping
+      if (this.localFilters.groupBy === "month") {
+        baseHeaders.push({
+          text: "Product Name",
+          value: "productName",
+          sortable: true,
+          width: "200px",
+        });
+      }
+
+      // Common columns
+      baseHeaders.push(
         {
           text: "Total Quantity",
           value: "totalQuantitySold",
@@ -310,13 +370,20 @@ export default {
           value: "uniqueInvoiceCount",
           sortable: true,
           align: "center",
-        },
-        {
+        }
+      );
+
+      // Add customers column except when grouping by customer
+      if (this.localFilters.groupBy !== "customer") {
+        baseHeaders.push({
           text: "Customers",
           value: "uniqueCustomerCount",
           sortable: true,
           align: "center",
-        },
+        });
+      }
+
+      baseHeaders.push(
         {
           text: "Avg Qty/Invoice",
           value: "averageQuantityPerInvoice",
@@ -330,18 +397,20 @@ export default {
           align: "center",
         },
         { text: "Widths Available", value: "widths", sortable: false },
-        { text: "Revenue Share", value: "percentage", sortable: false },
-      ],
-    };
-  },
-  computed: {
-    maxRevenue() {
-      if (!this.salesData.length) return 0;
-      return Math.max(...this.salesData.map((item) => item.totalRevenue || 0));
+        { text: "Revenue Share", value: "percentage", sortable: false }
+      );
+
+      return baseHeaders;
     },
   },
   watch: {
     filters: {
+      handler() {
+        this.fetchData();
+      },
+      deep: true,
+    },
+    localFilters: {
       handler() {
         this.fetchData();
       },
@@ -369,6 +438,36 @@ export default {
     getUniqueWidthCount(widths) {
       const unique = this.getUniqueWidths(widths);
       return unique.length || 0;
+    },
+
+    formatPeriod(idObj) {
+      if (!idObj) return "N/A";
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const month = idObj.month ? monthNames[idObj.month - 1] : "";
+      const year = idObj.year || "";
+      return `${month} ${year}`;
+    },
+
+    getTableTitle() {
+      const titles = {
+        month: "Monthly Product Sales",
+        customer: "Customer-wise Sales",
+        product: "Product Sales Details",
+      };
+      return titles[this.localFilters.groupBy] || "Sales Details";
     },
 
     async fetchData() {

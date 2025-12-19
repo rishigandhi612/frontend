@@ -79,7 +79,7 @@
     </v-row>
 
     <!-- Monthly Revenue Bars -->
-    <v-card class="mb-4">
+    <v-card class="mb-4 mt-4">
       <v-card-title>
         <v-icon left>mdi-chart-bar</v-icon>
         Monthly Revenue Comparison

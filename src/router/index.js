@@ -152,7 +152,7 @@ const routes = [
   },
   // BANK ROUTES - FIXED ORDER AND NAMES
   {
-    path: "/banks",
+    path: "/bank",
     component: BankList,
     name: "bankList",
     meta: { requiresAuth: true },
