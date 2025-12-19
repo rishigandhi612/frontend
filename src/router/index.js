@@ -31,6 +31,7 @@ import CustomerInvoiceSummary from "@/components/Invoices/CustomerInvoice/Custom
 import BankList from "@/components/Bank/BankList.vue";
 import BankDetail from "@/components/Bank/BankDetail.vue";
 import AddEditBank from "@/components/Bank/AddEditBank.vue";
+import inventoryImportCSV from "@/components/Inventory/inventoryImportCSV.vue";
 
 Vue.use(Router);
 
@@ -244,6 +245,12 @@ const routes = [
     path: "/customer-invoices",
     component: CustomerInvoiceSummary,
     name: "customerInvoiceSummary",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/inventory/import-csv",
+    name: "inventoryImportCSV",
+    component: inventoryImportCSV,
     meta: { requiresAuth: true },
   },
   {

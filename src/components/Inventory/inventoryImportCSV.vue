@@ -9,47 +9,79 @@
       <v-col cols="12" md="10">
         <v-card class="pa-4">
           <v-card-title class="text-h4 justify-center">
-            Batch Add Inventory Items
+            Import Inventory from CSV
           </v-card-title>
-          <v-btn
-            color="primary"
-            @click="$router.push({ name: 'inventoryImportCSV' })"
-          >
-            <v-icon left>mdi-file-upload</v-icon>
-            Import from CSV
-          </v-btn>
+
           <v-divider class="my-4"></v-divider>
 
-          <!-- Batch Controls -->
-          <v-row class="mb-4">
-            <v-col cols="12" sm="6">
-              <v-btn @click="addRow" color="primary" :disabled="loading">
-                <v-icon left>mdi-plus</v-icon>
-                Add Row
-              </v-btn>
-            </v-col>
-            <v-col cols="12" sm="6" class="text-right">
-              <v-chip color="info" outlined>
-                Total Items: {{ inventoryItems.length }}
-              </v-chip>
-            </v-col>
-          </v-row>
-
-          <!-- Batch Inventory Table -->
-          <v-card outlined>
+          <!-- CSV Upload Section -->
+          <v-card outlined class="mb-4">
             <v-card-title class="text-h6">
-              Inventory Items
-              <v-spacer></v-spacer>
-              <v-btn
-                @click="clearAll"
-                color="error"
-                text
-                small
-                :disabled="loading || inventoryItems.length === 0"
-              >
-                <v-icon left small>mdi-delete</v-icon>
-                Clear All
+              Step 1: Upload CSV File
+            </v-card-title>
+            <v-card-text>
+              <v-file-input
+                v-model="csvFile"
+                accept=".csv"
+                label="Select CSV File"
+                prepend-icon="mdi-file-delimited"
+                show-size
+                @change="handleFileUpload"
+                :disabled="loading"
+                outlined
+              ></v-file-input>
+
+              <!-- Download Template Button -->
+              <v-btn @click="downloadTemplate" color="info" outlined small>
+                <v-icon left small>mdi-download</v-icon>
+                Download CSV Template
               </v-btn>
+
+              <!-- CSV Format Instructions -->
+              <v-alert type="info" text class="mt-4">
+                <div class="font-weight-bold mb-2">CSV Format:</div>
+                <ul>
+                  <li>
+                    <strong>Product Name</strong> - Name of the product (must
+                    match existing products)
+                  </li>
+                  <li><strong>Type</strong> - "film" or "non-film"</li>
+                  <li>
+                    <strong>Batch Number</strong> - Required for non-film items
+                  </li>
+                  <li><strong>Width</strong> - For film items (optional)</li>
+                  <li><strong>Micron</strong> - For film items (optional)</li>
+                  <li><strong>Gross Weight</strong> - In kg (optional)</li>
+                  <li><strong>Net Weight</strong> - In kg (required)</li>
+                  <li>
+                    <strong>Length</strong> - For film items in meters
+                    (optional)
+                  </li>
+                  <li>
+                    <strong>Status</strong> - available, damaged, or reserved
+                    (default: available)
+                  </li>
+                </ul>
+              </v-alert>
+            </v-card-text>
+          </v-card>
+
+          <!-- Preview Section -->
+          <v-card outlined v-if="inventoryItems.length > 0">
+            <v-card-title class="text-h6">
+              Step 2: Review & Edit Imported Data
+              <v-spacer></v-spacer>
+              <v-chip color="success" outlined>
+                {{ validItemsCount }} Valid
+              </v-chip>
+              <v-chip
+                color="error"
+                outlined
+                class="ml-2"
+                v-if="invalidItemsCount > 0"
+              >
+                {{ invalidItemsCount }} Invalid
+              </v-chip>
             </v-card-title>
 
             <v-data-table
@@ -58,8 +90,9 @@
               :hide-default-footer="true"
               disable-pagination
               class="elevation-0"
+              :items-per-page="-1"
             >
-              <!-- Product Selection Column -->
+              <!-- Product Column -->
               <template slot="item.product" slot-scope="{ item, index }">
                 <v-autocomplete
                   v-model="item.product"
@@ -79,7 +112,7 @@
                 </div>
               </template>
 
-              <!-- Type Selection Column -->
+              <!-- Type Column -->
               <template slot="item.type" slot-scope="{ item }">
                 <v-select
                   v-model="item.type"
@@ -125,8 +158,8 @@
               <!-- Micron Column -->
               <template slot="item.micron" slot-scope="{ item }">
                 <v-text-field
-                  v-model.number="item.micron"
                   v-if="item.type === 'film'"
+                  v-model.number="item.micron"
                   label="Micron"
                   type="number"
                   step="0.01"
@@ -169,11 +202,11 @@
                 ></v-text-field>
               </template>
 
-              <!-- Meter Column -->
+              <!-- Length Column -->
               <template slot="item.mtr" slot-scope="{ item }">
                 <v-text-field
-                  v-model.number="item.mtr"
                   v-if="item.type === 'film'"
+                  v-model.number="item.mtr"
                   label="Length"
                   type="number"
                   step="0.01"
@@ -198,6 +231,14 @@
                 ></v-select>
               </template>
 
+              <!-- Row Status Indicator -->
+              <template slot="item.rowStatus" slot-scope="{ item }">
+                <v-icon v-if="hasErrors(item)" color="error"
+                  >mdi-alert-circle</v-icon
+                >
+                <v-icon v-else color="success">mdi-check-circle</v-icon>
+              </template>
+
               <!-- Actions Column -->
               <template slot="item.actions" slot-scope="{ index }">
                 <v-btn
@@ -211,24 +252,25 @@
                 </v-btn>
               </template>
             </v-data-table>
-
-            <!-- Empty State -->
-            <div v-if="inventoryItems.length === 0" class="text-center pa-8">
-              <v-icon size="64" color="grey lighten-2"
-                >mdi-package-variant</v-icon
-              >
-              <p class="grey--text mt-4">No inventory items added yet</p>
-              <v-btn @click="addRow" color="primary">
-                <v-icon left>mdi-plus</v-icon>
-                Add First Item
-              </v-btn>
-            </div>
           </v-card>
 
-          <v-divider class="my-4"></v-divider>
+          <v-divider class="my-4" v-if="inventoryItems.length > 0"></v-divider>
 
           <!-- Submit Actions -->
-          <v-card-actions class="justify-center">
+          <v-card-actions
+            class="justify-center"
+            v-if="inventoryItems.length > 0"
+          >
+            <v-btn
+              @click="clearAll"
+              color="error"
+              outlined
+              large
+              :disabled="loading"
+            >
+              <v-icon left>mdi-close</v-icon>
+              Clear All
+            </v-btn>
             <v-btn
               @click="validateAndSave"
               color="primary"
@@ -237,7 +279,7 @@
               :disabled="loading || inventoryItems.length === 0"
             >
               <v-icon left>mdi-content-save</v-icon>
-              Save All Inventory Items ({{ inventoryItems.length }})
+              Save All Items ({{ validItemsCount }})
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -296,7 +338,23 @@
             Please fix the following errors:
           </div>
           <ul class="mb-0">
-            <li v-for="error in validationErrors" :key="error">{{ error }}</li>
+            <li v-for="(error, idx) in validationErrors" :key="idx">
+              {{ error }}
+            </li>
+          </ul>
+        </v-alert>
+
+        <!-- Parse Errors -->
+        <v-alert
+          v-if="parseErrors.length > 0"
+          type="error"
+          class="mt-4"
+          dismissible
+          @input="parseErrors = []"
+        >
+          <div class="font-weight-bold mb-2">CSV Parsing Errors:</div>
+          <ul class="mb-0">
+            <li v-for="(error, idx) in parseErrors" :key="idx">{{ error }}</li>
           </ul>
         </v-alert>
       </v-col>
@@ -308,13 +366,15 @@
 import { mapGetters } from "vuex";
 
 export default {
-  name: "BatchInventoryForm",
+  name: "CSVImportInventory",
   data() {
     return {
+      csvFile: null,
       loading: false,
       error: null,
       success: null,
       validationErrors: [],
+      parseErrors: [],
       progressDialog: false,
       savedCount: 0,
       progressMessage: "",
@@ -330,6 +390,7 @@ export default {
         { text: "Non-Film", value: "non-film" },
       ],
       headers: [
+        { text: "Status", value: "rowStatus", sortable: false, width: "60px" },
         { text: "Product", value: "product", sortable: false, width: "200px" },
         { text: "Type", value: "type", sortable: false, width: "120px" },
         { text: "Batch #", value: "rollId", sortable: false, width: "120px" },
@@ -360,11 +421,17 @@ export default {
       if (this.inventoryItems.length === 0) return 0;
       return (this.savedCount / this.inventoryItems.length) * 100;
     },
+
+    validItemsCount() {
+      return this.inventoryItems.filter((item) => !this.hasErrors(item)).length;
+    },
+
+    invalidItemsCount() {
+      return this.inventoryItems.filter((item) => this.hasErrors(item)).length;
+    },
   },
   async created() {
     await this.fetchProducts();
-    // Add one initial row
-    this.addRow();
   },
   methods: {
     async fetchProducts() {
@@ -380,23 +447,156 @@ export default {
       }
     },
 
-    createEmptyItem() {
-      return {
-        product: null,
-        width: null,
-        netWeight: null,
-        grossWeight: null,
-        rollId: "",
-        micron: null,
-        mtr: null,
-        type: "film",
-        status: "available",
-        errors: {},
-      };
+    downloadTemplate() {
+      const headers = [
+        "Product Name",
+        "Type",
+        "Batch Number",
+        "Width",
+        "Micron",
+        "Gross Weight",
+        "Net Weight",
+        "Length",
+        "Status",
+      ];
+
+      const sampleData = [
+        [
+          "Product A",
+          "film",
+          "",
+          "100",
+          "25",
+          "50.5",
+          "48.2",
+          "1000",
+          "available",
+        ],
+        [
+          "Product B",
+          "non-film",
+          "BATCH001",
+          "",
+          "",
+          "25.0",
+          "24.5",
+          "",
+          "available",
+        ],
+      ];
+
+      const csvContent = [
+        headers.join(","),
+        ...sampleData.map((row) => row.join(",")),
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "inventory_template.csv";
+      a.click();
+      window.URL.revokeObjectURL(url);
     },
 
-    addRow() {
-      this.inventoryItems.push(this.createEmptyItem());
+    async handleFileUpload(file) {
+      if (!file) {
+        return;
+      }
+
+      this.parseErrors = [];
+      this.validationErrors = [];
+      this.error = null;
+      this.success = null;
+
+      try {
+        const text = await file.text();
+        this.parseCSV(text);
+      } catch (error) {
+        console.error("Error reading file:", error);
+        this.error = "Failed to read CSV file";
+      }
+    },
+
+    parseCSV(text) {
+      const lines = text.split("\n").filter((line) => line.trim());
+
+      if (lines.length < 2) {
+        this.parseErrors.push("CSV file is empty or has no data rows");
+        return;
+      }
+
+      // Parse header
+      const headers = lines[0].split(",").map((h) => h.trim());
+
+      // Parse data rows
+      const items = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim());
+
+        if (values.length !== headers.length) {
+          this.parseErrors.push(`Row ${i + 1}: Column count mismatch`);
+          continue;
+        }
+
+        const rowData = {};
+        headers.forEach((header, index) => {
+          rowData[header] = values[index];
+        });
+
+        // Map CSV columns to item structure
+        const productName = rowData["Product Name"] || "";
+        const matchedProduct = this.productList.find(
+          (p) => p.name.toLowerCase() === productName.toLowerCase()
+        );
+
+        const item = {
+          product: matchedProduct || null,
+          type: (rowData["Type"] || "film").toLowerCase(),
+          rollId: rowData["Batch Number"] || "",
+          width: this.parseNumber(rowData["Width"]),
+          micron: this.parseNumber(rowData["Micron"]),
+          grossWeight: this.parseNumber(rowData["Gross Weight"]),
+          netWeight: this.parseNumber(rowData["Net Weight"]),
+          mtr: this.parseNumber(rowData["Length"]),
+          status: (rowData["Status"] || "available").toLowerCase(),
+          errors: {},
+          _originalProductName: productName,
+        };
+
+        // Validate product
+        if (!matchedProduct && productName) {
+          item.errors.product = `Product "${productName}" not found`;
+        }
+
+        items.push(item);
+      }
+
+      this.inventoryItems = items;
+
+      if (items.length === 0) {
+        this.parseErrors.push("No valid data rows found in CSV");
+      } else {
+        this.success = `Imported ${items.length} rows from CSV`;
+        // Auto-validate after import
+        setTimeout(() => {
+          this.validateItems();
+        }, 100);
+      }
+    },
+
+    parseNumber(value) {
+      if (!value || value === "") return null;
+      const num = parseFloat(value);
+      return isNaN(num) ? null : num;
+    },
+
+    hasErrors(item) {
+      return Object.keys(item.errors).length > 0;
+    },
+
+    handleProductSelection(index) {
+      this.$set(this.inventoryItems[index].errors, "product", null);
     },
 
     removeRow(index) {
@@ -405,14 +605,11 @@ export default {
 
     clearAll() {
       this.inventoryItems = [];
+      this.csvFile = null;
       this.validationErrors = [];
+      this.parseErrors = [];
       this.error = null;
       this.success = null;
-    },
-
-    handleProductSelection(index) {
-      // Clear any previous product error
-      this.$set(this.inventoryItems[index].errors, "product", null);
     },
 
     validateItems() {
@@ -517,7 +714,7 @@ export default {
         if (failedItems.length === 0) {
           this.success = `Successfully saved all ${this.inventoryItems.length} inventory items`;
           this.inventoryItems = [];
-          this.addRow(); // Add one new empty row
+          this.csvFile = null;
         } else {
           this.success = `Successfully saved ${this.savedCount} out of ${this.inventoryItems.length} items`;
           this.error = `Failed to save: ${failedItems.join(", ")}`;
@@ -547,7 +744,6 @@ export default {
 </script>
 
 <style scoped>
-/* Custom styles for the batch form */
 .v-data-table >>> .v-data-table__wrapper {
   overflow-x: auto;
 }
@@ -560,7 +756,6 @@ export default {
   padding: 8px 4px !important;
 }
 
-/* Make form fields more compact in table */
 .v-data-table >>> .v-input--dense .v-input__control {
   min-height: 32px;
 }
