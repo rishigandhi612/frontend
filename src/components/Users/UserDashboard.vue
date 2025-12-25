@@ -157,7 +157,7 @@ export default {
           iconColor: "white",
           color: "cyan",
           buttonText: "View Transactions",
-          route: "/bank",
+          route: "/transaction",
         },
         totalTransporters: {
           title: "Total Transporters",

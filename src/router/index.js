@@ -32,6 +32,9 @@ import BankList from "@/components/Bank/BankList.vue";
 import BankDetail from "@/components/Bank/BankDetail.vue";
 import AddEditBank from "@/components/Bank/AddEditBank.vue";
 import inventoryImportCSV from "@/components/Inventory/inventoryImportCSV.vue";
+import TransactionDetail from "@/components/Transaction/TransactionDetail.vue";
+import TransactionList from "@/components/Transaction/TransactionList.vue";
+import AddEditTransaction from "@/components/Transaction/AddEditTransaction.vue";
 
 Vue.use(Router);
 
@@ -253,6 +256,31 @@ const routes = [
     component: inventoryImportCSV,
     meta: { requiresAuth: true },
   },
+  {
+    path: "/transaction",
+    component: TransactionList,
+    name: "transactionList",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/transaction/:id",
+    component: TransactionDetail,
+    name: "transactionDetail",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/addtransaction",
+    component: AddEditTransaction,
+    name: "addTransaction",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/addtransaction/:id",
+    component: AddEditTransaction,
+    name: "editTransaction",
+    meta: { requiresAuth: true },
+  },
+
   {
     path: "*",
     component: NotFound,
