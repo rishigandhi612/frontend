@@ -18,6 +18,11 @@
           :loading="loading"
           :sort-by.sync="sortBy"
           :sort-desc.sync="sortDesc"
+          :footer-props="{
+            showFirstLastPage: true,
+            firstIcon: 'mdi-arrow-collapse-left',
+            lastIcon: 'mdi-arrow-collapse-right',
+          }"
         >
           <template v-slot:top>
             <v-text-field

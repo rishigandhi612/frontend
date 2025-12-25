@@ -28,6 +28,9 @@
           :loading="loading"
           :footer-props="{
             'items-per-page-options': [5, 10, 15, 20],
+            showFirstLastPage: true,
+            firstIcon: 'mdi-arrow-collapse-left',
+            lastIcon: 'mdi-arrow-collapse-right',
           }"
           @update:options="handleTableOptionsChange"
           class="elevation-1"
