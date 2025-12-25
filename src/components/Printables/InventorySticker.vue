@@ -368,10 +368,11 @@ export default {
       };
     },
 
+    // Generate HTML for a single sticker
     generateStickerHTML(item, barcodeImageData, isLandscape) {
       const barcodeImg = barcodeImageData
         ? `<img src="${barcodeImageData}" style="max-width: 100%; height: 80px; object-fit: contain;" alt="Barcode">`
-        : `<div style="height: 80px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
+        : `<div style="height: 800px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 12px;">No Barcode</div>`;
 
       const filmRows =
         item.type === "film"
@@ -397,68 +398,40 @@ export default {
         }</strong> kg</div>
       `
           : `
-        <div class="nonfilm-content">
-          <div class="batch-number-large">
-            Batch No. ${item.rollId || "N/A"}
-          </div>
-          <div class="net-weight-large">
-            NET WEIGHT - ${item.netWeight || "N/A"} KGS
-          </div>
-          <div class="industrial-use">
-            FOR INDUSTRIAL USE ONLY
+        <div class="batch-number">
+          <div style="display: flex; justify-content: space-between; padding: 0 10px;">
+            <div>Batch No: <strong>${item.rollId || "N/A"}</strong></div>
+            <div>Net Weight: <strong>${
+              item.netWeight || "N/A"
+            }</strong> kg</div>
           </div>
         </div>
       `;
 
       return `
         <div class="sticker-content ${isLandscape ? "landscape" : ""}">
-          <div class="sticker-header">
-            <div class="logo-placeholder">LOGO</div>
-            <div class="header-text">
-              <h2 class="company-name-header">HEMANT TRADERS</h2>
-              <p class="company-address-header">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
-            </div>
-          </div>
-          
           <div class="product-name-header">
             <h1 class="product-name">${
               this.capitalizeFirstLetter(item.productName) || "Product Name"
             }</h1>
           </div>
-          
           ${filmRows}
-          ${
-            item.type === "film"
-              ? `<div class="barcode-section">${barcodeImg}</div>`
-              : ""
-          }
-          
-          <div class="footer ${isLandscape ? "footer-landscape" : ""}">
-            ${
-              isLandscape
-                ? `
-              <div class="footer-contact">
-                <span><strong>C:</strong> 9422080922 / 9420699675</span>
-                <span><strong>E:</strong> hemanttraders111@yahoo.in</span>
-              </div>
-            `
-                : `
-              <p class="address">Marketed By:</p>
-              <h2 class="company-name">HEMANT TRADERS</h2>
-              <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
-              <p class="contact-web">
-                Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br />
-                Web: hemanttraders.vercel.app
-              </p>
-              <div class="separator-line"></div>
-              <h2 class="product-line1">
-                Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong>
-              </h2>
-              <h2 class="product-line2">
-                <strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong>
-              </h2>
-            `
-            }
+          <div class="barcode-section">${barcodeImg}</div>
+          <div class="footer">
+            <p class="address">Marketed By:</p>
+            <h2 class="company-name">HEMANT TRADERS</h2>
+            <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
+            <p class="contact-web">
+              Contact: <strong> (+91) 9422080922 / 9420699675 </strong> <br />
+              Web: hemanttraders.vercel.app
+            </p>
+            <div class="separator-line"></div>
+            <h2 class="product-line1">
+              Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong>
+            </h2>
+            <h2 class="product-line2">
+              <strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong>
+            </h2>
           </div>
         </div>
       `;
