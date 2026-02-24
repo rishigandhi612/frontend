@@ -151,8 +151,8 @@
                     <!-- Item Name -->
                     <v-col cols="12" md="3">
                       <v-autocomplete
-                        :value="item.name"
-                        @input="updateItemField(index, 'name', $event)"
+                        :value="item.productId"
+                        @input="onProductSelect(index, $event)"
                         :items="productOptions"
                         label="Item Name *"
                         :rules="[(v) => !!v || 'Required']"
@@ -160,23 +160,9 @@
                         dense
                         clearable
                         :loading="loadingState.fetchProducts"
-                        @change="onProductSelect(index, $event)"
-                      >
-                        <template v-slot:item="{ item: product }">
-                          <v-list-item-content>
-                            <v-list-item-title>{{
-                              product.text
-                            }}</v-list-item-title>
-                            <v-list-item-subtitle
-                              v-if="
-                                product.details && product.details.description
-                              "
-                            >
-                              {{ product.details.description }}
-                            </v-list-item-subtitle>
-                          </v-list-item-content>
-                        </template>
-                      </v-autocomplete>
+                        item-text="text"
+                        item-value="value"
+                      />
                     </v-col>
 
                     <!-- Description -->
@@ -198,7 +184,7 @@
                           updateItemField(
                             index,
                             'packSize',
-                            parseFloat($event) || 0
+                            parseFloat($event) || 0,
                           );
                           calculateTotalQty(index);
                         "
@@ -237,7 +223,7 @@
                           updateItemField(
                             index,
                             'totalQty',
-                            parseInt($event) || 0
+                            parseInt($event) || 0,
                           )
                         "
                         label="Total Qty *"
@@ -532,7 +518,7 @@ export default {
     // Fetch customers from API
     await this.fetchCustomersFromAPI();
     // Load sample data for testing products
-    this.loadSampleData();
+    // this.loadSampleData();
   },
 
   methods: {
@@ -545,7 +531,6 @@ export default {
       "removeItem",
       "updateItem",
       "selectProduct",
-      "loadSampleData",
       "resetForm",
       "sendPurchaseOrder",
       "clearMessages",
@@ -591,7 +576,7 @@ export default {
     onSupplierSelect(supplierName) {
       if (supplierName) {
         const supplier = this.availableCustomers.find(
-          (c) => c.name === supplierName
+          (c) => c.name === supplierName,
         );
         if (supplier) {
           // Auto-fill email from customer data
@@ -605,7 +590,7 @@ export default {
     onThirdPartyCustomerSelect(customerId) {
       if (customerId) {
         const customer = this.availableCustomers.find(
-          (c) => c._id === customerId
+          (c) => c._id === customerId,
         );
         if (customer) {
           // Store selected third party customer details

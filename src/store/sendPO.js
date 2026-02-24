@@ -69,7 +69,7 @@ const getters = {
       state.formData.items.length > 0 &&
       state.formData.items.some(
         (item) =>
-          item.name && item.packSize && item.nos > 0 && item.totalQty > 0
+          item.name && item.packSize && item.nos > 0 && item.totalQty > 0,
       );
 
     // If third party delivery, also check if customer is selected
@@ -248,15 +248,12 @@ const actions = {
 
   // Select product for an item
   selectProduct({ commit }, { itemIndex, product }) {
-    commit("UPDATE_ITEM", {
+    commit("UPDATE_ITEM_BATCH", {
       index: itemIndex,
-      field: "name",
-      value: product.name || product.productName,
-    });
-    commit("UPDATE_ITEM", {
-      index: itemIndex,
-      field: "productId",
-      value: product._id,
+      updates: {
+        name: product.name || product.productName,
+        productId: product._id,
+      },
     });
   },
 
@@ -308,7 +305,7 @@ const actions = {
         state.formData.thirdPartyCustomerId
       ) {
         const customer = state.availableCustomers.find(
-          (c) => c._id === state.formData.thirdPartyCustomerId
+          (c) => c._id === state.formData.thirdPartyCustomerId,
         );
         if (customer) {
           payload.thirdPartyCustomer = customer;
@@ -326,7 +323,7 @@ const actions = {
 
       commit(
         "SET_SUCCESS_MESSAGE",
-        response.data.message || "Purchase order sent successfully!"
+        response.data.message || "Purchase order sent successfully!",
       );
     } catch (error) {
       console.error("Error sending purchase order:", error);
@@ -379,9 +376,21 @@ const mutations = {
     }
   },
 
+  UPDATE_ITEM_BATCH(state, { index, updates }) {
+    if (state.formData.items[index]) {
+      // Force reactivity with new object reference
+      state.formData.items = state.formData.items.map((item, idx) =>
+        idx === index ? { ...item, ...updates } : item,
+      );
+    }
+  },
+
   UPDATE_ITEM(state, { index, field, value }) {
     if (state.formData.items[index]) {
-      state.formData.items[index][field] = value;
+      // Use same pattern for consistency
+      state.formData.items = state.formData.items.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item,
+      );
     }
   },
 
