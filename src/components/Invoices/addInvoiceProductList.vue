@@ -4,7 +4,7 @@
     <v-row v-for="(product, index) in invoiceProducts" :key="index">
       <!-- Product Selection Column -->
       <v-col cols="12" md="3" class="pa-n ma-n">
-        <v-select
+        <v-autocomplete
           v-model="product.productId"
           :items="allProducts"
           item-text="name"
@@ -64,8 +64,17 @@
       </v-col>
 
       <!-- Remove Product Button -->
-      <v-col cols="12" md="1" class="d-flex align-center justify-start pl-n1 pa-n ma-n">
-        <v-btn color="error" @click="removeProduct(index)" icon aria-label="Remove Product">
+      <v-col
+        cols="12"
+        md="1"
+        class="d-flex align-center justify-start pl-n1 pa-n ma-n"
+      >
+        <v-btn
+          color="error"
+          @click="removeProduct(index)"
+          icon
+          aria-label="Remove Product"
+        >
           <v-icon>mdi-delete</v-icon>
         </v-btn>
       </v-col>
@@ -75,39 +84,39 @@
 
 <script>
 export default {
-  name: 'ProductList',
-  
+  name: "ProductList",
+
   props: {
     invoiceProducts: {
       type: Array,
-      required: true
+      required: true,
     },
     allProducts: {
       type: Array,
-      required: true
+      required: true,
     },
     rules: {
       type: Object,
-      required: true
-    }
+      required: true,
+    },
   },
-  
+
   methods: {
     getTotalPrice(index) {
       const product = this.invoiceProducts[index];
       return (product.quantity * product.unit_price).toFixed(2);
     },
-    
+
     updateTotalPrice(index) {
       const product = this.invoiceProducts[index];
       product.totalPrice = this.getTotalPrice(index);
-      this.$emit('product-total-update');
+      this.$emit("product-total-update");
     },
-    
+
     removeProduct(index) {
-      this.$emit('product-removed', index);
-    }
-  }
+      this.$emit("product-removed", index);
+    },
+  },
 };
 </script>
 
