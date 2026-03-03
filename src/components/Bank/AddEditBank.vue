@@ -93,16 +93,6 @@
         </v-form>
       </v-col>
     </v-row>
-
-    <!-- Success Snackbar -->
-    <v-snackbar v-model="successSnackbar" color="success" :timeout="3000">
-      {{ successMessage }}
-    </v-snackbar>
-
-    <!-- Error Snackbar -->
-    <v-snackbar v-model="errorSnackbar" color="error" :timeout="3000">
-      {{ errorMessage }}
-    </v-snackbar>
   </v-container>
 </template>
 
@@ -124,10 +114,6 @@ export default {
       },
       isFormValid: false,
       isEditMode: false,
-      successSnackbar: false,
-      errorSnackbar: false,
-      successMessage: "",
-      errorMessage: "",
       rules: {
         required: (value) => !!value || "This field is required.",
         email: (value) => {
@@ -165,8 +151,10 @@ export default {
     async createBank() {
       try {
         await this.$store.dispatch("banks/createBank", this.bank);
-        this.successMessage = "Bank created successfully!";
-        this.successSnackbar = true;
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Bank saved successfully",
+          color: "success",
+        });
 
         // Redirect after a short delay to show the success message
         setTimeout(() => {
@@ -174,11 +162,12 @@ export default {
         }, 1500);
       } catch (error) {
         console.error("Error creating bank:", error);
-        this.errorMessage = "Failed to create bank. Please try again.";
-        this.errorSnackbar = true;
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to create bank. Please try again.",
+          color: "error",
+        });
       }
     },
-
     // Update bank method
     async updateBank() {
       try {
@@ -186,17 +175,16 @@ export default {
           bankId: this.$route.params.id,
           bankData: this.bank,
         });
-        this.successMessage = "Bank updated successfully!";
-        this.successSnackbar = true;
-
-        // Redirect after a short delay to show the success message
-        setTimeout(() => {
-          this.$router.push(`/bank/${this.$route.params.id}`);
-        }, 1500);
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Bank updated successfully!",
+          color: "success",
+        });
       } catch (error) {
         console.error("Error updating bank:", error);
-        this.errorMessage = "Failed to update bank. Please try again.";
-        this.errorSnackbar = true;
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to update bank. Please try again.",
+          color: "error",
+        });
       }
     },
 
@@ -205,7 +193,7 @@ export default {
       try {
         await this.$store.dispatch(
           "banks/fetchBankDetail",
-          this.$route.params.id
+          this.$route.params.id,
         );
 
         // Deep clone to avoid mutation issues
@@ -223,8 +211,10 @@ export default {
         }
       } catch (error) {
         console.error("Error fetching bank details:", error);
-        this.errorMessage = "Failed to load bank details.";
-        this.errorSnackbar = true;
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to load bank details.",
+          color: "error",
+        });
       }
     },
   },

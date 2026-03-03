@@ -175,7 +175,7 @@ const actions = {
         commit("SET_SUCCESS_MESSAGE", "Transporters loaded successfully");
       } else {
         throw new Error(
-          response.data.message || "Failed to fetch transporters"
+          response.data.message || "Failed to fetch transporters",
         );
       }
     } catch (error) {
@@ -200,13 +200,13 @@ const actions = {
       console.log(
         "Vuex action - fetching transporter ID:",
         transporterId,
-        typeof transporterId
+        typeof transporterId,
       );
 
       // Validate the ID is a string
       if (!transporterId || typeof transporterId !== "string") {
         throw new Error(
-          "Invalid transporter ID provided to fetchTransporterById"
+          "Invalid transporter ID provided to fetchTransporterById",
         );
       }
 
@@ -253,7 +253,7 @@ const actions = {
         return response.data.data;
       } else {
         throw new Error(
-          response.data.message || "Failed to create transporter"
+          response.data.message || "Failed to create transporter",
         );
       }
     } catch (error) {
@@ -292,7 +292,7 @@ const actions = {
         return response.data.data;
       } else {
         throw new Error(
-          response.data.message || "Failed to update transporter"
+          response.data.message || "Failed to update transporter",
         );
       }
     } catch (error) {
@@ -302,6 +302,11 @@ const actions = {
         error.message ||
         "Failed to update transporter";
       commit("SET_ERROR_MESSAGE", errorMessage);
+      commit(
+        "snackbar/SHOW_SNACKBAR",
+        { message: errorMessage, color: "error" },
+        { root: true },
+      );
       throw error;
     } finally {
       commit("SET_LOADING_STATE", { type: "update", value: false });
@@ -317,7 +322,13 @@ const actions = {
       const response = await apiClient.delete(`/transporter/${transporterId}`);
 
       if (response.data.success) {
-        commit("SET_SUCCESS_MESSAGE", "Transporter deleted successfully");
+        const msg = "Transporter deleted successfully";
+        commit("SET_SUCCESS_MESSAGE", msg);
+        commit(
+          "snackbar/SHOW_SNACKBAR",
+          { message: msg, color: "success" },
+          { root: true },
+        );
 
         // Remove from local state
         commit("REMOVE_TRANSPORTER_FROM_RESULTS", transporterId);
@@ -325,7 +336,7 @@ const actions = {
         return true;
       } else {
         throw new Error(
-          response.data.message || "Failed to delete transporter"
+          response.data.message || "Failed to delete transporter",
         );
       }
     } catch (error) {
@@ -335,6 +346,11 @@ const actions = {
         error.message ||
         "Failed to delete transporter";
       commit("SET_ERROR_MESSAGE", errorMessage);
+      commit(
+        "snackbar/SHOW_SNACKBAR",
+        { message: errorMessage, color: "error" },
+        { root: true },
+      );
       throw error;
     } finally {
       commit("SET_LOADING_STATE", { type: "delete", value: false });
@@ -353,7 +369,13 @@ const actions = {
 
       if (response.data.success) {
         const statusText = isActive ? "activated" : "deactivated";
-        commit("SET_SUCCESS_MESSAGE", `Transporter ${statusText} successfully`);
+        const msg = `Transporter ${statusText} successfully`;
+        commit("SET_SUCCESS_MESSAGE", msg);
+        commit(
+          "snackbar/SHOW_SNACKBAR",
+          { message: msg, color: "success" },
+          { root: true },
+        );
 
         // Update in local state
         commit("UPDATE_TRANSPORTER_STATUS", { id, isActive });
@@ -361,7 +383,7 @@ const actions = {
         return response.data.data;
       } else {
         throw new Error(
-          response.data.message || "Failed to update transporter status"
+          response.data.message || "Failed to update transporter status",
         );
       }
     } catch (error) {

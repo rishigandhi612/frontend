@@ -33,13 +33,27 @@
             ></v-text-field>
           </template>
           <template v-slot:item="{ item }">
-            <tr @click="handleRowClick(item._id)">
+            <tr>
               <td>{{ capitalizeFirstLetter(item.name) }}</td>
               <td>{{ item.email_id }}</td>
               <td>{{ item.phone_no }}</td>
               <td>{{ item.gstin }}</td>
               <td>{{ capitalizeFirstLetter(item.address.city) }}</td>
-              <td>{{ formatDate(item.updatedAt) }}</td>
+              <!-- <td>{{ formatDate(item.updatedAt) }}</td> -->
+              <td>
+                <v-row>
+                  <v-col cols="3">
+                    <v-icon color="blue" @click="handleRowClick(item._id)"
+                      >mdi-eye</v-icon
+                    >
+                  </v-col>
+                  <v-col>
+                    <v-icon color="orange" @click="openledger(item._id)"
+                      >mdi-information-outline</v-icon
+                    ></v-col
+                  >
+                </v-row>
+              </td>
             </tr>
           </template>
         </v-data-table>
@@ -80,7 +94,8 @@ export default {
         { text: "Phone", value: "phone_no" },
         { text: "GSTIN", value: "gstin" },
         { text: "City", value: "address.city" },
-        { text: "Last Updated", value: "updatedAt" },
+        // { text: "Last Updated", value: "updatedAt" },
+        { text: "Actions", value: "actions", sortable: false },
       ],
       loading: false,
     };
@@ -126,6 +141,11 @@ export default {
     },
     goBack() {
       this.$router.go(-1); // Go back to the previous page
+    },
+    openledger(customerId) {
+      console.log("openledger", customerId);
+      this.$router.push({ name: "customerLedger", params: { id: customerId } });
+      // this.$router.push({ name: "customerLedger", params: { id: customerId } });
     },
   },
 };

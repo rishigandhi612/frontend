@@ -178,17 +178,6 @@
         </v-card>
       </v-col>
     </v-row>
-
-    <!-- Snackbar -->
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      timeout="3000"
-      bottom
-      right
-    >
-      {{ snackbar.text }}
-    </v-snackbar>
   </v-container>
 </template>
 
@@ -217,12 +206,6 @@ export default {
 
       paymentMethods: ["neft", "rtgs", "imps", "cash", "cheque"],
       paymentStatuses: ["completed", "pending", "failed"],
-
-      snackbar: {
-        show: false,
-        text: "",
-        color: "success",
-      },
 
       rules: {
         required: (v) => !!v || "Required",
@@ -262,16 +245,10 @@ export default {
       this.$router.go(-1);
     },
 
-    showSnackbar(text, color = "success") {
-      this.snackbar.text = text;
-      this.snackbar.color = color;
-      this.snackbar.show = true;
-    },
-
     focusFirstError() {
       this.$nextTick(() => {
         const el = this.$el.querySelector(
-          ".v-input--has-state.error--text input, .v-input--has-state.error--text .v-select"
+          ".v-input--has-state.error--text input, .v-input--has-state.error--text .v-select",
         );
         if (el) el.focus();
       });
@@ -286,7 +263,7 @@ export default {
       const payload = {
         ...this.transaction,
         transactionDate: new Date(
-          this.transaction.transactionDate
+          this.transaction.transactionDate,
         ).toISOString(),
       };
 
@@ -296,22 +273,31 @@ export default {
             transactionId: this.$route.params.id,
             transactionData: payload,
           });
-          this.showSnackbar("Transaction updated successfully");
+          this.$store.commit("snackbar/SHOW_SNACKBAR", {
+            message: "Transaction updated successfully",
+            color: "success",
+          });
         } else {
           await this.$store.dispatch("transactions/createtransaction", payload);
-          this.showSnackbar("Transaction created successfully");
+          this.$store.commit("snackbar/SHOW_SNACKBAR", {
+            message: "Transaction created successfully",
+            color: "success",
+          });
         }
 
         this.$router.push("/transaction");
       } catch (e) {
-        this.showSnackbar("Something went wrong", "error");
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Something went wrong",
+          color: "error",
+        });
       }
     },
 
     async loadTransaction() {
       await this.$store.dispatch(
         "transactions/fetchtransactionDetail",
-        this.$route.params.id
+        this.$route.params.id,
       );
 
       if (this.transactionDetail) {

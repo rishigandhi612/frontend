@@ -35,6 +35,9 @@ import inventoryImportCSV from "@/components/Inventory/inventoryImportCSV.vue";
 import TransactionDetail from "@/components/Transaction/TransactionDetail.vue";
 import TransactionList from "@/components/Transaction/TransactionList.vue";
 import AddEditTransaction from "@/components/Transaction/AddEditTransaction.vue";
+import viewCustomerLedger from "@/components/Ledger/viewCustomerLedger.vue";
+import AddReceipt from "@/components/Accounting/AddReceipt.vue";
+import AddOpeningBalances from "@/components/Accounting/AddOpeningBalances.vue";
 
 Vue.use(Router);
 
@@ -278,6 +281,24 @@ const routes = [
     path: "/addtransaction/:id",
     component: AddEditTransaction,
     name: "editTransaction",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/ledger/:id",
+    component: viewCustomerLedger,
+    name: "customerLedger",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/opening-balances",
+    component: AddOpeningBalances,
+    name: "addOpeningBalances",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/receipt",
+    component: AddReceipt,
+    name: "addReceipt",
     meta: { requiresAuth: true },
   },
 

@@ -107,8 +107,28 @@
           </v-list-item-icon>
           <v-list-item-title>Banks</v-list-item-title>
         </v-list-item>
+
+        <v-divider class="my-2"></v-divider>
+
+        <v-subheader>Accounting</v-subheader>
+
+        <v-list-item link @click="$router.push('/receipt')">
+          <v-list-item-icon>
+            <v-icon>mdi-cash-register</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Record Receipt</v-list-item-title>
+        </v-list-item>
+        <v-list-item link @click="$router.push('/opening-balances')">
+          <v-list-item-icon>
+            <v-icon>mdi-cash-multiple</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Opening Balances</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
+
+    <!-- Global snackbar component -->
+    <AppSnackbar />
 
     <!-- Main Content -->
     <v-main class="pt-16">
@@ -122,11 +142,14 @@
 <script>
 import { mapGetters } from "vuex";
 import AppBar from "./components/AppBar.vue";
+import AppSnackbar from "./components/AppSnackbar.vue";
 
 export default {
   components: {
     AppBar,
+    AppSnackbar,
   },
+
   data() {
     return {
       drawer: false,

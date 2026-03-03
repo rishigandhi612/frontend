@@ -61,7 +61,9 @@
           <v-col>
             <v-card outlined class="pa-3">
               <div class="d-flex align-center">
-                <v-icon color="primary" class="mr-2">mdi-checkbox-marked-circle</v-icon>
+                <v-icon color="primary" class="mr-2"
+                  >mdi-checkbox-marked-circle</v-icon
+                >
                 <span class="text-subtitle-1 mr-4">
                   {{ selectedItems.length }} item(s) selected
                 </span>
@@ -75,11 +77,7 @@
                   <v-icon left>mdi-printer</v-icon>
                   Print Stickers ({{ selectedItems.length }})
                 </v-btn>
-                <v-btn
-                  text
-                  color="error"
-                  @click="clearSelection"
-                >
+                <v-btn text color="error" @click="clearSelection">
                   <v-icon left>mdi-close</v-icon>
                   Clear Selection
                 </v-btn>
@@ -219,7 +217,9 @@
                 ></v-checkbox>
               </td>
               <td @click="handleRowClick(item.id)">{{ item.rollId }}</td>
-              <td @click="handleRowClick(item.id)">{{ item.productName || "Unknown Product" }}</td>
+              <td @click="handleRowClick(item.id)">
+                {{ item.productName || "Unknown Product" }}
+              </td>
               <td @click="handleRowClick(item.id)">{{ item.width }}</td>
               <td @click="handleRowClick(item.id)">{{ item.netWeight }}</td>
               <td @click="handleRowClick(item.id)">
@@ -302,19 +302,19 @@
               <v-icon>mdi-plus</v-icon> Add Inventory
             </v-btn>
           </v-col>
-           <v-col cols="12" md="12">
+          <v-col cols="12" md="12">
             <v-btn @click="goToBatchAddInventory" color="secondary" block>
               <v-icon>mdi-plus</v-icon> Batch Add Inventory
             </v-btn>
           </v-col>
           <v-col cols="12" md="12">
-            <v-btn 
-              @click="printAllStickers" 
-              color="orange" 
+            <v-btn
+              @click="printAllStickers"
+              color="orange"
               block
               :disabled="inventoryWithProductNames.length === 0"
             >
-              <v-icon>mdi-printer-multiple</v-icon> 
+              <v-icon>mdi-printer-multiple</v-icon>
               Print All ({{ inventoryWithProductNames.length }})
             </v-btn>
           </v-col>
@@ -323,7 +323,7 @@
     </v-row>
 
     <!-- Sticker Printing Component (Hidden) -->
-    <div style="position: absolute; left: -9999px; top: -9999px;">
+    <div style="position: absolute; left: -9999px; top: -9999px">
       <InventorySticker
         v-if="stickerItems.length > 0"
         ref="stickerComponent"
@@ -331,21 +331,6 @@
         :product-name="stickerProductName"
       />
     </div>
-
-    <!-- Search Results Snackbar -->
-    <v-snackbar
-      v-model="searchResultsSnackbar"
-      :timeout="4000"
-      color="info"
-      bottom
-    >
-      {{ searchResultsMessage }}
-      <template v-slot:action="{ attrs }">
-        <v-btn text v-bind="attrs" @click="searchResultsSnackbar = false">
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
 
     <!-- Print Confirmation Dialog -->
     <v-dialog v-model="printDialog" max-width="500">
@@ -355,10 +340,14 @@
           Print Stickers Confirmation
         </v-card-title>
         <v-card-text>
-          <p>You are about to print <strong>{{ printItemsCount }}</strong> sticker(s).</p>
+          <p>
+            You are about to print
+            <strong>{{ printItemsCount }}</strong> sticker(s).
+          </p>
           <p v-if="printItemsCount > 4">
-            This will use <strong>{{ Math.ceil(printItemsCount / 4) }}</strong> A4 page(s) 
-            (4 stickers per page).
+            This will use
+            <strong>{{ Math.ceil(printItemsCount / 4) }}</strong> A4 page(s) (4
+            stickers per page).
           </p>
           <p class="text-caption text--secondary mt-3">
             Make sure your printer is ready and loaded with A4 paper.
@@ -393,8 +382,6 @@ export default {
     return {
       showDialog: false,
       quickSearch: "",
-      searchResultsSnackbar: false,
-      searchResultsMessage: "",
       selectedItems: [],
       stickerItems: [],
       stickerProductName: "",
@@ -459,13 +446,13 @@ export default {
 
     hasActiveFilters() {
       return Object.values(this.currentFilters).some(
-        (value) => value !== "" && value !== null
+        (value) => value !== "" && value !== null,
       );
     },
 
     activeFiltersCount() {
       return Object.values(this.currentFilters).filter(
-        (value) => value !== "" && value !== null
+        (value) => value !== "" && value !== null,
       ).length;
     },
   },
@@ -511,7 +498,8 @@ export default {
         return;
       }
       this.printItemsCount = this.inventoryWithProductNames.length;
-      this.pendingPrintAction = () => this.executePrint(this.inventoryWithProductNames);
+      this.pendingPrintAction = () =>
+        this.executePrint(this.inventoryWithProductNames);
       this.printDialog = true;
     },
 
@@ -526,19 +514,19 @@ export default {
     async executePrint(items) {
       try {
         // Transform items to the format expected by the sticker component
-        this.stickerItems = items.map(item => ({
+        this.stickerItems = items.map((item) => ({
           rollId: item.rollId,
           type: item.type,
           micron: item.micron,
           width: item.width,
           netWeight: item.netWeight,
           grossWeight: item.grossWeight,
-          mtr:item.mtr,
+          mtr: item.mtr,
           productName: item.productName,
         }));
 
-        console.log('Sticker items to print:', this.stickerItems);
-        
+        console.log("Sticker items to print:", this.stickerItems);
+
         // Set product name (use the first item's product name or a generic name)
         // this.stickerProductName = items[0]?.productName || "Mixed Products";
 
@@ -598,7 +586,7 @@ export default {
 
       const resultsCount = this.getTotalCount || 0;
       this.showResultsMessage(
-        `Found ${resultsCount} items matching your search criteria`
+        `Found ${resultsCount} items matching your search criteria`,
       );
     },
 
@@ -701,8 +689,11 @@ export default {
 
     // Utility Methods
     showResultsMessage(message) {
-      this.searchResultsMessage = message;
-      this.searchResultsSnackbar = true;
+      this.$store.commit("snackbar/SHOW_SNACKBAR", {
+        message,
+        color: "info",
+        timeout: 4000,
+      });
     },
 
     // Existing Methods
@@ -712,7 +703,7 @@ export default {
       } catch (error) {
         console.error("Error fetching products:", error);
         this.$toast?.error?.(
-          "Failed to load products. Product names may not display correctly."
+          "Failed to load products. Product names may not display correctly.",
         );
       }
     },
@@ -779,7 +770,7 @@ export default {
     goToAddInventory() {
       this.$router.push({ name: "addInventory" });
     },
-     goToBatchAddInventory() {
+    goToBatchAddInventory() {
       this.$router.push({ name: "BatchAddInventory" });
     },
 

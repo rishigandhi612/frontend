@@ -364,12 +364,6 @@
         </v-row>
       </v-col>
     </v-row>
-    <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-      {{ snackbarMessage }}
-      <template v-slot:action="{ attrs }">
-        <v-btn text v-bind="attrs" @click="snackbar = false">Close</v-btn>
-      </template>
-    </v-snackbar>
   </v-container>
 </template>
 
@@ -402,9 +396,7 @@ export default {
         sortDesc: [true],
       },
       customerInvoicesData: null,
-      snackbar: false,
-      snackbarMessage: "",
-      snackbarColor: "info",
+      // snackbar state removed; using global store
     };
   },
   computed: {
@@ -423,13 +415,13 @@ export default {
       const options = [
         {
           text: `Current FY (${currentFYStart}-${String(currentFYEnd).slice(
-            2
+            2,
           )})`,
           value: "current",
         },
         {
           text: `Previous FY (${currentFYStart - 1}-${String(
-            currentFYEnd - 1
+            currentFYEnd - 1,
           ).slice(2)})`,
           value: "previous",
         },
@@ -462,8 +454,8 @@ export default {
     selectedInvoices(newVal) {
       console.log(
         `${newVal.length} invoice(s) selected, Total: ₹${this.formatCurrency(
-          this.selectedInvoicesTotal
-        )}`
+          this.selectedInvoicesTotal,
+        )}`,
       );
     },
   },
@@ -476,14 +468,13 @@ export default {
         await this.$store.dispatch("customers/fetchCustomers");
       } catch (error) {
         console.error("Error fetching customers:", error);
-        this.showSnackbar("Failed to load customers", "error");
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to load customers",
+          color: "error",
+        });
       }
     },
-    showSnackbar(message, color = "info") {
-      this.snackbarMessage = message;
-      this.snackbarColor = color;
-      this.snackbar = true;
-    },
+
     async fetchCustomerInvoices() {
       if (!this.selectedCustomerId) return;
 
@@ -501,14 +492,20 @@ export default {
             sortBy: this.tableOptions.sortBy[0] || "createdAt",
             sortDesc: this.tableOptions.sortDesc[0] || true,
             search: this.searchQuery,
-          }
+          },
         );
 
         this.customerInvoicesData = response;
-        this.showSnackbar("Successfully loaded customer invoices", "success");
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Successfully loaded customer invoices",
+          color: "success",
+        });
       } catch (error) {
         console.error("Error fetching customer invoices:", error);
-        this.showSnackbar("Failed to load invoices", "error");
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to load invoices",
+          color: "error",
+        });
         this.customerInvoicesData = null;
       } finally {
         this.loadingInvoices = false;
@@ -566,7 +563,10 @@ export default {
         !this.customerInvoicesData ||
         !this.customerInvoicesData.data.length
       ) {
-        this.showSnackbar("No data to export", "warning");
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "No data to export",
+          color: "warning",
+        });
 
         return;
       }
@@ -583,7 +583,10 @@ export default {
     },
     exportSelectedToCSV() {
       if (this.selectedInvoices.length === 0) {
-        this.showSnackbar("No invoices selected", "error");
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "No invoices selected",
+          color: "error",
+        });
         return;
       }
 
@@ -606,7 +609,7 @@ export default {
         .map((row) =>
           Object.values(row)
             .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-            .join(",")
+            .join(","),
         )
         .join("\n");
 

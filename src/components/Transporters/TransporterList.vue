@@ -260,15 +260,6 @@
       </v-col>
     </v-row>
 
-    <!-- Success/Error Messages -->
-    <v-snackbar v-model="showSuccessMessage" color="success" timeout="3000">
-      {{ successMessage }}
-    </v-snackbar>
-
-    <v-snackbar v-model="showErrorMessage" color="error" timeout="5000">
-      {{ errorMessage }}
-    </v-snackbar>
-
     <!-- Confirmation Dialog -->
     <v-dialog v-model="confirmDialog.show" max-width="400">
       <v-card>
@@ -374,24 +365,6 @@ export default {
       );
     },
 
-    showSuccessMessage: {
-      get() {
-        return !!this.successMessage;
-      },
-      set() {
-        this.clearMessages();
-      },
-    },
-
-    showErrorMessage: {
-      get() {
-        return !!this.errorMessage;
-      },
-      set() {
-        this.clearMessages();
-      },
-    },
-
     debouncedSearch() {
       return debounce(this.performSearch, 500);
     },
@@ -402,7 +375,6 @@ export default {
       "searchTransporters",
       "toggleTransporterStatus",
       "deleteTransporter",
-      "clearMessages",
     ]),
 
     async performSearch() {

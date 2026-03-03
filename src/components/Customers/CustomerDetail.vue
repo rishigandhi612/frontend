@@ -106,6 +106,12 @@
             </v-btn>
           </v-col>
           <v-col cols="12">
+            <v-btn color="teal" @click="recordReceipt" block>
+              <v-icon left>mdi-cash-register</v-icon>
+              Record Receipt
+            </v-btn>
+          </v-col>
+          <v-col cols="12">
             <v-btn dark color="error" @click="openDeleteConfirmation" block>
               <v-icon left>mdi-delete</v-icon>
               Delete Customer
@@ -212,6 +218,14 @@ export default {
 
     goBack() {
       this.$router.go(-1); // Go back to the previous page
+    },
+
+    recordReceipt() {
+      // Navigate to receipt recording page with customer ID
+      this.$router.push({
+        name: "addReceipt",
+        query: { customerId: this.customerId },
+      });
     },
   },
   created() {

@@ -12,6 +12,9 @@ import transporter from "./transporter";
 import summary from "./summary";
 import banks from "./banks";
 import transactions from "./transaction";
+import accounting from "./accounting";
+import ledger from "./ledger";
+import snackbar from "./snackbar";
 // import auth from "./apiClient";
 import store from "./index";
 
@@ -25,6 +28,7 @@ export default new Vuex.Store({
   modules: {
     //auth,
     dashboard,
+    accounting,
     customers,
     products,
     invoices,
@@ -35,6 +39,8 @@ export default new Vuex.Store({
     summary,
     banks,
     transactions,
+    ledger,
+    snackbar,
   },
   state: {
     user: null,
@@ -62,7 +68,7 @@ export default new Vuex.Store({
       try {
         const response = await axios.post(
           `${BASE_URL}/auth/login`,
-          credentials
+          credentials,
         );
         const { user, token, refreshToken } = response.data;
 
@@ -75,7 +81,7 @@ export default new Vuex.Store({
       } catch (error) {
         console.error(
           "Error logging in:",
-          error.response?.data || error.message
+          error.response?.data || error.message,
         );
         throw error;
       }
@@ -97,7 +103,7 @@ export default new Vuex.Store({
       } catch (error) {
         console.error(
           "Error refreshing token:",
-          error.response?.data || error.message
+          error.response?.data || error.message,
         );
         commit("CLEAR_USER");
         localStorage.removeItem("token");
@@ -140,5 +146,5 @@ axios.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
