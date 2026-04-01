@@ -19,6 +19,12 @@
           Ledger Account
         </div>
       </v-col>
+      <v-col cols="12" md="2" sm="4" class="d-flex align-center justify-end">
+        <v-btn color="primary" @click="goToReceipt">
+          <v-icon>mdi-receipt-text</v-icon>
+          Record Receipt
+        </v-btn>
+      </v-col>
     </v-row>
 
     <v-row>
@@ -145,6 +151,16 @@
               >
                 <v-icon>mdi-file-pdf-box</v-icon>
               </v-btn>
+              <v-btn
+                small
+                color="orange darken-2"
+                dark
+                class="ml-2"
+                @click="openPendingDialog"
+              >
+                <v-icon small left>mdi-clock-alert-outline</v-icon>
+                Pending Invoices
+              </v-btn>
             </v-toolbar>
           </template>
 
@@ -214,6 +230,172 @@
         <v-alert type="error" dense>{{ error }}</v-alert>
       </v-col>
     </v-row>
+    <v-dialog v-model="pendingDialog" max-width="860" scrollable>
+      <v-card>
+        <!-- Title bar -->
+        <v-card-title
+          class="white--text py-3"
+          style="background: linear-gradient(135deg, #e65100 0%, #ff9800 100%)"
+        >
+          <v-icon left color="white">mdi-clock-alert-outline</v-icon>
+          <span>Pending Invoices — {{ customerName }}</span>
+          <v-spacer />
+          <v-btn icon dark small @click="pendingDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <!-- Summary strip -->
+        <v-card-text class="pa-4 pb-0">
+          <v-row dense>
+            <v-col cols="6" sm="3">
+              <v-card outlined rounded>
+                <v-card-text class="pa-3 text-center">
+                  <div
+                    class="text-caption text--secondary text-uppercase font-weight-bold"
+                  >
+                    Invoices
+                  </div>
+                  <div class="text-h5 font-weight-bold orange--text darken-2">
+                    {{ pendingDialogSummary.count }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-card outlined rounded>
+                <v-card-text class="pa-3 text-center">
+                  <div
+                    class="text-caption text--secondary text-uppercase font-weight-bold"
+                  >
+                    Bill Amount
+                  </div>
+                  <div class="text-h6 font-weight-bold">
+                    {{ formatCurrency(pendingDialogSummary.totalBill) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-card outlined rounded>
+                <v-card-text class="pa-3 text-center">
+                  <div
+                    class="text-caption text--secondary text-uppercase font-weight-bold"
+                  >
+                    Allocated
+                  </div>
+                  <div class="text-h6 font-weight-bold green--text">
+                    {{ formatCurrency(pendingDialogSummary.totalAllocated) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-card outlined rounded>
+                <v-card-text class="pa-3 text-center">
+                  <div
+                    class="text-caption text--secondary text-uppercase font-weight-bold"
+                  >
+                    Pending
+                  </div>
+                  <div class="text-h6 font-weight-bold red--text darken-1">
+                    {{ formatCurrency(pendingDialogSummary.totalPending) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- Search + Record Receipt -->
+          <v-row dense class="mt-3">
+            <v-col cols="12" sm="8">
+              <v-text-field
+                v-model="pendingSearch"
+                placeholder="Search invoice number..."
+                prepend-inner-icon="mdi-magnify"
+                outlined
+                dense
+                hide-details
+                clearable
+              />
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <!-- Table -->
+        <v-card-text class="pt-3">
+          <v-data-table
+            :headers="pendingHeaders"
+            :items="pendingInvoices"
+            :loading="isLoadingBills"
+            :search="pendingSearch"
+            dense
+            class="elevation-1"
+            :items-per-page="10"
+            :footer-props="{ itemsPerPageOptions: [5, 10, 25, 50] }"
+            sort-by="invoiceDate"
+            sort-asc
+          >
+            <!-- Invoice date -->
+            <template v-slot:[`item.invoiceDate`]="{ item }">
+              {{ formatDate(item.invoiceDate) }}
+            </template>
+
+            <!-- Bill amount -->
+            <template v-slot:[`item.billAmount`]="{ item }">
+              {{ formatCurrency(item.billAmount) }}
+            </template>
+
+            <!-- Allocated — grey when 0 -->
+            <template v-slot:[`item.allocatedAmount`]="{ item }">
+              <span
+                :class="
+                  item.allocatedAmount > 0
+                    ? 'green--text font-weight-medium'
+                    : 'text--disabled'
+                "
+              >
+                {{ formatCurrency(item.allocatedAmount) }}
+              </span>
+            </template>
+
+            <!-- Pending chip -->
+            <template v-slot:[`item.pendingAmount`]="{ item }">
+              <!-- <v-chip
+                small
+                :color="
+                  Number(item.pendingAmount) < 0 ? 'purple' : 'red darken-1'
+                "
+                text-color="white"
+              > -->
+              {{ formatCurrency(item.pendingAmount) }}
+              <!-- </v-chip> -->
+            </template>
+
+            <!-- Status chip -->
+            <template v-slot:[`item.status`]="{ item }">
+              <v-chip
+                small
+                :color="statusColor(item.status)"
+                text-color="white"
+              >
+                {{ item.status }}
+              </v-chip>
+            </template>
+
+            <!-- Empty state -->
+            <template v-slot:no-data>
+              <div class="text-center pa-6">
+                <v-icon color="green" large>mdi-check-circle-outline</v-icon>
+                <div class="mt-2 green--text font-weight-medium">
+                  All invoices are fully settled!
+                </div>
+              </div>
+            </template>
+          </v-data-table>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -245,14 +427,47 @@ export default {
         { text: "Balance", value: "balance", align: "end" },
         { text: "Action", value: "actions", align: "center", sortable: false },
       ],
+      pendingDialog: false,
+      pendingLoading: false,
+      pendingSearch: "",
+      pendingHeaders: [
+        { text: "Invoice Date", value: "invoiceDate" },
+        { text: "Invoice No", value: "invoiceno" },
+        { text: "Opening Amount", value: "openingAmount", align: "end" },
+        { text: "Allocated", value: "allocatedAmount", align: "end" },
+        { text: "Pending", value: "pendingAmount", align: "end" },
+      ],
     };
   },
   computed: {
     ...mapGetters("ledger", ["customerLedger"]),
+    ...mapGetters("accounting", ["customerBills", "isLoadingBills"]),
     ledgerItems() {
       return this.customerLedger && this.customerLedger.ledger
         ? this.customerLedger.ledger
         : [];
+    },
+    pendingInvoices() {
+      return (this.customerBills || []).filter(
+        (inv) => Number(inv.pendingAmount) !== 0,
+      );
+    },
+    pendingDialogSummary() {
+      return {
+        count: this.pendingInvoices.length,
+        totalOpening: this.pendingInvoices.reduce(
+          (s, i) => s + Number(i.openingAmount || 0),
+          0,
+        ),
+        totalAllocated: this.pendingInvoices.reduce(
+          (s, i) => s + Number(i.allocatedAmount || 0),
+          0,
+        ),
+        totalPending: this.pendingInvoices.reduce(
+          (s, i) => s + Number(i.pendingAmount || 0),
+          0,
+        ),
+      };
     },
     formattedItems() {
       return this.ledgerItems.map((item) => {
@@ -402,6 +617,36 @@ export default {
       this.limit = newLimit;
       this.page = 1; // Reset to first page when limit changes
       this.fetchLedger();
+    },
+    async openPendingDialog() {
+      this.pendingDialog = true;
+      this.pendingSearch = "";
+      try {
+        const customerId =
+          this.customerLedger?.customer?._id || this.$route.params.id;
+        await this.$store.dispatch("accounting/fetchCustomerBills", customerId);
+      } catch {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to load pending invoices",
+          color: "error",
+        });
+      }
+    },
+    statusColor(status) {
+      return (
+        {
+          UNPAID: "red darken-1",
+          PARTIAL: "orange darken-2",
+          OVERPAID: "purple",
+        }[status] || "grey"
+      );
+    },
+    goToReceipt() {
+      this.pendingDialog = false;
+      this.$router.push({
+        name: "addReceipt",
+        query: { customerId: this.customerLedger?.customer?._id },
+      });
     },
   },
   mounted() {

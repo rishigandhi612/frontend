@@ -3,6 +3,7 @@ import apiClient from "./apiClient";
 const state = {
   ledgerEntries: [],
   outStandingInvoices: [],
+  outstandingBills: [],
   // holds the last fetched customer ledger response
   customerLedger: null,
 };
@@ -10,6 +11,7 @@ const state = {
 const getters = {
   ledgerEntries: (state) => state.ledgerEntries,
   customerLedger: (state) => state.customerLedger,
+  outStandingInvoices: (state) => state.outStandingInvoices,
 };
 
 const actions = {

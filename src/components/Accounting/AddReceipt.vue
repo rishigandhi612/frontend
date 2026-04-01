@@ -370,10 +370,15 @@ export default {
     },
 
     addBillAllocation(billId) {
-      const bill = this.customerBills.find((b) => b.id === billId);
-      if (bill) {
+      // billId is already the normalized id emitted by BillAllocationTable.
+      // No need to re-find the bill — just check it isn't already allocated.
+      const alreadyAllocated = this.receipt.allocations.some(
+        (a) => a.billId === billId,
+      );
+
+      if (!alreadyAllocated) {
         this.receipt.allocations.push({
-          billId: bill.id,
+          billId,
           allocatedAmount: 0,
         });
       }

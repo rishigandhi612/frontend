@@ -6,7 +6,7 @@
       <v-card-text>
         <v-row>
           <v-col cols="12" md="6">
-            <v-select
+            <v-autocomplete
               v-model="selectedBill"
               :items="unallocatedBills"
               item-text="invoiceNumber"
@@ -19,19 +19,28 @@
               <template #item="{ item }">
                 <div class="d-flex justify-space-between" style="width: 100%">
                   <span
-                    ><strong>{{ item.invoiceNumber }}</strong></span
+                    ><strong>{{ item.invoiceno }}</strong></span
                   >
                   <span class="ml-4"
-                    >₹{{ formatCurrency(item.billAmount) }}</span
+                    >₹{{ formatCurrency(item.openingAmount) }}</span
+                  >
+                  <span class="ml-4"
+                    >₹{{ formatCurrency(item.allocatedAmount) }}</span
+                  >
+                  <span class="ml-4"
+                    >₹{{ formatCurrency(item.pendingAmount) }}</span
                   >
                 </div>
               </template>
               <template #selection="{ item }">
-                {{ item.invoiceNumber }} - ₹{{
-                  formatCurrency(item.billAmount)
+                {{ item.invoiceno }} - ₹{{
+                  formatCurrency(item.openingAmount)
+                }}
+                - ₹{{ formatCurrency(item.allocatedAmount) }} - ₹{{
+                  formatCurrency(item.pendingAmount)
                 }}
               </template>
-            </v-select>
+            </v-autocomplete>
           </v-col>
           <v-col cols="12" md="4">
             <v-text-field
@@ -168,30 +177,77 @@ export default {
   },
   computed: {
     unallocatedBills() {
-      return this.bills.filter(
-        (bill) => !this.allocations.find((a) => a.billId === bill.id),
+      return this.normalizedBills.filter(
+        (bill) =>
+          bill.pendingAmount !== 0 &&
+          !this.allocations.find((a) => a.billId === bill.id),
       );
+    },
+    normalizedBills() {
+      // Normalize incoming bills to a consistent shape so component
+      // works with both old and new (v2) API responses.
+      const raw = this.bills || [];
+
+      // If the prop is an object with `data` (v2 response), use that array
+      const list = Array.isArray(raw) ? raw : raw.data || [];
+
+      return list.map((b, idx) => {
+        // v2 fields: invoiceno, allocatedAmount, pendingAmount, openingAmount
+        if (b && (b.invoiceno || b.invoiceNumber)) {
+          const invoiceno = b.invoiceno || b.invoiceNumber;
+          const openingAmount = Number(b.openingAmount || 0);
+          const allocatedAmount = Number(b.allocatedAmount || 0);
+          const pendingAmount = Number(b.pendingAmount || 0);
+
+          // billAmount: prefer openingAmount if present, else pending, else allocated
+          const billAmount =
+            openingAmount || pendingAmount || allocatedAmount || 0;
+
+          return {
+            id: b.id || invoiceno || `bill_${idx}`,
+            invoiceno,
+            invoiceNumber: invoiceno,
+            openingAmount,
+            allocatedAmount,
+            pendingAmount,
+            billAmount,
+          };
+        }
+
+        // Fallback for legacy shape (id, invoiceNumber, billAmount)
+        return {
+          id: b.id || `bill_${idx}`,
+          invoiceno: b.invoiceNumber || b.invoiceno || `INV-${idx}`,
+          invoiceNumber: b.invoiceNumber || b.invoiceno || `INV-${idx}`,
+          openingAmount: Number(b.openingAmount || 0),
+          allocatedAmount: Number(b.allocatedAmount || 0) || 0,
+          pendingAmount: Number(b.pendingAmount || 0) || 0,
+          billAmount: Number(b.billAmount || b.amount || 0),
+        };
+      });
     },
   },
   methods: {
     getSelectedBillAmount() {
       if (!this.selectedBill) return 0;
-      const bill = this.bills.find((b) => b.id === this.selectedBill);
+      const bill = this.normalizedBills.find((b) => b.id === this.selectedBill);
+      console.log("bill", bill);
+
       return bill ? bill.billAmount : 0;
     },
 
     getBillInvoiceNumber(billId) {
-      const bill = this.bills.find((b) => b.id === billId);
+      const bill = this.normalizedBills.find((b) => b.id === billId);
       return bill ? bill.invoiceNumber : "Unknown";
     },
 
     getBillAmount(billId) {
-      const bill = this.bills.find((b) => b.id === billId);
+      const bill = this.normalizedBills.find((b) => b.id === billId);
       return bill ? bill.billAmount : 0;
     },
 
     getBalance(billId) {
-      const bill = this.bills.find((b) => b.id === billId);
+      const bill = this.normalizedBills.find((b) => b.id === billId);
       const allocated = this.allocations.find((a) => a.billId === billId);
       if (bill) {
         return bill.billAmount - (allocated ? allocated.allocatedAmount : 0);
@@ -200,6 +256,8 @@ export default {
     },
 
     addAllocation() {
+      console.log("are we at 252", this.selectedBill, this.allocationAmount);
+
       if (
         !this.selectedBill ||
         !this.allocationAmount ||
@@ -209,6 +267,8 @@ export default {
       }
 
       const billAmount = this.getSelectedBillAmount();
+      console.log("bill amount", billAmount);
+
       if (this.allocationAmount > billAmount) {
         this.$store.commit("snackbar/SHOW_SNACKBAR", {
           message: `Amount cannot exceed bill amount of ₹${billAmount}`,
