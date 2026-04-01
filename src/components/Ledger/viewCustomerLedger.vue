@@ -139,15 +139,88 @@
               <v-toolbar-title class="font-weight-bold"
                 >Ledger Entries</v-toolbar-title
               >
+
               <v-spacer />
-              <v-btn icon @click="refresh" title="Refresh">
+
+              <!-- Toggle: Year vs Custom -->
+              <v-btn-toggle
+                v-model="filterMode"
+                mandatory
+                dense
+                class="mr-3"
+                @change="filterMode === 'year' ? onYearChange() : null"
+              >
+                <v-btn value="year" small>
+                  <v-icon small left>mdi-calendar-range</v-icon> Year
+                </v-btn>
+                <v-btn value="custom" small>
+                  <v-icon small left>mdi-calendar-edit</v-icon> Custom
+                </v-btn>
+              </v-btn-toggle>
+
+              <!-- Financial Year dropdown -->
+              <v-select
+                v-if="filterMode === 'year'"
+                v-model="financialYear"
+                :items="financialYearOptions"
+                item-text="text"
+                item-value="value"
+                dense
+                outlined
+                hide-details
+                style="max-width: 155px"
+                @change="onYearChange"
+              />
+
+              <!-- Custom date range -->
+              <template v-if="filterMode === 'custom'">
+                <v-text-field
+                  v-model="startDate"
+                  type="date"
+                  label="From"
+                  dense
+                  outlined
+                  hide-details
+                  style="max-width: 145px"
+                  class="mr-2"
+                />
+                <v-text-field
+                  v-model="endDate"
+                  type="date"
+                  label="To"
+                  dense
+                  outlined
+                  hide-details
+                  style="max-width: 145px"
+                  class="mr-2"
+                />
+                <v-btn
+                  small
+                  color="primary"
+                  @click="onDateFilter"
+                  :disabled="!startDate && !endDate"
+                >
+                  <v-icon small>mdi-magnify</v-icon>
+                </v-btn>
+                <v-btn
+                  small
+                  icon
+                  @click="clearDateFilter"
+                  title="Clear"
+                  class="ml-1"
+                >
+                  <v-icon small>mdi-close</v-icon>
+                </v-btn>
+              </template>
+
+              <v-btn icon @click="refresh" title="Refresh" class="ml-2">
                 <v-icon>mdi-refresh</v-icon>
               </v-btn>
               <v-btn
                 icon
                 @click="exportPdf"
                 title="Export Ledger PDF"
-                class="ml-2"
+                class="ml-1"
               >
                 <v-icon>mdi-file-pdf-box</v-icon>
               </v-btn>
@@ -437,6 +510,12 @@ export default {
         { text: "Allocated", value: "allocatedAmount", align: "end" },
         { text: "Pending", value: "pendingAmount", align: "end" },
       ],
+      financialYear: "current",
+      startDate: null,
+      endDate: null,
+      dateMenu1: false, // for v-date-picker popups if you use them
+      dateMenu2: false,
+      filterMode: "year", // "year" | "custom"
     };
   },
   computed: {
@@ -446,6 +525,18 @@ export default {
       return this.customerLedger && this.customerLedger.ledger
         ? this.customerLedger.ledger
         : [];
+    },
+    financialYearOptions() {
+      const options = [{ text: "Current Year", value: "current" }];
+      const now = new Date();
+      // Financial year starts in April, so if we're before April, current FY started last year
+      const currentFYStart =
+        now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+      for (let y = currentFYStart; y >= currentFYStart - 4; y--) {
+        const label = `${y}-${String(y + 1).slice(-2)}`;
+        options.push({ text: label, value: label });
+      }
+      return options;
     },
     pendingInvoices() {
       return (this.customerBills || []).filter(
@@ -519,13 +610,21 @@ export default {
         const customerId =
           this.customerLedger?.customer?._id || this.$route.params.id;
         if (!customerId) return;
+
+        const params = { limit: 100000, page: 1, sortOrder: "asc" };
+
+        if (this.filterMode === "custom" && (this.startDate || this.endDate)) {
+          if (this.startDate) params.startDate = this.startDate;
+          if (this.endDate) params.endDate = this.endDate;
+        } else {
+          params.financialYear = this.financialYear;
+        }
+
         await this.$store.dispatch("ledger/fetchCustomerLedger", {
           customerId,
-          params: { limit: 100000, page: 1, sortOrder: "asc" },
+          params,
         });
-        if (this.$refs.ledgerPdf) {
-          this.$refs.ledgerPdf.generatePdf();
-        }
+        this.$refs.ledgerPdf?.generatePdf();
       } catch (e) {
         console.error("Failed to fetch full ledger:", e);
         this.$store.commit("snackbar/SHOW_SNACKBAR", {
@@ -560,22 +659,32 @@ export default {
       try {
         const customerId = this.$route.params.id;
         if (!customerId) {
-          this.error =
-            "Customer ID not provided in route (use ?customerId=...)";
+          this.error = "Customer ID not provided in route";
           this.loading = false;
           return;
         }
+
+        const params = {
+          sortOrder: "asc",
+          page: this.page,
+          limit: this.limit,
+        };
+
+        if (this.filterMode === "custom" && (this.startDate || this.endDate)) {
+          // Send date range — backend ignores financialYear when these are present
+          if (this.startDate) params.startDate = this.startDate;
+          if (this.endDate) params.endDate = this.endDate;
+        } else {
+          // Send financial year
+          params.financialYear = this.financialYear;
+        }
+
         await this.$store.dispatch("ledger/fetchCustomerLedger", {
           customerId,
-          params: {
-            financialYear: "current",
-            sortOrder: "asc",
-            page: this.page,
-            limit: this.limit,
-          },
+          params,
         });
-        // Update total pages from response
-        if (this.customerLedger && this.customerLedger.pagination) {
+
+        if (this.customerLedger?.pagination) {
           this.totalPages = this.customerLedger.pagination.totalPages || 1;
         }
       } catch (err) {
@@ -584,6 +693,25 @@ export default {
         this.loading = false;
       }
     },
+
+    onYearChange() {
+      this.page = 1;
+      this.fetchLedger();
+    },
+
+    onDateFilter() {
+      this.page = 1;
+      this.fetchLedger();
+    },
+
+    clearDateFilter() {
+      this.startDate = null;
+      this.endDate = null;
+      this.filterMode = "year";
+      this.page = 1;
+      this.fetchLedger();
+    },
+
     refresh() {
       this.fetchLedger();
     },
