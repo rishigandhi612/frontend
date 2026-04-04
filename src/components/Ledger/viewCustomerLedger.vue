@@ -392,6 +392,12 @@
                 clearable
               />
             </v-col>
+            <v-col cols="12" sm="4">
+              <v-btn color="primary" @click="generatependingPdf()">
+                <v-icon left>mdi-file-pdf-box</v-icon>
+                Export PDF
+              </v-btn>
+            </v-col>
           </v-row>
         </v-card-text>
 
@@ -469,17 +475,25 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+    <PendingInvoicesPdf
+      ref="pendingPdf"
+      :invoices="pendingInvoices"
+      :summary="pendingDialogSummary"
+      :customer="customerLedger?.customer"
+    />
   </v-container>
 </template>
 
 <script>
 import { mapGetters } from "vuex";
 import LedgerPdf from "../Printables/LedgerPdf.vue";
+import PendingInvoicesPdf from "../Printables/PendingInvoicesPdf.vue";
 
 export default {
   name: "viewCustomerLedger",
   components: {
     LedgerPdf,
+    PendingInvoicesPdf,
   },
   data() {
     return {
@@ -632,6 +646,9 @@ export default {
           color: "error",
         });
       }
+    },
+    generatependingPdf() {
+      this.$refs.pendingPdf?.generatePdf();
     },
     formatDate(d) {
       if (!d) return "-";
