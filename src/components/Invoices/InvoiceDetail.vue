@@ -63,7 +63,9 @@
                   </p>
                   <p>
                     <strong>Transporter:</strong>
-                    {{ invoiceDetail.transporter?.name || "N/A" }}
+                    {{ invoiceDetail.transporter?.name || "N/A" }} (GSTIN-{{
+                      invoiceDetail.transporter?.gstNumber || "N/A"
+                    }})
                   </p>
                 </v-col>
                 <v-col sm="6">
@@ -280,7 +282,7 @@ export default {
       const date = new Date(dateString);
       return `${String(date.getDate()).padStart(2, "0")} ${date.toLocaleString(
         "default",
-        { month: "short" }
+        { month: "short" },
       )} ${date.getFullYear()}`;
     },
     updateInvoice() {
