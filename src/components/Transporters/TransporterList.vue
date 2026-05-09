@@ -104,10 +104,18 @@
           :headers="headers"
           :items="searchResults"
           :loading="isSearchLoading"
+          :options.sync="tableOptions"
+          :server-items-length="pagination.totalCount"
           item-key="_id"
           class="elevation-1"
           v-if="searchResults.length > 0 || isSearchLoading"
-          hide-default-footer
+          @update:options="handleTableOptionsChange"
+          :footer-props="{
+            'items-per-page-options': [5, 10, 15, 20],
+            showFirstLastPage: true,
+            firstIcon: 'mdi-arrow-collapse-left',
+            lastIcon: 'mdi-arrow-collapse-right',
+          }"
         >
           <template v-slot:item="{ item }">
             <tr
@@ -169,37 +177,6 @@
             </tr>
           </template>
         </v-data-table>
-
-        <!-- Pagination -->
-        <div v-if="pagination.totalPages > 1" class="text-center mt-4">
-          <v-pagination
-            v-model="currentPage"
-            :length="pagination.totalPages"
-            :total-visible="7"
-            @input="changePage"
-            circle
-          />
-
-          <!-- Items per page selector -->
-          <div class="mt-2">
-            <v-select
-              v-model="itemsPerPage"
-              :items="itemsPerPageOptions"
-              label="Items per page"
-              dense
-              outlined
-              style="max-width: 120px; margin: 0 auto"
-              @change="changeItemsPerPage"
-            />
-          </div>
-
-          <!-- Pagination info -->
-          <div class="caption mt-2 text-center">
-            Showing {{ (currentPage - 1) * itemsPerPage + 1 }} -
-            {{ Math.min(currentPage * itemsPerPage, pagination.totalCount) }} of
-            {{ pagination.totalCount }} items
-          </div>
-        </div>
       </v-col>
 
       <v-col md="2" cols="12">
@@ -311,8 +288,12 @@ export default {
         sortOrder: "asc",
       },
 
-      currentPage: 1,
-      itemsPerPage: 10,
+      tableOptions: {
+        page: 1,
+        itemsPerPage: 10,
+        sortBy: [],
+        sortDesc: [],
+      },
 
       // Options
       sortOptions: [
@@ -325,8 +306,6 @@ export default {
         { text: "Ascending", value: "asc" },
         { text: "Descending", value: "desc" },
       ],
-
-      itemsPerPageOptions: [5, 10, 25, 50, 100],
 
       // Confirmation dialog
       confirmDialog: {
@@ -379,9 +358,14 @@ export default {
 
     async performSearch() {
       try {
+        const itemsPerPage =
+          this.tableOptions.itemsPerPage === -1
+            ? this.pagination.totalCount || 10
+            : this.tableOptions.itemsPerPage;
+
         const searchParams = {
-          page: this.currentPage,
-          limit: this.itemsPerPage,
+          page: this.tableOptions.page,
+          limit: itemsPerPage,
           sortBy: this.searchFilters.sortBy,
           sortOrder: this.searchFilters.sortOrder,
         };
@@ -407,14 +391,32 @@ export default {
       await this.performSearch();
     },
 
-    changePage(page) {
-      this.currentPage = page;
-      this.performSearch();
-    },
+    handleTableOptionsChange(options) {
+      const nextOptions = {
+        page: options.page || 1,
+        itemsPerPage: options.itemsPerPage || 10,
+        sortBy: Array.isArray(options.sortBy) ? options.sortBy : [],
+        sortDesc: Array.isArray(options.sortDesc) ? options.sortDesc : [],
+      };
 
-    changeItemsPerPage() {
-      this.currentPage = 1; // Reset to first page
-      this.performSearch();
+      const [sortBy] = nextOptions.sortBy;
+      const [sortDesc] = nextOptions.sortDesc;
+      const nextSortBy = sortBy || "name";
+      const nextSortOrder = sortDesc ? "desc" : "asc";
+
+      const hasChanged =
+        nextOptions.page !== (this.pagination.currentPage || 1) ||
+        nextOptions.itemsPerPage !== (this.pagination.limit || 10) ||
+        nextSortBy !== this.searchFilters.sortBy ||
+        nextSortOrder !== this.searchFilters.sortOrder;
+
+      this.tableOptions = nextOptions;
+      this.searchFilters.sortBy = nextSortBy;
+      this.searchFilters.sortOrder = nextSortOrder;
+
+      if (hasChanged) {
+        this.performSearch();
+      }
     },
 
     clearFilters() {
@@ -426,7 +428,7 @@ export default {
         sortBy: "name",
         sortOrder: "asc",
       };
-      this.currentPage = 1;
+      this.tableOptions.page = 1;
       this.performSearch();
     },
 
@@ -513,8 +515,9 @@ export default {
     "$route.query": {
       handler(newQuery) {
         if (newQuery.search) this.searchFilters.search = newQuery.search;
-        if (newQuery.page) this.currentPage = parseInt(newQuery.page);
-        if (newQuery.limit) this.itemsPerPage = parseInt(newQuery.limit);
+        if (newQuery.page) this.tableOptions.page = parseInt(newQuery.page);
+        if (newQuery.limit)
+          this.tableOptions.itemsPerPage = parseInt(newQuery.limit);
       },
       immediate: true,
     },

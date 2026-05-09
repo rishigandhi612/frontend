@@ -76,6 +76,33 @@ export default {
       })} ${n < 0 ? "Cr" : "Dr"}`;
     },
 
+    sanitizeFilePart(value) {
+      return String(value || "Customer")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    },
+
+    buildFilename() {
+      return `Ledger_${this.sanitizeFilePart(this.customer?.name)}.pdf`;
+    },
+
+    getCustomerAddressText() {
+      const address = this.customer?.address;
+
+      if (!address) return "";
+      if (typeof address === "string") return address;
+
+      return [
+        address?.line1,
+        address?.line2,
+        address?.city,
+        address?.state,
+        address?.pincode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+    },
+
     // ── Header ───────────────────────────────────────────────────────────────
     drawHeader(doc, pageNum, totalPages) {
       doc.addImage(COMPANY_LOGO, "PNG", 5, 8, 25, 25);
@@ -142,19 +169,16 @@ export default {
       });
 
       // Address under customer name
-      const addr = [
-        this.customer?.address?.line1,
-        this.customer?.address?.city,
-        this.customer?.address?.pincode,
-      ]
-        .filter(Boolean)
-        .join(", ");
+      const addr = this.getCustomerAddressText();
       let y = 72;
       if (addr) {
         doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text(addr, 14, y);
-        y += 5;
+        const addressLines = doc.splitTextToSize(addr, 130);
+        addressLines.forEach((line) => {
+          doc.text(line, 14, y);
+          y += 5;
+        });
       }
 
       y += 2;
@@ -204,7 +228,7 @@ export default {
     },
 
     // ── Main ─────────────────────────────────────────────────────────────────
-    generatePdf() {
+    createPdfDocument() {
       const doc = new jsPDF({ unit: "mm", format: "a4" });
 
       // Approximate header height (used for margin.top and startY)
@@ -341,11 +365,28 @@ export default {
       doc.line(ML, sy + 1.2, PW - MR, sy + 1.2);
 
       doc.putTotalPages(TOTAL_PAGES_PLACEHOLDER);
+      return doc;
+    },
 
+    generatePdf() {
+      const doc = this.createPdfDocument();
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
       window.open(url);
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+
+    getPdfBlob() {
+      const doc = this.createPdfDocument();
+      return doc.output("blob");
+    },
+
+    getPdfBlobWithName() {
+      const doc = this.createPdfDocument();
+      return {
+        blob: doc.output("blob"),
+        filename: this.buildFilename(),
+      };
     },
   },
 };

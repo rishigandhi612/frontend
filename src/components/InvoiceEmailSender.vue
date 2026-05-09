@@ -2,13 +2,31 @@
   <div>
     <!-- PDF Generator Components (hidden) -->
     <InvoicePdfGenerator
+      v-if="isInvoiceMode"
       ref="invoicePdfGenerator"
       :invoiceDetail="invoiceDetail"
       style="display: none"
     />
     <DeliveryChallanGenerator
+      v-if="isInvoiceMode"
       ref="challanPdfGenerator"
       :invoiceDetail="invoiceDetail"
+      style="display: none"
+    />
+    <LedgerPdfGenerator
+      v-if="isLedgerMode"
+      ref="ledgerPdfGenerator"
+      :ledger="ledger"
+      :summary="ledgerSummary"
+      :customer="currentCustomer"
+      style="display: none"
+    />
+    <PendingInvoicesPdfGenerator
+      v-if="isPendingMode"
+      ref="pendingPdfGenerator"
+      :invoices="pendingInvoices"
+      :summary="pendingSummary"
+      :customer="currentCustomer"
       style="display: none"
     />
 
@@ -16,13 +34,13 @@
       <v-card>
         <v-card-title class="text-h5 primary white--text">
           <v-icon left color="white">mdi-email-send</v-icon>
-          Send Invoice via Email
+          {{ dialogTitle }}
         </v-card-title>
 
         <v-card-text class="pt-4">
           <v-container>
             <v-row>
-              <v-col cols="12">
+              <v-col cols="12" v-if="isInvoiceMode">
                 <v-checkbox
                   v-model="includeChallan"
                   label="Include Delivery Challan"
@@ -235,17 +253,45 @@
 import { mapState, mapActions } from "vuex";
 import InvoicePdfGenerator from "./Printables/InvoicePdf.vue";
 import DeliveryChallanGenerator from "./Printables/DeliveryChallan.vue";
+import LedgerPdfGenerator from "./Printables/LedgerPdf.vue";
+import PendingInvoicesPdfGenerator from "./Printables/PendingInvoicesPdf.vue";
 
 export default {
   name: "InvoiceEmailSender",
   components: {
     InvoicePdfGenerator,
     DeliveryChallanGenerator,
+    LedgerPdfGenerator,
+    PendingInvoicesPdfGenerator,
   },
   props: {
+    documentType: {
+      type: String,
+      default: "invoice",
+    },
     invoiceDetail: {
       type: Object,
-      required: true,
+      default: () => null,
+    },
+    ledger: {
+      type: Array,
+      default: () => [],
+    },
+    ledgerSummary: {
+      type: Object,
+      default: () => ({}),
+    },
+    pendingInvoices: {
+      type: Array,
+      default: () => [],
+    },
+    pendingSummary: {
+      type: Object,
+      default: () => ({}),
+    },
+    customer: {
+      type: Object,
+      default: () => ({}),
     },
     // Optional prop to pass predefined contacts from parent
     contacts: {
@@ -300,6 +346,15 @@ export default {
   },
 
   computed: {
+    isInvoiceMode() {
+      return this.documentType === "invoice";
+    },
+    isLedgerMode() {
+      return this.documentType === "ledger";
+    },
+    isPendingMode() {
+      return this.documentType === "pendingInvoices";
+    },
     isValidEmail() {
       return this.emailAddress && /.+@.+\..+/.test(this.emailAddress);
     },
@@ -309,6 +364,26 @@ export default {
     ...mapState("invoices", ["loadingState"]),
     isEmailSending() {
       return this.loadingState.sendEmail;
+    },
+    currentCustomer() {
+      if (this.isInvoiceMode) {
+        return this.invoiceDetail?.customer || this.customer || {};
+      }
+
+      return this.customer || this.invoiceDetail?.customer || {};
+    },
+    currentCustomerName() {
+      return this.currentCustomer?.name || "Customer";
+    },
+    dialogTitle() {
+      if (this.isLedgerMode) return "Send Ledger via Email";
+      if (this.isPendingMode) return "Send Pending Invoices via Email";
+      return "Send Invoice via Email";
+    },
+    primaryDocumentLabel() {
+      if (this.isLedgerMode) return "Ledger";
+      if (this.isPendingMode) return "Pending Invoices";
+      return "Invoice";
     },
     // Combine default contacts with any passed via props
     predefinedContacts() {
@@ -328,37 +403,15 @@ export default {
   },
 
   methods: {
-    ...mapActions("invoices", ["sendInvoiceEmail"]),
+    ...mapActions("invoices", ["sendDocumentEmail"]),
 
     openDialog() {
       this.resetForm();
       // Pre-fill email if available
-      this.emailAddress = this.invoiceDetail.customer?.email_id || "";
-      // Set default subject
-      this.subject = `Invoice #${this.invoiceDetail.invoiceNumber} - Hemant Traders`;
-      // Set default email body
-      this.emailBody = `Dear <strong>${
-        this.invoiceDetail.customer?.name || "Customer"
-      }</strong>,
-
-Please find attached the invoice for your purchase.
-
-Invoice Details:
-- Invoice Number:<strong> ${this.invoiceDetail.invoiceNumber}</strong>
-- Date:<strong> ${this.formatDate(this.invoiceDetail.createdAt)}</strong>
-- Amount:<strong> ₹${this.invoiceDetail.grandTotal}</strong>
-
-<strong>
-Thanks & regards,
-HEMANT TRADERS
-BOPP, POLYESTER, PVC, THERMAL FILMS & LAMINATION ADHESIVES, BOOKBINDING ADHESIVES, PASTING ADHESIVES, UV COATS Phone: (020) 24467833 / 24497533 / 24473403
-Mobile: 9422080922 / 9420699675
-Website: hemanttraders.vercel.app
-email:hemanttraders111@yahoo.in
-Address: 1281, Vertex Arcade, Sadashiv Peth, Pune
-</strong>
-Please Note: This is a system generated email, please do not reply to this email.
-`;
+      this.emailAddress =
+        this.currentCustomer?.email_id || this.currentCustomer?.email || "";
+      this.subject = this.buildDefaultSubject();
+      this.emailBody = this.buildDefaultEmailBody();
 
       this.dialog = true;
     },
@@ -443,6 +496,7 @@ Please Note: This is a system generated email, please do not reply to this email
     },
 
     getFileIcon(fileType) {
+      if (!fileType) return "mdi-file";
       if (fileType.includes("pdf")) return "mdi-file-pdf-box";
       if (fileType.includes("word") || fileType.includes("document"))
         return "mdi-file-word-box";
@@ -460,14 +514,133 @@ Please Note: This is a system generated email, please do not reply to this email
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
     },
 
+    sanitizeFilePart(value) {
+      return String(value || "Customer")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    },
+
+    formatCurrency(value) {
+      if (value === null || value === undefined || value === "") return "N/A";
+      return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(Number(value) || 0);
+    },
+
+    buildPeriodLabel(items = [], dateField = "date") {
+      const validDates = items
+        .map((item) => new Date(item?.[dateField]))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b);
+
+      if (!validDates.length) return "";
+
+      const start = this.formatDate(validDates[0]);
+      const end = this.formatDate(validDates[validDates.length - 1]);
+
+      return start === end ? start : `${start} to ${end}`;
+    },
+
+    getDocumentReference() {
+      if (this.isInvoiceMode) {
+        return this.invoiceDetail?.invoiceNumber || "Invoice";
+      }
+
+      if (this.isLedgerMode) {
+        return `Ledger-${this.sanitizeFilePart(this.currentCustomerName)}`;
+      }
+
+      return `Pending-Invoices-${this.sanitizeFilePart(this.currentCustomerName)}`;
+    },
+
+    getPrimaryDocumentFilename() {
+      if (this.isInvoiceMode) {
+        return `Invoice_${this.invoiceDetail?.invoiceNumber || "Document"}.pdf`;
+      }
+
+      if (this.isLedgerMode) {
+        return `Ledger_${this.sanitizeFilePart(this.currentCustomerName)}.pdf`;
+      }
+
+      return `Pending_Invoices_${this.sanitizeFilePart(this.currentCustomerName)}.pdf`;
+    },
+
+    buildDefaultSubject() {
+      if (this.isLedgerMode) {
+        return `Ledger Statement - ${this.currentCustomerName} - Hemant Traders`;
+      }
+
+      if (this.isPendingMode) {
+        return `Pending Invoices - ${this.currentCustomerName} - Hemant Traders`;
+      }
+
+      return `Invoice #${this.invoiceDetail?.invoiceNumber || ""} - Hemant Traders`;
+    },
+
+    buildDefaultEmailBody() {
+      const customerName = this.currentCustomerName;
+      const signature = `<strong>
+Thanks & regards,
+HEMANT TRADERS
+BOPP, POLYESTER, PVC, THERMAL FILMS & LAMINATION ADHESIVES, BOOKBINDING ADHESIVES, PASTING ADHESIVES, UV COATS Phone: (020) 24467833 / 24497533 / 24473403
+Mobile: 9422080922 / 9420699675
+Website: hemanttraders.vercel.app
+email:hemanttraders111@yahoo.in
+Address: 1281, Vertex Arcade, Sadashiv Peth, Pune
+</strong>
+Please Note: This is a system generated email, please do not reply to this email.`;
+
+      if (this.isLedgerMode) {
+        const period = this.buildPeriodLabel(this.ledger, "date");
+
+        return `Dear <strong>${customerName}</strong>,
+
+Please find attached your ledger statement.
+
+Ledger Details:
+- Period:<strong> ${period || "As shared"}</strong>
+- Closing Balance:<strong> ${this.formatCurrency(this.ledgerSummary?.closingBalance)}</strong>
+- Balance Type:<strong> ${this.ledgerSummary?.balanceType || "N/A"}</strong>
+
+${signature}`;
+      }
+
+      if (this.isPendingMode) {
+        const period = this.buildPeriodLabel(this.pendingInvoices, "invoiceDate");
+
+        return `Dear <strong>${customerName}</strong>,
+
+Please find attached the pending invoices statement.
+
+Pending Summary:
+- Period:<strong> ${period || "As shared"}</strong>
+- Invoices:<strong> ${this.pendingSummary?.count || this.pendingInvoices.length}</strong>
+- Outstanding Amount:<strong> ${this.formatCurrency(this.pendingSummary?.totalPending)}</strong>
+
+${signature}`;
+      }
+
+      return `Dear <strong>${customerName}</strong>,
+
+Please find attached the invoice for your purchase.
+
+Invoice Details:
+- Invoice Number:<strong> ${this.invoiceDetail?.invoiceNumber || "N/A"}</strong>
+- Date:<strong> ${this.formatDate(this.invoiceDetail?.createdAt)}</strong>
+- Amount:<strong> ${this.formatCurrency(this.invoiceDetail?.grandTotal)}</strong>
+
+${signature}`;
+    },
+
     getAttachmentSummary() {
       const attachments = [];
 
-      // Always include invoice
-      attachments.push(`Invoice #${this.invoiceDetail.invoiceNumber}.pdf`);
+      attachments.push(this.getPrimaryDocumentFilename());
 
-      // Include challan if selected
-      if (this.includeChallan) {
+      if (this.isInvoiceMode && this.includeChallan) {
         attachments.push(`Delivery Challan.pdf`);
       }
 
@@ -496,36 +669,35 @@ Please Note: This is a system generated email, please do not reply to this email
       this.errorMessage = "";
 
       try {
-        // Step 1: Generate Invoice PDF
         this.generating = true;
-        this.progressMessage = "Generating invoice PDF...";
-        const invoicePdfBlob = await this.generateInvoicePDF();
+        this.progressMessage = `Generating ${this.primaryDocumentLabel.toLowerCase()} PDF...`;
+        const primaryPdfData = await this.generatePrimaryPDF();
 
         let challanPdfData = null;
 
-        // Step 2: Generate Delivery Challan PDF if requested
-        if (this.includeChallan) {
+        if (this.isInvoiceMode && this.includeChallan) {
           this.progressMessage = "Generating delivery challan PDF...";
           challanPdfData = await this.generateChallanPDF();
         }
 
         this.generating = false;
 
-        // Step 3: Send email using Vuex store action
         this.progressMessage = "Sending email...";
         const emailData = {
           email: this.emailAddress,
-          invoiceNumber: this.invoiceDetail.invoiceNumber,
-          customerName: this.invoiceDetail.customer?.name || "Customer",
+          invoiceNumber: this.getDocumentReference(),
+          customerName: this.currentCustomerName,
           subject: this.subject,
           message: this.emailBody,
+          documentType: this.documentType,
+          documentLabel: this.primaryDocumentLabel,
         };
 
-        const result = await this.sendInvoiceEmail({
+        const result = await this.sendDocumentEmail({
           emailData,
-          pdfBlob: invoicePdfBlob,
-          challanPdfData: challanPdfData, // Pass challan data if available
-          additionalFiles: this.additionalFiles, // Pass additional files
+          primaryPdfData,
+          challanPdfData,
+          additionalFiles: this.additionalFiles,
         });
 
         console.log("Email send result:", emailData, result);
@@ -549,23 +721,50 @@ Please Note: This is a system generated email, please do not reply to this email
       }
     },
 
-    // Generate Invoice PDF
-    async generateInvoicePDF() {
+    async generatePrimaryPDF() {
       return new Promise((resolve, reject) => {
         try {
+          if (this.isLedgerMode) {
+            const ledgerGenerator = this.$refs.ledgerPdfGenerator;
+            if (!ledgerGenerator) {
+              throw new Error("Ledger PDF generator not available");
+            }
+            const pdfData = ledgerGenerator.getPdfBlobWithName();
+            if (!pdfData?.blob) {
+              throw new Error("Failed to generate ledger PDF");
+            }
+            resolve(pdfData);
+            return;
+          }
+
+          if (this.isPendingMode) {
+            const pendingGenerator = this.$refs.pendingPdfGenerator;
+            if (!pendingGenerator) {
+              throw new Error("Pending invoices PDF generator not available");
+            }
+            const pdfData = pendingGenerator.getPdfBlobWithName();
+            if (!pdfData?.blob) {
+              throw new Error("Failed to generate pending invoices PDF");
+            }
+            resolve(pdfData);
+            return;
+          }
+
           const pdfGenerator = this.$refs.invoicePdfGenerator;
           if (!pdfGenerator) {
             throw new Error("Invoice PDF generator not available");
           }
           const pdfData = pdfGenerator.getPdfBlob();
-          resolve(pdfData);
+          resolve({
+            blob: pdfData,
+            filename: this.getPrimaryDocumentFilename(),
+          });
         } catch (error) {
           reject(error);
         }
       });
     },
 
-    // Generate Delivery Challan PDF
     async generateChallanPDF() {
       return new Promise((resolve, reject) => {
         try {
@@ -582,7 +781,9 @@ Please Note: This is a system generated email, please do not reply to this email
     },
 
     formatDate(dateString) {
+      if (!dateString) return "N/A";
       const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) return "N/A";
       const day = String(date.getDate()).padStart(2, "0");
       const month = date.toLocaleString("default", { month: "short" });
       const year = date.getFullYear();

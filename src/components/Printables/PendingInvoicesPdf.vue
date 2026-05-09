@@ -54,8 +54,73 @@ export default {
           });
     },
 
+    getAllocatedAmount(invoice) {
+      return Number(
+        invoice?.actualAllocatedAmount ?? invoice?.allocatedAmount ?? 0,
+      );
+    },
+
+    buildSummary(invoices = []) {
+      return {
+        count: invoices.length,
+        totalBill: invoices.reduce(
+          (sum, invoice) => sum + Number(invoice?.openingAmount || 0),
+          0,
+        ),
+        totalAllocated: invoices.reduce(
+          (sum, invoice) => sum + this.getAllocatedAmount(invoice),
+          0,
+        ),
+        totalPending: invoices.reduce(
+          (sum, invoice) => sum + Number(invoice?.pendingAmount || 0),
+          0,
+        ),
+      };
+    },
+
+    buildPeriodLabel(invoices = []) {
+      const validDates = invoices
+        .map((invoice) => new Date(invoice?.invoiceDate))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b);
+
+      if (!validDates.length) return "";
+
+      const start = this.fmtDate(validDates[0]);
+      const end = this.fmtDate(validDates[validDates.length - 1]);
+
+      return start === end ? start : `${start} to ${end}`;
+    },
+
+    sanitizeFilePart(value) {
+      return String(value || "Customer")
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+    },
+
+    buildFilename() {
+      return `Pending_Invoices_${this.sanitizeFilePart(this.customer?.name)}.pdf`;
+    },
+
+    getCustomerAddressText() {
+      const address = this.customer?.address;
+
+      if (!address) return "";
+      if (typeof address === "string") return address;
+
+      return [
+        address?.line1,
+        address?.line2,
+        address?.city,
+        address?.state,
+        address?.pincode,
+      ]
+        .filter(Boolean)
+        .join(", ");
+    },
+
     // ── Header ───────────────────────────────────────────────────────────────
-    addHeader(doc) {
+    addHeader(doc, periodLabel = "") {
       doc.addImage(COMPANY_LOGO, "PNG", 5, 8, 25, 25);
       doc.setFontSize(36);
       doc.setFont("helvetica", "bold");
@@ -91,7 +156,16 @@ export default {
       doc.text("(Original For Recipient)", 105, 56, { align: "center" });
 
       doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
       doc.text("PENDING INVOICES", 14, 62);
+      if (periodLabel) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Period: ${periodLabel}`, 62, 62);
+      }
+
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
       doc.text(`Date: ${this.fmtDate(new Date())}`, 200, 62, {
         align: "right",
       });
@@ -110,17 +184,16 @@ export default {
       });
 
       // CUSTOMER ADDRESS
-      //   doc.setFont("helvetica", "normal");
-      //   doc.setFontSize(12);
-      //   const addressText =
-      //     `${this.customer?.address?.line1 || "N/A"}, ` +
-      //     `${this.customer?.address?.city || "N/A"}-` +
-      //     `${this.customer?.address?.pincode || "N/A"}`;
-      //   const addressLines = doc.splitTextToSize(addressText, 180);
-      //   addressLines.forEach((line) => {
-      //     doc.text(line, 105, y, { align: "center" });
-      //     y += 5;
-      //   });
+      const addressText = this.getCustomerAddressText();
+      if (addressText) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        const addressLines = doc.splitTextToSize(addressText, 180);
+        addressLines.forEach((line) => {
+          doc.text(line, 105, y, { align: "center" });
+          y += 5;
+        });
+      }
 
       // CONTACT
       //   const contactLines = doc.splitTextToSize(
@@ -188,20 +261,26 @@ export default {
     },
 
     // ── Main ─────────────────────────────────────────────────────────────────
-    generatePdf() {
-      const doc = new jsPDF({ unit: "mm", format: "a4" });
-      const HDR_H = this.addHeader(doc, 1);
+    createPdfDocument() {
+      if (!this.invoices?.length) return;
 
       // Sort by invoice date ascending (oldest first — like a statement)
       const sorted = [...this.invoices].sort(
         (a, b) => new Date(a.invoiceDate) - new Date(b.invoiceDate),
       );
+      const periodLabel = this.buildPeriodLabel(sorted);
+      const doc = new jsPDF({ unit: "mm", format: "a4" });
+      const HDR_H = this.addHeader(doc, periodLabel);
+      const resolvedSummary = {
+        ...this.buildSummary(sorted),
+        ...this.summary,
+      };
 
       const tableBody = sorted.map((inv) => [
         this.fmtDate(inv.invoiceDate),
         inv.invoiceno || "",
         this.fmtNum(inv.openingAmount),
-        this.fmtNum(inv.allocatedAmount),
+        this.fmtNum(this.getAllocatedAmount(inv)),
         this.fmtNum(inv.pendingAmount),
       ]);
 
@@ -263,7 +342,7 @@ export default {
         },
 
         didDrawPage: (data) => {
-          const newHdrH = this.addHeader(doc, data.pageNumber);
+          const newHdrH = this.addHeader(doc, periodLabel);
           data.settings.margin.top = newHdrH; // keeps table body below header on page 2+
           this.drawFooter(doc);
         },
@@ -274,14 +353,14 @@ export default {
 
       if (sy + 22 > PH - FOOTER_H) {
         doc.addPage();
-        this.addHeader(doc, doc.internal.getNumberOfPages());
+        this.addHeader(doc, periodLabel);
         this.drawFooter(doc);
         sy = HDR_H + 3;
       }
 
-      const totalBill = this.summary?.totalBill || 0;
-      const totalAllocated = this.summary?.totalAllocated || 0;
-      const totalPending = this.summary?.totalPending || 0;
+      const totalBill = resolvedSummary.totalBill || 0;
+      const totalAllocated = resolvedSummary.totalAllocated || 0;
+      const totalPending = resolvedSummary.totalPending || 0;
 
       // Right edges of numeric columns
       const billRX = COL_LEFT[2] + COL[2];
@@ -314,9 +393,7 @@ export default {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
       doc.text(
-        `${
-          this.summary?.count || sorted.length
-        } invoice(s) pending   |   Outstanding: ${this.fmtNum(totalPending)}`,
+        `${resolvedSummary.count || sorted.length} invoice(s) pending   |   Outstanding: ${this.fmtNum(totalPending)}`,
         ML,
         sy,
       );
@@ -327,11 +404,31 @@ export default {
       doc.line(ML, sy, PW - MR, sy);
       doc.setLineWidth(0.2);
       doc.line(ML, sy + 1.2, PW - MR, sy + 1.2);
+      return doc;
+    },
 
+    generatePdf() {
+      const doc = this.createPdfDocument();
+      if (!doc) return;
       const blob = doc.output("blob");
       const url = URL.createObjectURL(blob);
       window.open(url);
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+
+    getPdfBlob() {
+      const doc = this.createPdfDocument();
+      return doc ? doc.output("blob") : null;
+    },
+
+    getPdfBlobWithName() {
+      const doc = this.createPdfDocument();
+      if (!doc) return null;
+
+      return {
+        blob: doc.output("blob"),
+        filename: this.buildFilename(),
+      };
     },
   },
 };

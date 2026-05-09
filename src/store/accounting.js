@@ -7,6 +7,8 @@ const state = {
   receiptDetail: null,
   loading: false,
   customerBills: [],
+  customerBillsSummary: {},
+  customerBillsCustomer: {},
   loadingBills: false,
   loadingState: {
     createReceipt: false,
@@ -20,6 +22,8 @@ const getters = {
   receiptDetail: (state) => state.receiptDetail,
   isLoading: (state) => state.loading,
   customerBills: (state) => state.customerBills,
+  customerBillsSummary: (state) => state.customerBillsSummary,
+  customerBillsCustomer: (state) => state.customerBillsCustomer,
   isLoadingBills: (state) => state.loadingBills,
   getLoadingState: (state) => state.loadingState,
   getOpeningBalance: (state) => state.openingBalance,
@@ -32,7 +36,7 @@ const actions = {
       const response = await apiClient.get(
         `/accounting/customers/${customerId}/bills`,
       );
-      commit("SET_CUSTOMER_BILLS", response.data.data || []);
+      commit("SET_CUSTOMER_BILLS_RESPONSE", response.data || {});
     } catch (error) {
       console.error("Error fetching customer bills:", error);
       throw error;
@@ -152,8 +156,10 @@ const mutations = {
     state.loading = loading;
   },
 
-  SET_CUSTOMER_BILLS(state, bills) {
-    state.customerBills = bills;
+  SET_CUSTOMER_BILLS_RESPONSE(state, payload) {
+    state.customerBills = payload?.data || [];
+    state.customerBillsSummary = payload?.summary || {};
+    state.customerBillsCustomer = payload?.customer || {};
   },
 
   SET_LOADING_BILLS(state, loading) {
@@ -166,6 +172,8 @@ const mutations = {
 
   CLEAR_CUSTOMER_BILLS(state) {
     state.customerBills = [];
+    state.customerBillsSummary = {};
+    state.customerBillsCustomer = {};
   },
 };
 

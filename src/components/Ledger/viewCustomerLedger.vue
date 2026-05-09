@@ -3,8 +3,8 @@
     <!-- hidden pdf generator instance -->
     <LedgerPdf
       ref="ledgerPdf"
-      :ledger="ledgerItems"
-      :summary="summary"
+      :ledger="ledgerPdfItems"
+      :summary="ledgerPdfSummary"
       :customer="customerLedger?.customer"
     />
     <v-row align="center" class="mb-4">
@@ -135,106 +135,122 @@
           }"
         >
           <template v-slot:top>
-            <v-toolbar flat>
-              <v-toolbar-title class="font-weight-bold"
-                >Ledger Entries</v-toolbar-title
-              >
+            <div class="ledger-toolbar">
+              <div class="ledger-toolbar__title">Ledger Entries</div>
 
-              <v-spacer />
+              <div class="ledger-toolbar__section">
+                <v-btn-toggle
+                  v-model="filterMode"
+                  mandatory
+                  dense
+                  class="ledger-toolbar__toggle"
+                  @change="filterMode === 'year' ? onYearChange() : null"
+                >
+                  <v-btn value="year" small>
+                    <v-icon small left>mdi-calendar-range</v-icon> Year
+                  </v-btn>
+                  <v-btn value="custom" small>
+                    <v-icon small left>mdi-calendar-edit</v-icon> Custom
+                  </v-btn>
+                </v-btn-toggle>
 
-              <!-- Toggle: Year vs Custom -->
-              <v-btn-toggle
-                v-model="filterMode"
-                mandatory
-                dense
-                class="mr-3"
-                @change="filterMode === 'year' ? onYearChange() : null"
-              >
-                <v-btn value="year" small>
-                  <v-icon small left>mdi-calendar-range</v-icon> Year
-                </v-btn>
-                <v-btn value="custom" small>
-                  <v-icon small left>mdi-calendar-edit</v-icon> Custom
-                </v-btn>
-              </v-btn-toggle>
-
-              <!-- Financial Year dropdown -->
-              <v-select
-                v-if="filterMode === 'year'"
-                v-model="financialYear"
-                :items="financialYearOptions"
-                item-text="text"
-                item-value="value"
-                dense
-                outlined
-                hide-details
-                style="max-width: 155px"
-                @change="onYearChange"
-              />
-
-              <!-- Custom date range -->
-              <template v-if="filterMode === 'custom'">
-                <v-text-field
-                  v-model="startDate"
-                  type="date"
-                  label="From"
+                <v-select
+                  v-if="filterMode === 'year'"
+                  v-model="financialYear"
+                  :items="financialYearOptions"
+                  item-text="text"
+                  item-value="value"
                   dense
                   outlined
                   hide-details
-                  style="max-width: 145px"
-                  class="mr-2"
+                  class="ledger-toolbar__field ledger-toolbar__year"
+                  @change="onYearChange"
                 />
-                <v-text-field
-                  v-model="endDate"
-                  type="date"
-                  label="To"
-                  dense
-                  outlined
-                  hide-details
-                  style="max-width: 145px"
-                  class="mr-2"
-                />
-                <v-btn
-                  small
-                  color="primary"
-                  @click="onDateFilter"
-                  :disabled="!startDate && !endDate"
-                >
-                  <v-icon small>mdi-magnify</v-icon>
-                </v-btn>
-                <v-btn
-                  small
-                  icon
-                  @click="clearDateFilter"
-                  title="Clear"
-                  class="ml-1"
-                >
-                  <v-icon small>mdi-close</v-icon>
-                </v-btn>
-              </template>
 
-              <v-btn icon @click="refresh" title="Refresh" class="ml-2">
-                <v-icon>mdi-refresh</v-icon>
-              </v-btn>
-              <v-btn
-                icon
-                @click="exportPdf"
-                title="Export Ledger PDF"
-                class="ml-1"
-              >
-                <v-icon>mdi-file-pdf-box</v-icon>
-              </v-btn>
-              <v-btn
-                small
-                color="orange darken-2"
-                dark
-                class="ml-2"
-                @click="openPendingDialog"
-              >
-                <v-icon small left>mdi-clock-alert-outline</v-icon>
-                Pending Invoices
-              </v-btn>
-            </v-toolbar>
+                <template v-if="filterMode === 'custom'">
+                  <v-text-field
+                    v-model="startDate"
+                    type="date"
+                    label="From"
+                    dense
+                    outlined
+                    hide-details
+                    class="ledger-toolbar__field"
+                  />
+                  <v-text-field
+                    v-model="endDate"
+                    type="date"
+                    label="To"
+                    dense
+                    outlined
+                    hide-details
+                    class="ledger-toolbar__field"
+                  />
+                  <v-btn
+                    small
+                    color="primary"
+                    class="ledger-toolbar__action-btn"
+                    @click="onDateFilter"
+                    :disabled="!startDate && !endDate"
+                  >
+                    <v-icon small left>mdi-magnify</v-icon>
+                    Apply
+                  </v-btn>
+                  <v-btn
+                    small
+                    outlined
+                    class="ledger-toolbar__action-btn"
+                    @click="clearDateFilter"
+                    title="Clear"
+                  >
+                    <v-icon small left>mdi-close</v-icon>
+                    Clear
+                  </v-btn>
+                </template>
+              </div>
+
+              <div class="ledger-toolbar__section ledger-toolbar__actions">
+                <v-btn
+                  small
+                  outlined
+                  class="ledger-toolbar__action-btn"
+                  @click="refresh"
+                  title="Refresh"
+                >
+                  <v-icon small left>mdi-refresh</v-icon>
+                  Refresh
+                </v-btn>
+                <v-btn
+                  small
+                  outlined
+                  class="ledger-toolbar__action-btn"
+                  @click="exportPdf"
+                  title="Export Ledger PDF"
+                >
+                  <v-icon small left>mdi-file-pdf-box</v-icon>
+                  Export PDF
+                </v-btn>
+                <v-btn
+                  small
+                  outlined
+                  class="ledger-toolbar__action-btn"
+                  @click="openLedgerEmailDialog"
+                >
+                  <v-icon small left>mdi-email-outline</v-icon>
+                  Email Ledger
+                </v-btn>
+                <v-btn
+                  small
+                  color="orange darken-2"
+                  dark
+                  class="ledger-toolbar__action-btn"
+                  @click="openPendingDialog"
+                >
+                  <v-icon small left>mdi-clock-alert-outline</v-icon>
+                  Pending Invoices
+                </v-btn>
+              </div>
+            </div>
           </template>
 
           <template v-slot:[`item.select`]="{ item }">
@@ -381,7 +397,7 @@
 
           <!-- Search + Record Receipt -->
           <v-row dense class="mt-3">
-            <v-col cols="12" sm="8">
+            <v-col cols="12" md="6">
               <v-text-field
                 v-model="pendingSearch"
                 placeholder="Search invoice number..."
@@ -392,11 +408,54 @@
                 clearable
               />
             </v-col>
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" md="3">
               <v-btn color="primary" @click="generatependingPdf()">
                 <v-icon left>mdi-file-pdf-box</v-icon>
-                Export PDF
+                {{ hasPendingSelection ? "Export Selected PDF" : "Export PDF" }}
               </v-btn>
+            </v-col>
+            <v-col cols="12" sm="6" md="3">
+              <v-btn color="primary" outlined @click="openPendingEmailDialog">
+                <v-icon left>mdi-email-outline</v-icon>
+                {{ hasPendingSelection ? "Email Selected" : "Email PDF" }}
+              </v-btn>
+            </v-col>
+          </v-row>
+
+          <v-row dense class="mt-3" v-if="selectedPendingInvoices.length > 0">
+            <v-col cols="12">
+              <v-card
+                outlined
+                rounded
+                :style="{ borderLeft: '4px solid #1976d2' }"
+                style="background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%)"
+              >
+                <v-card-text class="py-3">
+                  <v-row align="center" dense>
+                    <v-col cols="12" md="8">
+                      <div
+                        class="text-caption text-uppercase font-weight-bold text--secondary"
+                      >
+                        Selected Pending Invoices ({{ pendingSelectedSummary.count
+                        }})
+                      </div>
+                      <div class="text-h6 font-weight-bold" style="color: #1976d2">
+                        {{ formatCurrency(pendingSelectedSummary.totalPending) }}
+                      </div>
+                    </v-col>
+                    <v-col
+                      cols="12"
+                      md="4"
+                      class="d-flex align-center justify-end"
+                    >
+                      <v-btn small outlined @click="clearPendingSelection">
+                        <v-icon small>mdi-close</v-icon>
+                        Clear Selection
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
             </v-col>
           </v-row>
         </v-card-text>
@@ -408,6 +467,7 @@
             :items="pendingInvoices"
             :loading="isLoadingBills"
             :search="pendingSearch"
+            item-key="selectionKey"
             dense
             class="elevation-1"
             :items-per-page="10"
@@ -415,14 +475,23 @@
             sort-by="invoiceDate"
             sort-asc
           >
+            <template v-slot:[`item.select`]="{ item }">
+              <v-checkbox
+                :input-value="selectedPendingInvoiceKeys.indexOf(item.selectionKey) >= 0"
+                @change="togglePendingSelection(item)"
+                hide-details
+                class="mt-0 pt-0"
+              />
+            </template>
+
             <!-- Invoice date -->
             <template v-slot:[`item.invoiceDate`]="{ item }">
               {{ formatDate(item.invoiceDate) }}
             </template>
 
             <!-- Bill amount -->
-            <template v-slot:[`item.billAmount`]="{ item }">
-              {{ formatCurrency(item.billAmount) }}
+            <template v-slot:[`item.openingAmount`]="{ item }">
+              {{ formatCurrency(item.openingAmount) }}
             </template>
 
             <!-- Allocated — grey when 0 -->
@@ -477,21 +546,37 @@
     </v-dialog>
     <PendingInvoicesPdf
       ref="pendingPdf"
-      :invoices="pendingInvoices"
-      :summary="pendingDialogSummary"
+      :invoices="pendingInvoicesForPdf"
+      :summary="pendingPdfSummary"
+      :customer="pendingCustomer"
+    />
+    <InvoiceEmailSender
+      ref="ledgerEmailSender"
+      document-type="ledger"
+      :ledger="ledgerPdfItems"
+      :ledger-summary="ledgerPdfSummary"
       :customer="customerLedger?.customer"
+    />
+    <InvoiceEmailSender
+      ref="pendingEmailSender"
+      document-type="pendingInvoices"
+      :pending-invoices="pendingInvoicesForPdf"
+      :pending-summary="pendingPdfSummary"
+      :customer="pendingCustomer"
     />
   </v-container>
 </template>
 
 <script>
 import { mapGetters } from "vuex";
+import InvoiceEmailSender from "../InvoiceEmailSender.vue";
 import LedgerPdf from "../Printables/LedgerPdf.vue";
 import PendingInvoicesPdf from "../Printables/PendingInvoicesPdf.vue";
 
 export default {
   name: "viewCustomerLedger",
   components: {
+    InvoiceEmailSender,
     LedgerPdf,
     PendingInvoicesPdf,
   },
@@ -500,6 +585,8 @@ export default {
       loading: false,
       error: null,
       selected: [],
+      ledgerDocumentItems: [],
+      ledgerDocumentSummary: null,
       page: 1,
       limit: 10,
       totalPages: 1,
@@ -517,7 +604,9 @@ export default {
       pendingDialog: false,
       pendingLoading: false,
       pendingSearch: "",
+      selectedPendingInvoiceKeys: [],
       pendingHeaders: [
+        { text: "Select", value: "select", align: "center", sortable: false },
         { text: "Invoice Date", value: "invoiceDate" },
         { text: "Invoice No", value: "invoiceno" },
         { text: "Opening Amount", value: "openingAmount", align: "end" },
@@ -534,11 +623,24 @@ export default {
   },
   computed: {
     ...mapGetters("ledger", ["customerLedger"]),
-    ...mapGetters("accounting", ["customerBills", "isLoadingBills"]),
+    ...mapGetters("accounting", [
+      "customerBills",
+      "customerBillsSummary",
+      "customerBillsCustomer",
+      "isLoadingBills",
+    ]),
     ledgerItems() {
       return this.customerLedger && this.customerLedger.ledger
         ? this.customerLedger.ledger
         : [];
+    },
+    ledgerPdfItems() {
+      return this.ledgerDocumentItems.length
+        ? this.ledgerDocumentItems
+        : this.ledgerItems;
+    },
+    ledgerPdfSummary() {
+      return this.ledgerDocumentSummary || this.summary || {};
     },
     financialYearOptions() {
       const options = [{ text: "Current Year", value: "current" }];
@@ -546,33 +648,93 @@ export default {
       // Financial year starts in April, so if we're before April, current FY started last year
       const currentFYStart =
         now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-      for (let y = currentFYStart; y >= currentFYStart - 4; y--) {
+      for (let y = currentFYStart; y >= currentFYStart - 1; y--) {
         const label = `${y}-${String(y + 1).slice(-2)}`;
         options.push({ text: label, value: label });
       }
       return options;
     },
     pendingInvoices() {
-      return (this.customerBills || []).filter(
-        (inv) => Number(inv.pendingAmount) !== 0,
+      return (this.customerBills || [])
+        .map((invoice, idx) => {
+          const invoiceno =
+            invoice?.invoiceno || invoice?.invoiceNumber || `INV-${idx + 1}`;
+          const openingAmount = Number(
+            invoice?.openingAmount ??
+              invoice?.billAmount ??
+              invoice?.amount ??
+              0,
+          );
+          const allocatedAmount = Number(
+            invoice?.allocatedAmount ?? invoice?.actualAllocatedAmount ?? 0,
+          );
+          const pendingAmount = Number(invoice?.pendingAmount ?? 0);
+
+          return {
+            ...invoice,
+            selectionKey:
+              invoice?.id ||
+              invoice?._id ||
+              invoice?.invoiceId ||
+              `${invoiceno}-${invoice?.invoiceDate || idx}`,
+            invoiceno,
+            openingAmount,
+            allocatedAmount,
+            actualAllocatedAmount: allocatedAmount,
+            pendingAmount,
+          };
+        })
+        .filter((inv) => Number(inv.pendingAmount) !== 0);
+    },
+    selectedPendingInvoices() {
+      if (!this.selectedPendingInvoiceKeys.length) return [];
+      return this.pendingInvoices.filter((invoice) =>
+        this.selectedPendingInvoiceKeys.includes(invoice.selectionKey),
       );
     },
-    pendingDialogSummary() {
+    hasPendingSelection() {
+      return this.selectedPendingInvoices.length > 0;
+    },
+    pendingInvoicesForPdf() {
+      return this.hasPendingSelection
+        ? this.selectedPendingInvoices
+        : this.pendingInvoices;
+    },
+    pendingCustomer() {
+      const customer = this.customerBillsCustomer || {};
+      const normalizedAddress =
+        typeof customer.address === "object"
+          ? customer.address
+          : {
+              line1: customer.address || "",
+              city: "",
+              pincode: "",
+            };
+
       return {
-        count: this.pendingInvoices.length,
-        totalOpening: this.pendingInvoices.reduce(
-          (s, i) => s + Number(i.openingAmount || 0),
-          0,
-        ),
-        totalAllocated: this.pendingInvoices.reduce(
-          (s, i) => s + Number(i.allocatedAmount || 0),
-          0,
-        ),
-        totalPending: this.pendingInvoices.reduce(
-          (s, i) => s + Number(i.pendingAmount || 0),
-          0,
-        ),
+        ...customer,
+        _id: customer._id || customer.id || customer.customerId || "",
+        name: customer.name || this.customerLedger?.customer?.name || "",
+        email_id: customer.email_id || customer.email || "",
+        phone_no: customer.phone_no || customer.phone || "",
+        gstin: customer.gstin || "",
+        address: normalizedAddress,
       };
+    },
+    pendingDialogSummary() {
+      if (Object.keys(this.customerBillsSummary || {}).length) {
+        return this.normalizePendingSummary(this.customerBillsSummary);
+      }
+
+      return this.summarizePendingInvoices(this.pendingInvoices);
+    },
+    pendingSelectedSummary() {
+      return this.summarizePendingInvoices(this.selectedPendingInvoices);
+    },
+    pendingPdfSummary() {
+      return this.hasPendingSelection
+        ? this.pendingSelectedSummary
+        : this.pendingDialogSummary;
     },
     formattedItems() {
       return this.ledgerItems.map((item) => {
@@ -619,36 +781,142 @@ export default {
     goBack() {
       this.$router.go(-1);
     },
-    async exportPdf() {
+    buildLedgerDocumentParams(limit = 100000) {
+      const params = { limit, page: 1, sortOrder: "asc" };
+
+      if (this.filterMode === "custom" && (this.startDate || this.endDate)) {
+        if (this.startDate) params.startDate = this.startDate;
+        if (this.endDate) params.endDate = this.endDate;
+      } else {
+        params.financialYear = this.financialYear;
+      }
+
+      return params;
+    },
+    async prepareLedgerDocumentData() {
+      const customerId = this.customerLedger?.customer?._id || this.$route.params.id;
+      if (!customerId) return false;
+
+      let prepared = false;
+
       try {
-        const customerId =
-          this.customerLedger?.customer?._id || this.$route.params.id;
-        if (!customerId) return;
-
-        const params = { limit: 100000, page: 1, sortOrder: "asc" };
-
-        if (this.filterMode === "custom" && (this.startDate || this.endDate)) {
-          if (this.startDate) params.startDate = this.startDate;
-          if (this.endDate) params.endDate = this.endDate;
-        } else {
-          params.financialYear = this.financialYear;
-        }
-
         await this.$store.dispatch("ledger/fetchCustomerLedger", {
           customerId,
-          params,
+          params: this.buildLedgerDocumentParams(),
         });
-        this.$refs.ledgerPdf?.generatePdf();
+
+        this.ledgerDocumentItems = [...(this.customerLedger?.ledger || [])];
+        this.ledgerDocumentSummary = this.customerLedger?.summary
+          ? { ...this.customerLedger.summary }
+          : {};
+        prepared = true;
       } catch (e) {
         console.error("Failed to fetch full ledger:", e);
         this.$store.commit("snackbar/SHOW_SNACKBAR", {
-          message: "Unable to fetch full ledger for export",
+          message: "Unable to fetch full ledger document",
           color: "error",
         });
       }
+
+      try {
+        await this.fetchLedger();
+      } catch (restoreError) {
+        console.error("Failed to restore paginated ledger view:", restoreError);
+      }
+
+      return prepared;
+    },
+    async exportPdf() {
+      const prepared = await this.prepareLedgerDocumentData();
+      if (!prepared) return;
+
+      await this.$nextTick();
+      this.$refs.ledgerPdf?.generatePdf();
+    },
+    async openLedgerEmailDialog() {
+      const prepared = await this.prepareLedgerDocumentData();
+      if (!prepared || !this.ledgerPdfItems.length) return;
+
+      await this.$nextTick();
+      this.$refs.ledgerEmailSender?.openDialog();
     },
     generatependingPdf() {
+      if (!this.pendingInvoicesForPdf.length) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: this.hasPendingSelection
+            ? "No selected pending invoices to export"
+            : "No pending invoices available to export",
+          color: "warning",
+        });
+        return;
+      }
       this.$refs.pendingPdf?.generatePdf();
+    },
+    async ensurePendingInvoicesLoaded(force = false) {
+      if (!force && this.customerBills && this.customerBills.length) return true;
+
+      try {
+        const customerId =
+          this.customerLedger?.customer?._id || this.$route.params.id;
+        if (!customerId) return false;
+
+        await this.$store.dispatch("accounting/fetchCustomerBills", customerId);
+        return true;
+      } catch {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Failed to load pending invoices",
+          color: "error",
+        });
+        return false;
+      }
+    },
+    async openPendingEmailDialog() {
+      const loaded = await this.ensurePendingInvoicesLoaded();
+      if (!loaded) return;
+
+      if (!this.pendingInvoicesForPdf.length) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: this.hasPendingSelection
+            ? "No selected pending invoices to email"
+            : "No pending invoices available to email",
+          color: "warning",
+        });
+        return;
+      }
+
+      this.$refs.pendingEmailSender?.openDialog();
+    },
+    summarizePendingInvoices(invoices = []) {
+      return {
+        count: invoices.length,
+        totalBill: invoices.reduce(
+          (sum, invoice) => sum + Number(invoice.openingAmount || 0),
+          0,
+        ),
+        totalAllocated: invoices.reduce(
+          (sum, invoice) => sum + Number(invoice.allocatedAmount || 0),
+          0,
+        ),
+        totalPending: invoices.reduce(
+          (sum, invoice) => sum + Number(invoice.pendingAmount || 0),
+          0,
+        ),
+      };
+    },
+    normalizePendingSummary(summary = {}) {
+      return {
+        count: Number(summary.count || summary.totalInvoices || 0),
+        totalBill: Number(
+          summary.totalBill ??
+            summary.totalOpening ??
+            summary.totalOpeningAmount ??
+            0,
+        ),
+        totalAllocated: Number(
+          summary.totalAllocated ?? summary.totalAllocatedAmount ?? 0,
+        ),
+        totalPending: Number(summary.totalPending ?? 0),
+      };
     },
     formatDate(d) {
       if (!d) return "-";
@@ -749,6 +1017,17 @@ export default {
     clearSelection() {
       this.selected = [];
     },
+    togglePendingSelection(item) {
+      const index = this.selectedPendingInvoiceKeys.indexOf(item.selectionKey);
+      if (index >= 0) {
+        this.selectedPendingInvoiceKeys.splice(index, 1);
+      } else {
+        this.selectedPendingInvoiceKeys.push(item.selectionKey);
+      }
+    },
+    clearPendingSelection() {
+      this.selectedPendingInvoiceKeys = [];
+    },
     getRowClass(item) {
       return this.selected.indexOf(item.referenceId) >= 0
         ? "highlighted-row"
@@ -766,16 +1045,8 @@ export default {
     async openPendingDialog() {
       this.pendingDialog = true;
       this.pendingSearch = "";
-      try {
-        const customerId =
-          this.customerLedger?.customer?._id || this.$route.params.id;
-        await this.$store.dispatch("accounting/fetchCustomerBills", customerId);
-      } catch {
-        this.$store.commit("snackbar/SHOW_SNACKBAR", {
-          message: "Failed to load pending invoices",
-          color: "error",
-        });
-      }
+      this.clearPendingSelection();
+      await this.ensurePendingInvoicesLoaded(true);
     },
     statusColor(status) {
       return (
@@ -803,5 +1074,71 @@ export default {
 <style scoped>
 .highlighted-row {
   background-color: #e3f2fd !important;
+}
+
+.ledger-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ledger-toolbar__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.ledger-toolbar__section,
+.ledger-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ledger-toolbar__toggle {
+  flex-shrink: 0;
+}
+
+.ledger-toolbar__field {
+  min-width: 160px;
+  max-width: 180px;
+}
+
+.ledger-toolbar__year {
+  max-width: 170px;
+}
+
+.ledger-toolbar__action-btn {
+  flex-shrink: 0;
+}
+
+@media (min-width: 960px) {
+  .ledger-toolbar__actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 959px) {
+  .ledger-toolbar {
+    padding: 12px;
+  }
+
+  .ledger-toolbar__toggle,
+  .ledger-toolbar__field,
+  .ledger-toolbar__action-btn {
+    width: 100%;
+    max-width: none;
+  }
+
+  .ledger-toolbar__toggle {
+    display: flex;
+  }
+
+  .ledger-toolbar__toggle .v-btn {
+    flex: 1 1 50%;
+  }
 }
 </style>

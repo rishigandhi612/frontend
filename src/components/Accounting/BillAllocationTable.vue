@@ -3,7 +3,12 @@
     <!-- Bill Selection and Amount Input -->
     <v-card class="mb-4" outlined>
       <v-card-title>Add Bill Allocation</v-card-title>
+      <pre>{{ bills }}</pre>
       <v-card-text>
+        <v-alert type="info" dense outlined class="mb-4">
+          Allocating bills is optional. Any remaining amount will be recorded as
+          on-account.
+        </v-alert>
         <v-row>
           <v-col cols="12" md="6">
             <v-autocomplete
@@ -109,7 +114,7 @@
       </v-list>
 
       <v-card-text v-else class="text-center text-muted">
-        No bills allocated yet
+        No bills allocated yet. You can still save this receipt as on-account.
       </v-card-text>
 
       <!-- Summary -->
@@ -123,17 +128,17 @@
             </div>
           </v-col>
           <v-col cols="6">
-            <div class="text-caption text-muted">Total Allocated</div>
+            <div class="text-caption text-muted">Allocated to Bills</div>
             <div class="text-h6 font-weight-bold text-success">
               ₹{{ formatCurrency(getTotalAllocatedAmount()) }}
             </div>
           </v-col>
           <v-col cols="6">
-            <div class="text-caption text-muted">Remaining</div>
+            <div class="text-caption text-muted">On-account Preview</div>
             <div
               :class="['text-h6', 'font-weight-bold', getRemainingStyling()]"
             >
-              ₹{{ formatCurrency(getRemainingAmount()) }}
+              ₹{{ formatCurrency(getOnAccountAmount()) }}
             </div>
           </v-col>
           <v-col cols="6">
@@ -179,6 +184,7 @@ export default {
     unallocatedBills() {
       return this.normalizedBills.filter(
         (bill) =>
+          bill.status !== "ON_ACCOUNT" && // ← exclude on-account entry
           bill.pendingAmount !== 0 &&
           !this.allocations.find((a) => a.billId === bill.id),
       );
@@ -231,9 +237,7 @@ export default {
     getSelectedBillAmount() {
       if (!this.selectedBill) return 0;
       const bill = this.normalizedBills.find((b) => b.id === this.selectedBill);
-      console.log("bill", bill);
-
-      return bill ? bill.billAmount : 0;
+      return bill ? bill.pendingAmount || bill.billAmount : 0;
     },
 
     getBillInvoiceNumber(billId) {
@@ -256,8 +260,6 @@ export default {
     },
 
     addAllocation() {
-      console.log("are we at 252", this.selectedBill, this.allocationAmount);
-
       if (
         !this.selectedBill ||
         !this.allocationAmount ||
@@ -267,8 +269,6 @@ export default {
       }
 
       const billAmount = this.getSelectedBillAmount();
-      console.log("bill amount", billAmount);
-
       if (this.allocationAmount > billAmount) {
         this.$store.commit("snackbar/SHOW_SNACKBAR", {
           message: `Amount cannot exceed bill amount of ₹${billAmount}`,
@@ -303,17 +303,25 @@ export default {
       return this.totalAmount - this.getTotalAllocatedAmount();
     },
 
+    getOnAccountAmount() {
+      return Math.max(this.getRemainingAmount(), 0);
+    },
+
     getAllocationStatus() {
       const remaining = this.getRemainingAmount();
-      if (remaining === 0) return "Fully Allocated";
       if (remaining < 0) return "Over Allocated";
+      if (this.getTotalAllocatedAmount() === 0 && this.totalAmount > 0)
+        return "On-account Only";
+      if (remaining === 0) return "Fully Allocated";
       return "Partially Allocated";
     },
 
     getAllocationStatusColor() {
       const remaining = this.getRemainingAmount();
-      if (remaining === 0) return "green";
       if (remaining < 0) return "red";
+      if (this.getTotalAllocatedAmount() === 0 && this.totalAmount > 0)
+        return "blue";
+      if (remaining === 0) return "green";
       return "orange";
     },
 
@@ -328,7 +336,7 @@ export default {
       const remaining = this.getRemainingAmount();
       if (remaining < 0) return "text-error";
       if (remaining === 0) return "text-success";
-      return "text-warning";
+      return "text-info";
     },
 
     formatCurrency(value) {
@@ -372,6 +380,10 @@ export default {
 
 .text-warning {
   color: #f57f17 !important;
+}
+
+.text-info {
+  color: #1976d2 !important;
 }
 
 .d-flex {

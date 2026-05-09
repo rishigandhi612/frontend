@@ -2,9 +2,9 @@
   <div class="receipt-container">
     <v-card>
       <v-card-title>Record Receipt</v-card-title>
-      <v-card-subtitle
-        >Enter payment details and allocate against bills</v-card-subtitle
-      >
+      <v-card-subtitle>
+        Enter payment details and optionally allocate against bills
+      </v-card-subtitle>
 
       <v-card-text>
         <v-form ref="form" @submit.prevent="submitReceipt">
@@ -161,7 +161,7 @@
           <!-- Bill Allocation Section -->
           <v-divider class="my-4"></v-divider>
 
-          <h3 class="mb-3">Bill Allocations</h3>
+          <h3 class="mb-3">Bill Allocations (Optional)</h3>
 
           <v-row v-if="!receipt.customerId" class="mb-3">
             <v-col cols="12">
@@ -173,6 +173,10 @@
 
           <v-row v-else>
             <v-col cols="12">
+              <v-alert type="info" dense outlined class="mb-3">
+                Any amount not allocated to bills will be saved as on-account
+                for this customer.
+              </v-alert>
               <bill-allocation-table
                 :bills="customerBills"
                 :loading="isLoadingBills"
@@ -194,7 +198,7 @@
                     <v-col cols="12">
                       <v-alert
                         v-if="getUnallocatedAmount() !== 0"
-                        :type="getUnallocatedAmount() < 0 ? 'error' : 'warning'"
+                        :type="getUnallocatedAmount() < 0 ? 'error' : 'info'"
                         dense
                         outlined
                         class="mb-2"
@@ -202,7 +206,9 @@
                         {{
                           getUnallocatedAmount() < 0
                             ? "Allocated amount exceeds total receipt amount."
-                            : "Please allocate the full amount before saving."
+                            : getTotalAllocated() === 0
+                              ? "Entire receipt will be recorded as on-account."
+                              : "Remaining amount will be recorded as on-account."
                         }}
                       </v-alert>
                     </v-col>
@@ -212,15 +218,15 @@
                       }}
                     </v-col>
                     <v-col cols="6">
-                      <strong>Total Allocated:</strong>
+                      <strong>Allocated to Bills:</strong>
                       ₹{{ formatCurrency(getTotalAllocated()) }}
                     </v-col>
                   </v-row>
                   <v-row dense>
                     <v-col cols="6">
-                      <strong>Unallocated Amount:</strong>
+                      <strong>On-account Amount:</strong>
                       <span :class="getUnallocatedClass()">
-                        ₹{{ formatCurrency(getUnallocatedAmount()) }}
+                        ₹{{ formatCurrency(getOnAccountAmount()) }}
                       </span>
                     </v-col>
                     <v-col cols="6">
@@ -305,13 +311,7 @@ export default {
       return this.getLoadingState.createReceipt;
     },
     canSubmit() {
-      // require customer, amount, at least one allocation, and no unallocated remainder
-      return (
-        this.receipt.customerId &&
-        this.receipt.totalAmount &&
-        this.receipt.allocations.length > 0 &&
-        this.getUnallocatedAmount() === 0
-      );
+      return this.stepOneValid && this.getUnallocatedAmount() >= 0;
     },
     stepOneValid() {
       // basic required fields for the first step
@@ -331,9 +331,7 @@ export default {
       return true;
     },
     stepTwoValid() {
-      return (
-        this.receipt.allocations.length > 0 && this.getUnallocatedAmount() === 0
-      );
+      return this.getUnallocatedAmount() >= 0;
     },
   },
   methods: {
@@ -401,24 +399,33 @@ export default {
       return (this.receipt.totalAmount || 0) - this.getTotalAllocated();
     },
 
+    getOnAccountAmount() {
+      return Math.max(this.getUnallocatedAmount(), 0);
+    },
+
     getAllocationStatus() {
       const unallocated = this.getUnallocatedAmount();
-      if (unallocated === 0) return "Fully Allocated";
       if (unallocated < 0) return "Over Allocated";
+      if (this.getTotalAllocated() === 0 && this.receipt.totalAmount)
+        return "On-account Only";
+      if (unallocated === 0) return "Fully Allocated";
       return "Partially Allocated";
     },
 
     getStatusColor() {
       const unallocated = this.getUnallocatedAmount();
-      if (unallocated === 0) return "green";
       if (unallocated < 0) return "red";
+      if (this.getTotalAllocated() === 0 && this.receipt.totalAmount)
+        return "blue";
+      if (unallocated === 0) return "green";
       return "orange";
     },
 
     getUnallocatedClass() {
       const unallocated = this.getUnallocatedAmount();
       if (unallocated < 0) return "text-error";
-      return "text-warning";
+      if (unallocated === 0) return "text-success";
+      return "text-info";
     },
 
     formatCurrency(value) {
@@ -442,14 +449,24 @@ export default {
         return;
       }
 
-      // Validate allocations
-      if (this.receipt.allocations.length === 0) {
+      if (this.getUnallocatedAmount() < 0) {
         this.$store.commit("snackbar/SHOW_SNACKBAR", {
-          message: "Please allocate at least one bill",
+          message: "Allocated amount cannot exceed the receipt total",
           color: "error",
         });
         return;
       }
+
+      const allocations = this.receipt.allocations
+        .filter(
+          (allocation) =>
+            allocation.billId &&
+            Number(allocation.allocatedAmount) > 0,
+        )
+        .map((allocation) => ({
+          ...allocation,
+          allocatedAmount: Number(allocation.allocatedAmount),
+        }));
 
       // Prepare payload based on payment method
       const payload = {
@@ -459,14 +476,14 @@ export default {
         bankId: this.receipt.bankId,
         voucherDate: this.receipt.voucherDate,
         narration: this.receipt.narration,
-        allocations: this.receipt.allocations,
+        allocations,
       };
 
       // Add payment-specific fields
       if (this.receipt.paymentMethod === "NEFT_RTGS") {
         payload.utrNumber = this.receipt.utrNumber;
       } else if (this.receipt.paymentMethod === "UPI") {
-        payload.upiId = this.receipt.upiId;
+        payload.upiRef = this.receipt.upiId;
       } else if (this.receipt.paymentMethod === "CHEQUE") {
         payload.chequeNumber = this.receipt.chequeNumber;
         payload.chequeDate = this.receipt.chequeDate;
@@ -535,5 +552,13 @@ export default {
 
 .text-warning {
   color: #f57f17 !important;
+}
+
+.text-success {
+  color: #388e3c !important;
+}
+
+.text-info {
+  color: #1976d2 !important;
 }
 </style>

@@ -220,20 +220,34 @@ const actions = {
     }
   },
 
-  // Updated sendInvoiceEmail action in your Vuex store
-  async sendInvoiceEmail(
+  async sendDocumentEmail(
     { commit },
-    { emailData, pdfBlob, challanPdfData = null, additionalFiles = [] }
+    {
+      emailData,
+      primaryPdfData,
+      challanPdfData = null,
+      additionalFiles = [],
+    }
   ) {
     commit("SET_LOADING_STATE", { type: "sendEmail", value: true });
     try {
       const formData = new FormData();
 
-      // Add invoice PDF
+      const mainAttachment =
+        primaryPdfData?.blob || primaryPdfData || null;
+      const mainFilename =
+        primaryPdfData?.filename ||
+        `invoice-${emailData.invoiceNumber || "document"}.pdf`;
+
+      if (!mainAttachment) {
+        throw new Error("Primary PDF attachment is required");
+      }
+
+      // Keep the existing multipart field name for backend compatibility.
       formData.append(
         "invoice",
-        pdfBlob,
-        `invoice-${emailData.invoiceNumber}.pdf`
+        mainAttachment,
+        mainFilename
       );
 
       // Add delivery challan PDF if provided
@@ -264,6 +278,8 @@ const actions = {
       formData.append("customerName", emailData.customerName);
       formData.append("subject", emailData.subject);
       formData.append("message", emailData.message);
+      formData.append("documentType", emailData.documentType || "invoice");
+      formData.append("documentLabel", emailData.documentLabel || "Invoice");
 
       const response = await apiClient.post("/email/invoice", formData, {
         headers: {
@@ -321,6 +337,21 @@ const actions = {
     } finally {
       commit("SET_LOADING_STATE", { type: "sendEmail", value: false });
     }
+  },
+
+  async sendInvoiceEmail(
+    { dispatch },
+    { emailData, pdfBlob, challanPdfData = null, additionalFiles = [] }
+  ) {
+    return dispatch("sendDocumentEmail", {
+      emailData,
+      primaryPdfData: {
+        blob: pdfBlob,
+        filename: `invoice-${emailData.invoiceNumber}.pdf`,
+      },
+      challanPdfData,
+      additionalFiles,
+    });
   },
 
   // New POD Actions
