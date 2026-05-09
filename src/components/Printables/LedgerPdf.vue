@@ -15,8 +15,8 @@ const CW = PW - ML - MR; // usable content width = 182 mm
 const FOOTER_H = 22; // mm reserved at bottom for footer
 
 // Column widths — must sum to CW (182)
-// Date | Voucher | Debit | Credit | Balance
-const COL = [28, 64, 30, 30, 30];
+// Date | Voucher No. | Voucher Type | Debit | Credit | Balance
+const COL = [28, 34, 30, 30, 30, 30];
 
 // Absolute left-edge of each column
 const COL_LEFT = COL.reduce((acc, w, i) => {
@@ -239,6 +239,7 @@ export default {
         return [
           this.fmtDate(item.date),
           item.referenceNumber || "",
+          item.type || "",
           item.debit != "0.00" ? this.fmtNum(item.debit) : "",
           item.credit != "0.00" ? this.fmtNum(item.credit) : "",
           item.balance != "0.00" ? this.fmtBal(item.balance) : "",
@@ -253,6 +254,7 @@ export default {
           [
             { content: "Date", styles: { halign: "left" } },
             { content: "Voucher No.", styles: { halign: "left" } },
+            { content: "Voucher Type.", styles: { halign: "left" } },
             { content: "Debit", styles: { halign: "right" } },
             { content: "Credit", styles: { halign: "right" } },
             { content: "Balance", styles: { halign: "right" } },
@@ -285,9 +287,10 @@ export default {
         columnStyles: {
           0: { cellWidth: COL[0], halign: "left" },
           1: { cellWidth: COL[1], halign: "left" },
-          2: { cellWidth: COL[2], halign: "right" },
+          2: { cellWidth: COL[2], halign: "left" },
           3: { cellWidth: COL[3], halign: "right" },
           4: { cellWidth: COL[4], halign: "right" },
+          5: { cellWidth: COL[5], halign: "right" },
         },
 
         margin: { top: HDR_H, left: ML, right: MR, bottom: FOOTER_H + 4 },
