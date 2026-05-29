@@ -3,7 +3,7 @@
     <!-- Bill Selection and Amount Input -->
     <v-card class="mb-4" outlined>
       <v-card-title>Add Bill Allocation</v-card-title>
-      <pre>{{ bills }}</pre>
+      <!-- <pre>{{ bills }}</pre> -->
       <v-card-text>
         <v-alert type="info" dense outlined class="mb-4">
           Allocating bills is optional. Any remaining amount will be recorded as
