@@ -28,14 +28,32 @@
             ></v-text-field>
           </template>
           <template v-slot:item="{ item }">
-            <tr @click="handleRowClick(item._id)">
-              <!-- <td>{{ item._id }}</td> -->
+            <tr>
               <td>{{ capitalizeFirstLetter(item.name) }}</td>
               <td>{{ item.email_id }}</td>
               <td>{{ item.phone_no }}</td>
               <td>{{ item.account_no }}</td>
               <td>{{ capitalizeFirstLetter(item.branch.name) }}</td>
               <td>{{ formatDate(item.updatedAt) }}</td>
+              <td>
+                <v-btn
+                  small
+                  color="primary"
+                  class="mr-2"
+                  @click="handleRowClick(item._id)"
+                >
+                  <v-icon small left>mdi-bank</v-icon>
+                  Bank Detail
+                </v-btn>
+                <v-btn
+                  small
+                  color="success"
+                  @click="openBankTransactions(item._id)"
+                >
+                  <v-icon small left>mdi-swap-horizontal</v-icon>
+                  Transactions
+                </v-btn>
+              </td>
             </tr>
           </template>
         </v-data-table>
@@ -64,6 +82,7 @@ import { mapGetters } from "vuex";
 
 export default {
   name: "BankList",
+
   data() {
     return {
       // sortBy: "name",
@@ -76,6 +95,7 @@ export default {
         { text: "Account Number", value: "account_no" },
         { text: "Branch", value: "branch.name" },
         { text: "Last Updated", value: "updatedAt" },
+        { text: "Actions", value: "actions", sortable: false }, // add this
       ],
       loading: false,
     };
@@ -120,6 +140,9 @@ export default {
         return;
       }
       this.$router.push({ name: "bankDetail", params: { id: bankId } });
+    },
+    openBankTransactions(bankId) {
+      this.$router.push({ name: "bankTransactions", params: { id: bankId } });
     },
     addBank() {
       this.$router.push({ name: "addBank" });
