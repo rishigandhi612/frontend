@@ -419,6 +419,7 @@ export default {
     closeDialog() {
       this.dialog = false;
       this.resetForm();
+      this.$emit("closed");
     },
 
     resetForm() {
@@ -705,6 +706,7 @@ ${signature}`;
         if (result && result.success) {
           this.successMessage = result.message;
           this.progressMessage = "";
+          this.$emit("email-sent", result);
 
           // Auto-close dialog after 3 seconds on success
           setTimeout(() => {

@@ -142,6 +142,7 @@ const actions = {
       const response = await apiClient.post("/custprod", invoiceData);
       if (response.data.success) {
         commit("ADD_INVOICE", response.data.data);
+        return response.data;
       } else {
         // If the API returns success: false, throw an error with the message
         throw new Error(response.data.message || "Invoice creation failed");

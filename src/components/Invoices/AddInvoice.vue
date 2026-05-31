@@ -167,6 +167,37 @@
       :rules="rules"
       @inventory-products-added="addInventoryProductsToInvoice"
     />
+
+    <v-dialog v-model="mailInvoiceDialog" max-width="420px" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          <v-icon left color="primary">mdi-email-outline</v-icon>
+          Mail this invoice?
+        </v-card-title>
+        <v-card-text>
+          Invoice
+          <strong>{{ createdInvoiceDetail?.invoiceNumber || "" }}</strong>
+          has been created. Would you like to send it to the customer by email?
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text color="grey darken-1" @click="skipInvoiceEmail">
+            No
+          </v-btn>
+          <v-btn color="primary" @click="openCreatedInvoiceEmail">
+            <v-icon left>mdi-send</v-icon>
+            Yes
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <InvoiceEmailSender
+      v-if="createdInvoiceDetail"
+      :invoiceDetail="createdInvoiceDetail"
+      ref="emailSenderComponent"
+      @closed="handleCreatedInvoiceEmailClosed"
+    />
   </v-container>
 </template>
 
@@ -176,6 +207,7 @@ import ProductList from "./addInvoiceProductList.vue";
 import InvoiceTotals from "./InvoiceTotals.vue";
 import BatchDialog from "./BatchDialog.vue";
 import InventoryDialog from "./InventoryDialog.vue";
+import InvoiceEmailSender from "@/components/InvoiceEmailSender.vue";
 
 export default {
   components: {
@@ -183,6 +215,7 @@ export default {
     InvoiceTotals,
     BatchDialog,
     InventoryDialog,
+    InvoiceEmailSender,
   },
 
   data() {
@@ -209,6 +242,9 @@ export default {
       },
       batchDialog: false,
       inventoryDialog: false, // New data property for inventory dialog
+      mailInvoiceDialog: false,
+      createdInvoiceDetail: null,
+      redirectAfterEmailDialog: false,
     };
   },
 
@@ -233,13 +269,13 @@ export default {
       ) {
         console.log(
           "Selected customer is already an object:",
-          this.selectedCustomerId
+          this.selectedCustomerId,
         );
         return this.selectedCustomerId;
       }
 
       const customer = this.allCustomers.find(
-        (c) => c._id === this.selectedCustomerId
+        (c) => c._id === this.selectedCustomerId,
       );
       console.log("Found customer:", customer);
       return customer;
@@ -289,7 +325,7 @@ export default {
       try {
         const response = await this.$store.dispatch(
           "invoices/fetchInvoiceById",
-          id
+          id,
         );
         if (response && response.success) {
           const invoice = response.data;
@@ -350,7 +386,7 @@ export default {
 
       // Show success message
       this.$toast?.success?.(
-        `Added ${inventoryProducts.length} items from inventory to invoice.`
+        `Added ${inventoryProducts.length} items from inventory to invoice.`,
       );
     },
 
@@ -377,8 +413,8 @@ export default {
       }
 
       try {
-        await this.createInvoiceInStore(invoicePayload);
-        this.$router.push("/invoice");
+        const response = await this.createInvoiceInStore(invoicePayload);
+        await this.prepareCreatedInvoiceEmailFlow(response);
       } catch (err) {
         console.error("API Error:", err);
         let errorMessage = "Error adding invoice.";
@@ -392,6 +428,53 @@ export default {
 
         this.error = errorMessage;
       }
+    },
+
+    async prepareCreatedInvoiceEmailFlow(createResponse) {
+      const createdInvoice = createResponse?.data || createResponse;
+      const createdInvoiceId =
+        createdInvoice?._id || createdInvoice?.id || createResponse?.invoiceId;
+
+      if (!createdInvoiceId) {
+        this.$router.push("/invoice");
+        return;
+      }
+
+      try {
+        const detailResponse = await this.fetchInvoiceById(createdInvoiceId);
+        this.createdInvoiceDetail = detailResponse?.data || createdInvoice;
+      } catch (error) {
+        console.error("Error loading created invoice for email:", error);
+        this.createdInvoiceDetail = createdInvoice;
+      }
+
+      this.mailInvoiceDialog = true;
+    },
+
+    skipInvoiceEmail() {
+      this.mailInvoiceDialog = false;
+      this.$router.push("/invoice");
+    },
+
+    async openCreatedInvoiceEmail() {
+      this.mailInvoiceDialog = false;
+      this.redirectAfterEmailDialog = true;
+      await this.$nextTick();
+
+      if (this.$refs.emailSenderComponent) {
+        this.$refs.emailSenderComponent.openDialog();
+      } else {
+        this.$router.push("/invoice");
+      }
+    },
+
+    handleCreatedInvoiceEmailClosed() {
+      if (!this.redirectAfterEmailDialog) {
+        return;
+      }
+
+      this.redirectAfterEmailDialog = false;
+      this.$router.push("/invoice");
     },
 
     async updateInvoice() {
@@ -451,7 +534,7 @@ export default {
       }
 
       const grandTotal = Math.round(
-        totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount
+        totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount,
       );
 
       // ✅ FIXED: Properly handle product structure
@@ -468,7 +551,7 @@ export default {
         } else {
           // Fallback: try to find the product in allProducts
           const foundProduct = this.allProducts.find(
-            (p) => p._id === product.productId
+            (p) => p._id === product.productId,
           );
           productReference = foundProduct || { _id: product.productId };
         }
@@ -527,7 +610,7 @@ export default {
           (product) =>
             !product.product ||
             isNaN(product.quantity) ||
-            isNaN(product.unit_price)
+            isNaN(product.unit_price),
         )
       ) {
         this.error = "Please fill out all product details correctly.";
