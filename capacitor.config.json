@@ -1,0 +1,8 @@
+{
+  "appId": "com.holosoft.app",
+  "appName": "holosoft",
+  "webDir": "dist",
+  "server": {
+    "url": "https://apprishi.vercel.app"
+  }
+}
