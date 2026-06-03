@@ -19,6 +19,15 @@
         min="0"
       />
     </v-col>
+    <v-col cols="12" md="4">
+      <v-text-field
+        :value="discountAllowed"
+        @input="updateDiscountAllowed"
+        label="Discount Allowed"
+        type="number"
+        min="0"
+      />
+    </v-col>
 
     <!-- Debug Info -->
     <v-col cols="12" v-if="debug">
@@ -88,6 +97,10 @@ export default {
       type: [Number, String],
       default: 0,
     },
+    discountAllowed: {
+      type: [Number, String],
+      default: 0,
+    },
     selectedCustomer: {
       type: Object,
       default: null,
@@ -154,6 +167,10 @@ export default {
       this.$emit("update:other-charges", value);
     },
 
+    updateDiscountAllowed(value) {
+      this.$emit("update:discount-allowed", value);
+    },
+
     updateCgst(value) {
       this.$emit("update:cgst", value);
     },
@@ -191,12 +208,15 @@ export default {
       }, 0);
 
       const otherCharges = parseFloat(this.otherCharges) || 0;
+      const discountAllowed = parseFloat(this.discountAllowed) || 0;
       const totalWithOtherCharges = totalItemsPrice + otherCharges;
 
       // Tax is always 18% total, either split as CGST+SGST or as single IGST
       const tax = totalWithOtherCharges * 0.18;
 
-      return Math.round(totalWithOtherCharges + tax);
+      return Math.round(totalWithOtherCharges + tax - discountAllowed).toFixed(
+        2,
+      );
     },
   },
 };

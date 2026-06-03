@@ -113,12 +113,20 @@
                     >₹{{ invoiceDetail.totalAmount }}</v-list-item-subtitle
                   >
                 </v-list-item>
-                <v-list-item>
+                <v-list-item v-if="invoiceDetail.otherCharges > 0">
                   <v-list-item-title class="text-right"
                     >Other Charges</v-list-item-title
                   >
                   <v-list-item-subtitle class="text-center"
                     >₹{{ invoiceDetail.otherCharges }}</v-list-item-subtitle
+                  >
+                </v-list-item>
+                <v-list-item v-if="invoiceDetail.discountAllowed > 0">
+                  <v-list-item-title class="text-right"
+                    >Discount Allowed</v-list-item-title
+                  >
+                  <v-list-item-subtitle class="text-center"
+                    >₹{{ invoiceDetail.discountAllowed }}</v-list-item-subtitle
                   >
                 </v-list-item>
                 <v-list-item

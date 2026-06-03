@@ -114,8 +114,10 @@
           <invoice-totals
             :invoice-products="invoiceProducts"
             :other-charges="otherCharges"
+            :discount-allowed="discountAllowed"
             :selected-customer="getSelectedCustomerObject"
             @update:other-charges="otherCharges = $event"
+            @update:discount-allowed="discountAllowed = $event"
             @intra-state-update="handleGstTypeChange"
           />
 
@@ -230,6 +232,7 @@ export default {
       originalInvoice: null,
       loading: false,
       otherCharges: 0,
+      discountAllowed: 0,
       isIntraStateTransaction: true,
       cgst: 0,
       sgst: 0,
@@ -339,6 +342,7 @@ export default {
             totalPrice: (product.unit_price * product.quantity).toFixed(2),
           }));
           this.otherCharges = invoice.otherCharges || 0;
+          this.discountAllowed = invoice.discountAllowed || 0;
           this.invoiceNumber = invoice.invoiceNumber || "";
           this.isIntraStateTransaction = invoice.igst === 0;
           this.originalInvoice = { ...invoice };
@@ -520,6 +524,7 @@ export default {
     prepareInvoicePayload() {
       const totalItemsPrice = this.calculateTotalItemsPrice();
       const otherCharges = parseFloat(this.otherCharges) || 0;
+      const discountAllowed = parseFloat(this.discountAllowed) || 0;
       const totalWithOtherCharges = totalItemsPrice + otherCharges;
 
       let cgstAmount = 0;
@@ -534,7 +539,11 @@ export default {
       }
 
       const grandTotal = Math.round(
-        totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount,
+        totalWithOtherCharges +
+          cgstAmount +
+          sgstAmount +
+          igstAmount -
+          discountAllowed,
       );
 
       // ✅ FIXED: Properly handle product structure
@@ -582,6 +591,7 @@ export default {
         products,
         rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
         otherCharges,
+        discountAllowed,
         cgst: cgstAmount,
         sgst: sgstAmount,
         igst: igstAmount,

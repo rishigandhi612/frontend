@@ -111,13 +111,13 @@ export default {
         "1281, Sadashiv Peth, Vertex Arcade, Pune - 411030",
         105,
         25,
-        "center"
+        "center",
       );
       doc.text(
         "Contact: (+91) 9422080922 / 9420699675    Web: hemanttraders.vercel.app",
         105,
         32,
-        "center"
+        "center",
       );
 
       // Horizontal line above
@@ -129,13 +129,13 @@ export default {
         "Dealers in BOPP, POLYESTER, PVC, THERMAL Films",
         105,
         42,
-        "center"
+        "center",
       );
       doc.text(
         "Adhesives for Lamination, Bookbinding, and Pasting, UV Coats",
         105,
         48,
-        "center"
+        "center",
       );
 
       // Horizontal line below
@@ -156,7 +156,7 @@ export default {
         `Date: ${this.formatDate(this.invoiceDetail.createdAt)}  `,
         200,
         62,
-        "right"
+        "right",
       );
 
       // Dynamic customer name handling
@@ -191,7 +191,7 @@ export default {
         `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
         105,
         currentY,
-        "center"
+        "center",
       );
       currentY += 5;
 
@@ -199,7 +199,7 @@ export default {
         `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
         105,
         currentY,
-        "center"
+        "center",
       );
       currentY += 5;
 
@@ -207,7 +207,7 @@ export default {
         `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
         105,
         currentY,
-        "center"
+        "center",
       );
     },
 
@@ -224,7 +224,7 @@ export default {
 *Goods once sold will not be taken back.
 *Interest @24% will be charged if payments are not made before due date.`,
         14,
-        pageHeight - 25
+        pageHeight - 25,
       );
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
@@ -237,7 +237,7 @@ export default {
         Branch & IFS Code: Bajirao Rd, Pune - 411030 & MAHB0000001`,
         105,
         pageHeight - 25,
-        "left"
+        "left",
       );
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
@@ -245,7 +245,7 @@ export default {
         `This is a computer-generated document and does not require any signature(s).`,
         105,
         pageHeight - 3,
-        "center"
+        "center",
       );
     },
 
@@ -271,7 +271,7 @@ export default {
           acc[key].nos += 1;
           return acc;
         },
-        {}
+        {},
       );
 
       // Step 2: Group by product name, HSN, and price to analyze width patterns
@@ -353,7 +353,7 @@ export default {
       // Calculate totals
       const totalNos = Object.values(finalAggregatedProducts).reduce(
         (total, product) => total + product.nos,
-        0
+        0,
       );
       const totalQuantity = Object.values(finalAggregatedProducts)
         .reduce((total, product) => total + product.quantity, 0)
@@ -382,7 +382,6 @@ export default {
           `Rs.${this.invoiceDetail.otherCharges.toFixed(2)}`,
         ]);
       }
-
       // Add tax rows
       if (this.invoiceDetail.cgst > 0 || this.invoiceDetail.sgst > 0) {
         products.push([
@@ -414,6 +413,19 @@ export default {
           "",
           "IGST @ 18%",
           `Rs.${this.invoiceDetail.igst.toFixed(2)}`,
+        ]);
+      }
+
+      const discountAllowed = Number(this.invoiceDetail.discountAllowed) || 0;
+      if (discountAllowed !== 0) {
+        products.push([
+          "less:",
+          "",
+          "",
+          "",
+          "",
+          "Discount Allowed",
+          `Rs.${discountAllowed.toFixed(2)}`,
         ]);
       }
 
@@ -518,7 +530,7 @@ export default {
 
           return summary;
         },
-        {}
+        {},
       );
 
       let hsnSummaryData = [];
@@ -540,13 +552,13 @@ export default {
       }
 
       const grandTotalInWords = toWords(
-        Math.round(this.invoiceDetail.grandTotal)
+        Math.round(this.invoiceDetail.grandTotal),
       ).toUpperCase();
       doc.setFont("helvetica", "bold");
       doc.text(
         `INR ${grandTotalInWords} Only`,
         14,
-        doc.lastAutoTable.finalY + 14
+        doc.lastAutoTable.finalY + 14,
       );
 
       // Render HSN Summary Table
@@ -600,7 +612,7 @@ export default {
       doc.text(
         `INR ${totalTaxInWords} Only`,
         14,
-        doc.lastAutoTable.finalY + 14
+        doc.lastAutoTable.finalY + 14,
       );
 
       return doc;
@@ -623,7 +635,7 @@ export default {
             newWindow.print();
           } else {
             alert(
-              "PDF opened in a new tab. Use your device's options to print."
+              "PDF opened in a new tab. Use your device's options to print.",
             );
           }
         };
