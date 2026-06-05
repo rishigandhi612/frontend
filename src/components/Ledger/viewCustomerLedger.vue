@@ -276,7 +276,7 @@
               v-if="item.type === 'INVOICE'"
               icon
               small
-              @click="viewInvoice(item.referenceId)"
+              @click="viewInvoice(item.voucherId)"
               title="View Invoice"
               color="primary"
             >
