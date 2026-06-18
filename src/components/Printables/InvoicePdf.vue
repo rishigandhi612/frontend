@@ -147,18 +147,22 @@ export default {
 
       // Add Invoice Title
       doc.setFontSize(12);
-      doc.text(`Invoice #${this.invoiceDetail.invoiceNumber}`, 14, 62);
+
+      const invoiceText = `Invoice #${this.invoiceDetail.invoiceNumber}${
+        this.invoiceDetail.ewbNo ? ` EWAY:${this.invoiceDetail.ewbNo}` : ""
+      }`;
+
+      doc.text(invoiceText, 14, 62);
 
       // Add Date
       doc.setFontSize(12);
       doc.setFont("helvetica", "normal");
       doc.text(
-        `Date: ${this.formatDate(this.invoiceDetail.createdAt)}  `,
+        `Date: ${this.formatDate(this.invoiceDetail.createdAt)}`,
         200,
         62,
         "right",
       );
-
       // Dynamic customer name handling
       let currentY = 70;
       const customerName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;

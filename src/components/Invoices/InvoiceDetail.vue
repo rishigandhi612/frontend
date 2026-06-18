@@ -31,8 +31,15 @@
 
             <!-- Invoice Info -->
             <v-row class="mt-3">
-              <v-col md="8" class="text-h6 font-weight-bold">
+              <v-col md="4" class="text-h6 font-weight-bold">
                 Invoice #{{ invoiceDetail.invoiceNumber }}
+              </v-col>
+              <v-col
+                md="4"
+                class="text-h6 font-weight-bold"
+                v-if="invoiceDetail.ewbNo"
+              >
+                E-Way Bill #{{ invoiceDetail.ewbNo || "N/A" }}
               </v-col>
               <v-col md="4" class="text-md-right">
                 <v-chip color="primary" text-color="white" small>

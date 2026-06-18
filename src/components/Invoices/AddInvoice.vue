@@ -48,6 +48,23 @@
             />
           </v-col>
         </v-row>
+        <v-row class="mt-3" v-if="isEditing">
+          <v-col cols="12" md="6" offset-md="3">
+            <v-text-field
+              v-model="ewbNo"
+              label="E-Way Bill No"
+              :rules="[rules.required]"
+              required
+              :disabled="!canEditInvoiceNumber"
+              :hint="
+                !canEditInvoiceNumber
+                  ? 'E-Way Bill number cannot be modified'
+                  : ''
+              "
+              persistent-hint
+            />
+          </v-col>
+        </v-row>
 
         <!-- Form -->
         <v-form ref="form" v-model="valid">
@@ -238,6 +255,7 @@ export default {
       sgst: 0,
       igst: 0,
       invoiceNumber: "",
+      ewbNo: "",
       canEditInvoiceNumber: false,
       rules: {
         required: (value) => !!value || "Required.",
@@ -343,6 +361,7 @@ export default {
           }));
           this.otherCharges = invoice.otherCharges || 0;
           this.discountAllowed = invoice.discountAllowed || 0;
+          this.ewbNo = invoice.ewbNo || "";
           this.invoiceNumber = invoice.invoiceNumber || "";
           this.isIntraStateTransaction = invoice.igst === 0;
           this.originalInvoice = { ...invoice };
@@ -588,6 +607,7 @@ export default {
         customer: this.selectedCustomerId,
         transporter: this.selectedTransporterId || "",
         invoiceNumber: this.invoiceNumber,
+        ewbNo: this.ewbNo,
         products,
         rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
         otherCharges,

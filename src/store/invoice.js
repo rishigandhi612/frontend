@@ -110,7 +110,7 @@ const actions = {
         commit("SET_INVOICE_DETAIL", invoice);
         commit(
           "SET_CUSTOMER_ID",
-          invoice.customer ? invoice.customer._id : null
+          invoice.customer ? invoice.customer._id : null,
         );
         invoice.products.forEach((product) => {
           commit("SET_PRODUCT_ID", product._id);
@@ -214,7 +214,7 @@ const actions = {
     } catch (error) {
       console.error("Error deleting invoice:", error);
       throw new Error(
-        error.response?.data?.message || "Failed to delete the invoice."
+        error.response?.data?.message || "Failed to delete the invoice.",
       );
     } finally {
       commit("SET_LOADING_STATE", { type: "deleteInvoice", value: false });
@@ -223,19 +223,13 @@ const actions = {
 
   async sendDocumentEmail(
     { commit },
-    {
-      emailData,
-      primaryPdfData,
-      challanPdfData = null,
-      additionalFiles = [],
-    }
+    { emailData, primaryPdfData, challanPdfData = null, additionalFiles = [] },
   ) {
     commit("SET_LOADING_STATE", { type: "sendEmail", value: true });
     try {
       const formData = new FormData();
 
-      const mainAttachment =
-        primaryPdfData?.blob || primaryPdfData || null;
+      const mainAttachment = primaryPdfData?.blob || primaryPdfData || null;
       const mainFilename =
         primaryPdfData?.filename ||
         `invoice-${emailData.invoiceNumber || "document"}.pdf`;
@@ -245,18 +239,14 @@ const actions = {
       }
 
       // Keep the existing multipart field name for backend compatibility.
-      formData.append(
-        "invoice",
-        mainAttachment,
-        mainFilename
-      );
+      formData.append("invoice", mainAttachment, mainFilename);
 
       // Add delivery challan PDF if provided
       if (challanPdfData) {
         formData.append(
           "challan",
           challanPdfData.blob,
-          challanPdfData.filename
+          challanPdfData.filename,
         );
       }
 
@@ -269,13 +259,14 @@ const actions = {
         // Also send the count of additional files to help backend processing
         formData.append(
           "additionalFilesCount",
-          additionalFiles.length.toString()
+          additionalFiles.length.toString(),
         );
       }
 
       // Add email data
       formData.append("email", emailData.email);
       formData.append("invoiceNumber", emailData.invoiceNumber);
+      formData.append("ewbNo", emailData.ewbNo || "");
       formData.append("customerName", emailData.customerName);
       formData.append("subject", emailData.subject);
       formData.append("message", emailData.message);
@@ -342,7 +333,7 @@ const actions = {
 
   async sendInvoiceEmail(
     { dispatch },
-    { emailData, pdfBlob, challanPdfData = null, additionalFiles = [] }
+    { emailData, pdfBlob, challanPdfData = null, additionalFiles = [] },
   ) {
     return dispatch("sendDocumentEmail", {
       emailData,
@@ -358,7 +349,7 @@ const actions = {
   // New POD Actions
   async uploadPod(
     { commit },
-    { invoiceId, podFile, deliveryNotes, uploadedBy }
+    { invoiceId, podFile, deliveryNotes, uploadedBy },
   ) {
     commit("SET_LOADING_STATE", { type: "uploadPod", value: true });
     try {
@@ -375,7 +366,7 @@ const actions = {
             "Content-Type": "multipart/form-data",
           },
           timeout: 60000, // 60 second timeout for file upload
-        }
+        },
       );
 
       if (response.status === 200 || (response.data && response.data.success)) {
@@ -529,7 +520,7 @@ const mutations = {
   },
   UPDATE_INVOICE(state, updatedInvoice) {
     const index = state.invoices.findIndex(
-      (invoice) => invoice._id === updatedInvoice._id
+      (invoice) => invoice._id === updatedInvoice._id,
     );
     if (index !== -1) {
       state.invoices.splice(index, 1, updatedInvoice);
@@ -540,7 +531,7 @@ const mutations = {
   },
   REMOVE_INVOICE(state, invoiceId) {
     state.invoices = state.invoices.filter(
-      (invoice) => invoice._id !== invoiceId
+      (invoice) => invoice._id !== invoiceId,
     );
 
     if (state.invoiceDetail && state.invoiceDetail._id === invoiceId) {
