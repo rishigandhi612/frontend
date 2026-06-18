@@ -122,6 +122,7 @@
           :loading="loading"
           item-key="referenceId"
           class="elevation-2"
+          mobile-breakpoint="0"
           :item-class="getRowClass"
           :page.sync="page"
           :items-per-page.sync="limit"
@@ -130,8 +131,6 @@
           @update:items-per-page="onLimitChange"
           :footer-props="{
             showFirstLastPage: true,
-            firstIcon: 'mdi-arrow-collapse-left',
-            lastIcon: 'mdi-arrow-collapse-right',
           }"
         >
           <template v-slot:top>
@@ -262,11 +261,7 @@
           </template>
 
           <template v-slot:[`item.type`]="{ item }">
-            <v-chip
-              :color="item.type === 'INVOICE' ? '#d32f2f' : '#388e3c'"
-              text-color="white"
-              small
-            >
+            <v-chip :color="getChipColor(item.type)" text-color="white" small>
               {{ item.type }}
             </v-chip>
           </template>
@@ -278,6 +273,16 @@
               small
               @click="viewInvoice(item.voucherId)"
               title="View Invoice"
+              color="primary"
+            >
+              <v-icon small>mdi-information-outline</v-icon>
+            </v-btn>
+            <v-btn
+              v-if="item.type === 'RECEIPT'"
+              icon
+              small
+              @click="viewReceipt(item.referenceNumber)"
+              title="View Receipt"
               color="primary"
             >
               <v-icon small>mdi-information-outline</v-icon>
@@ -319,7 +324,7 @@
         <v-alert type="error" dense>{{ error }}</v-alert>
       </v-col>
     </v-row>
-    <v-dialog v-model="pendingDialog" max-width="860" scrollable>
+    <v-dialog v-model="pendingDialog" scrollable>
       <v-card>
         <!-- Title bar -->
         <v-card-title
@@ -343,38 +348,10 @@
                   <div
                     class="text-caption text--secondary text-uppercase font-weight-bold"
                   >
-                    Invoices
-                  </div>
-                  <div class="text-h5 font-weight-bold orange--text darken-2">
-                    {{ pendingDialogSummary.count }}
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-            <v-col cols="6" sm="3">
-              <v-card outlined rounded>
-                <v-card-text class="pa-3 text-center">
-                  <div
-                    class="text-caption text--secondary text-uppercase font-weight-bold"
-                  >
-                    Bill Amount
-                  </div>
-                  <div class="text-h6 font-weight-bold">
-                    {{ formatCurrency(pendingDialogSummary.totalBill) }}
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-            <v-col cols="6" sm="3">
-              <v-card outlined rounded>
-                <v-card-text class="pa-3 text-center">
-                  <div
-                    class="text-caption text--secondary text-uppercase font-weight-bold"
-                  >
-                    Allocated
+                    Gross Pending
                   </div>
                   <div class="text-h6 font-weight-bold green--text">
-                    {{ formatCurrency(pendingDialogSummary.totalAllocated) }}
+                    {{ formatCurrency(pendingDialogSummary.grossPending) }}
                   </div>
                 </v-card-text>
               </v-card>
@@ -385,10 +362,41 @@
                   <div
                     class="text-caption text--secondary text-uppercase font-weight-bold"
                   >
-                    Pending
+                    On Account
+                  </div>
+                  <div class="text-h6 font-weight-bold orange--text darken-2">
+                    {{ formatCurrency(pendingDialogSummary.totalOnAccount) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="6" sm="3">
+              <v-card outlined rounded>
+                <v-card-text class="pa-3 text-center">
+                  <div
+                    class="text-caption text--secondary text-uppercase font-weight-bold"
+                  >
+                    Actual Receivable
                   </div>
                   <div class="text-h6 font-weight-bold red--text darken-1">
                     {{ formatCurrency(pendingDialogSummary.totalPending) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="6" sm="3">
+              <v-card outlined rounded>
+                <v-card-text class="pa-3 text-center">
+                  <div
+                    class="text-caption text--secondary text-uppercase font-weight-bold"
+                  >
+                    Total Credit Note(s) Amount
+                  </div>
+                  <div class="text-h6 font-weight-bold">
+                    {{
+                      formatCurrency(pendingDialogSummary.totalCreditNoteAmount)
+                    }}
                   </div>
                 </v-card-text>
               </v-card>
@@ -428,7 +436,9 @@
                 outlined
                 rounded
                 :style="{ borderLeft: '4px solid #1976d2' }"
-                style="background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%)"
+                style="
+                  background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
+                "
               >
                 <v-card-text class="py-3">
                   <v-row align="center" dense>
@@ -436,21 +446,35 @@
                       <div
                         class="text-caption text-uppercase font-weight-bold text--secondary"
                       >
-                        Selected Pending Invoices ({{ pendingSelectedSummary.count
+                        Selected Pending Invoices ({{
+                          pendingSelectedSummary.count
                         }})
                       </div>
-                      <div class="text-h6 font-weight-bold" style="color: #1976d2">
-                        {{ formatCurrency(pendingSelectedSummary.totalPending) }}
+                      <div
+                        class="text-h6 font-weight-bold"
+                        style="color: #1976d2"
+                      >
+                        {{
+                          formatCurrency(pendingSelectedSummary.totalPending)
+                        }}
                       </div>
                     </v-col>
                     <v-col
                       cols="12"
                       md="4"
-                      class="d-flex align-center justify-end"
+                      class="d-flex align-center justify-end gap-2"
                     >
                       <v-btn small outlined @click="clearPendingSelection">
                         <v-icon small>mdi-close</v-icon>
                         Clear Selection
+                      </v-btn>
+                      <v-btn
+                        small
+                        color="success"
+                        @click="settleSelectedInvoices"
+                      >
+                        <v-icon small>mdi-check-circle</v-icon>
+                        Settle
                       </v-btn>
                     </v-col>
                   </v-row>
@@ -469,15 +493,21 @@
             :search="pendingSearch"
             item-key="selectionKey"
             dense
+            mobile-breakpoint="0"
             class="elevation-1"
             :items-per-page="10"
-            :footer-props="{ itemsPerPageOptions: [5, 10, 25, 50] }"
+            :footer-props="{
+              itemsPerPageOptions: [5, 10, 25, 50],
+              showFirstLastPage: true,
+            }"
             sort-by="invoiceDate"
             sort-asc
           >
             <template v-slot:[`item.select`]="{ item }">
               <v-checkbox
-                :input-value="selectedPendingInvoiceKeys.indexOf(item.selectionKey) >= 0"
+                :input-value="
+                  selectedPendingInvoiceKeys.indexOf(item.selectionKey) >= 0
+                "
                 @change="togglePendingSelection(item)"
                 hide-details
                 class="mt-0 pt-0"
@@ -781,6 +811,20 @@ export default {
     goBack() {
       this.$router.go(-1);
     },
+    getChipColor(type) {
+      switch (type) {
+        case "INVOICE":
+          return "#d32f2f";
+        case "RECEIPT":
+          return "#388e3c";
+        case "CREDIT_NOTE":
+          return "#1976d2";
+        case "OPENING_BALANCE":
+          return "#7b1fa2";
+        default:
+          return "grey";
+      }
+    },
     buildLedgerDocumentParams(limit = 100000) {
       const params = { limit, page: 1, sortOrder: "asc" };
 
@@ -794,7 +838,8 @@ export default {
       return params;
     },
     async prepareLedgerDocumentData() {
-      const customerId = this.customerLedger?.customer?._id || this.$route.params.id;
+      const customerId =
+        this.customerLedger?.customer?._id || this.$route.params.id;
       if (!customerId) return false;
 
       let prepared = false;
@@ -853,7 +898,8 @@ export default {
       this.$refs.pendingPdf?.generatePdf();
     },
     async ensurePendingInvoicesLoaded(force = false) {
-      if (!force && this.customerBills && this.customerBills.length) return true;
+      if (!force && this.customerBills && this.customerBills.length)
+        return true;
 
       try {
         const customerId =
@@ -905,17 +951,10 @@ export default {
     },
     normalizePendingSummary(summary = {}) {
       return {
-        count: Number(summary.count || summary.totalInvoices || 0),
-        totalBill: Number(
-          summary.totalBill ??
-            summary.totalOpening ??
-            summary.totalOpeningAmount ??
-            0,
-        ),
-        totalAllocated: Number(
-          summary.totalAllocated ?? summary.totalAllocatedAmount ?? 0,
-        ),
         totalPending: Number(summary.totalPending ?? 0),
+        totalOnAccount: Number(summary.onAccount ?? 0),
+        grossPending: Number(summary.grossPending ?? 0),
+        totalCreditNoteAmount: Number(summary.totalCreditNoteAmount ?? 0),
       };
     },
     formatDate(d) {
@@ -1006,6 +1045,12 @@ export default {
         params: { id: voucherId },
       });
     },
+    viewReceipt(receiptNumber) {
+      this.$router.push({
+        name: "addReceipt",
+        params: { id: receiptNumber },
+      });
+    },
     toggleSelect(item) {
       const index = this.selected.indexOf(item.referenceId);
       if (index >= 0) {
@@ -1061,7 +1106,41 @@ export default {
       this.pendingDialog = false;
       this.$router.push({
         name: "addReceipt",
-        query: { customerId: this.customerLedger?.customer?._id },
+        query: { customerId: this.customerLedger?.customer?.id },
+      });
+    },
+    settleSelectedInvoices() {
+      if (!this.hasPendingSelection) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Please select at least one invoice",
+          color: "warning",
+        });
+        return;
+      }
+
+      // Store selected invoices in sessionStorage for AddReceipt to consume
+      const selectedData = {
+        customerId: this.customerLedger?.customer?.id,
+        selectedInvoices: this.selectedPendingInvoices.map((inv) => ({
+          invoiceId: inv.invoiceno,
+          invoiceno: inv.invoiceno,
+          invoiceDate: inv.invoiceDate,
+          pendingAmount: Number(inv.pendingAmount),
+          openingAmount: Number(inv.openingAmount),
+        })),
+        totalPending: this.pendingSelectedSummary.totalPending,
+      };
+
+      window.sessionStorage.setItem(
+        "pendingInvoicesToSettle",
+        JSON.stringify(selectedData),
+      );
+
+      // Close dialog and navigate
+      this.pendingDialog = false;
+      this.$router.push({
+        name: "addReceipt",
+        query: { customerId: this.customerLedger?.customer?.id },
       });
     },
   },

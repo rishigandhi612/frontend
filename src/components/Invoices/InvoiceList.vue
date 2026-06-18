@@ -29,8 +29,6 @@
           :footer-props="{
             'items-per-page-options': [5, 10, 15, 20],
             showFirstLastPage: true,
-            firstIcon: 'mdi-arrow-collapse-left',
-            lastIcon: 'mdi-arrow-collapse-right',
           }"
           @update:options="handleTableOptionsChange"
           class="elevation-1"
@@ -150,7 +148,7 @@ export default {
       this.$store.commit("invoices/SET_PAGE", this.tableOptions.page);
       this.$store.commit(
         "invoices/SET_ITEMS_PER_PAGE",
-        this.tableOptions.itemsPerPage
+        this.tableOptions.itemsPerPage,
       );
       this.$store.commit("invoices/SET_SORTING", {
         sortBy: this.tableOptions.sortBy[0],

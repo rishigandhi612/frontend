@@ -303,9 +303,9 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/receipt",
-    component: AddReceipt,
     name: "addReceipt",
+    path: "/receipt/:id?/:customerId?/:bankId?",
+    component: AddReceipt,
     meta: { requiresAuth: true },
   },
 

@@ -95,9 +95,24 @@
               <strong>{{ getBillInvoiceNumber(allocation.billId) }}</strong>
             </v-list-item-title>
             <v-list-item-subtitle>
-              Bill: ₹{{ formatCurrency(getBillAmount(allocation.billId)) }} |
-              Allocated: ₹{{ formatCurrency(allocation.allocatedAmount) }} |
-              Balance: ₹{{ formatCurrency(getBalance(allocation.billId)) }}
+              <span
+                v-if="isOverpaid(getBill(allocation.billId))"
+                class="text-warning"
+              >
+                Overpayment adjustment: ₹{{
+                  formatCurrency(allocation.allocatedAmount)
+                }}
+                (available: ₹{{
+                  formatCurrency(
+                    Math.abs(getBill(allocation.billId).pendingAmount),
+                  )
+                }})
+              </span>
+              <span v-else>
+                Bill: ₹{{ formatCurrency(getBillAmount(allocation.billId)) }} |
+                Allocated: ₹{{ formatCurrency(allocation.allocatedAmount) }} |
+                Balance: ₹{{ formatCurrency(getBalance(allocation.billId)) }}
+              </span>
             </v-list-item-subtitle>
           </v-list-item-content>
           <v-list-item-action>
@@ -173,6 +188,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    originalAllocations: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -181,11 +200,19 @@ export default {
     };
   },
   computed: {
+    sessionAllocatedMap() {
+      const map = {};
+      for (const a of this.allocations) {
+        map[a.billId] = Number(a.allocatedAmount) || 0;
+      }
+      return map;
+    },
+
     unallocatedBills() {
       return this.normalizedBills.filter(
         (bill) =>
-          bill.status !== "ON_ACCOUNT" && // ← exclude on-account entry
-          bill.pendingAmount !== 0 &&
+          bill.status !== "ON_ACCOUNT" &&
+          this.effectivePending(bill) !== 0 && // ← use effective pending
           !this.allocations.find((a) => a.billId === bill.id),
       );
     },
@@ -234,12 +261,49 @@ export default {
     },
   },
   methods: {
+    effectivePending(bill) {
+      const dbPending = Number(bill.pendingAmount) || 0;
+
+      // What was originally allocated to this bill when the receipt was loaded
+      const originalAlloc = this.originalAllocations.find(
+        (a) => a.billId === bill.id,
+      );
+      const originalAmount = originalAlloc
+        ? Number(originalAlloc.allocatedAmount)
+        : 0;
+
+      // What is currently allocated in this session (may be 0 if user removed it)
+      const currentAlloc = this.allocations.find((a) => a.billId === bill.id);
+      const currentAmount = currentAlloc
+        ? Number(currentAlloc.allocatedAmount)
+        : 0;
+
+      // Freed up = what was originally held but is no longer in current session
+      const freedUp = originalAmount - currentAmount;
+
+      // Effective available = DB pending + whatever we freed up locally
+      return dbPending + freedUp;
+    },
     getSelectedBillAmount() {
       if (!this.selectedBill) return 0;
       const bill = this.normalizedBills.find((b) => b.id === this.selectedBill);
-      return bill ? bill.pendingAmount || bill.billAmount : 0;
-    },
+      if (!bill) return 0;
 
+      if (this.isOverpaid(bill)) {
+        // Return the overpaid amount as a positive number — UI will negate it
+        return Math.abs(Number(bill.pendingAmount));
+      }
+
+      const parentUnallocated =
+        this.totalAmount - this.getTotalAllocatedAmount();
+      return Math.min(Number(bill.pendingAmount), parentUnallocated);
+    },
+    isOverpaid(bill) {
+      return Number(bill.pendingAmount) < 0;
+    },
+    getBill(billId) {
+      return this.normalizedBills.find((b) => b.id === billId) || null;
+    },
     getBillInvoiceNumber(billId) {
       const bill = this.normalizedBills.find((b) => b.id === billId);
       return bill ? bill.invoiceNumber : "Unknown";
@@ -263,18 +327,34 @@ export default {
       if (
         !this.selectedBill ||
         !this.allocationAmount ||
-        this.allocationAmount <= 0
-      ) {
+        this.allocationAmount === 0
+      )
         return;
-      }
 
-      const billAmount = this.getSelectedBillAmount();
-      if (this.allocationAmount > billAmount) {
-        this.$store.commit("snackbar/SHOW_SNACKBAR", {
-          message: `Amount cannot exceed bill amount of ₹${billAmount}`,
-          color: "error",
-        });
-        return;
+      const bill = this.normalizedBills.find((b) => b.id === this.selectedBill);
+
+      if (this.isOverpaid(bill)) {
+        const maxAdjustment = Math.abs(Number(bill.pendingAmount));
+        if (Math.abs(this.allocationAmount) > maxAdjustment) {
+          this.$store.commit("snackbar/SHOW_SNACKBAR", {
+            message: `Adjustment cannot exceed overpaid amount of ₹${maxAdjustment}`,
+            color: "error",
+          });
+          return;
+        }
+        if (this.allocationAmount > 0) {
+          // Force negative — overpaid bills must be negative allocations
+          this.allocationAmount = -Math.abs(this.allocationAmount);
+        }
+      } else {
+        const billAmount = this.getSelectedBillAmount();
+        if (this.allocationAmount > billAmount) {
+          this.$store.commit("snackbar/SHOW_SNACKBAR", {
+            message: `Amount cannot exceed bill pending amount of ₹${billAmount}`,
+            color: "error",
+          });
+          // return;
+        }
       }
 
       this.$emit("add-bill", this.selectedBill);
@@ -283,11 +363,9 @@ export default {
         allocatedAmount: this.allocationAmount,
       });
 
-      // Reset form
       this.selectedBill = null;
       this.allocationAmount = null;
     },
-
     removeAllocation(billId) {
       this.$emit("remove-bill", billId);
     },
@@ -349,10 +427,15 @@ export default {
   watch: {
     selectedBill(newVal) {
       if (newVal) {
-        const billAmount = this.getSelectedBillAmount();
-        const remaining = this.totalAmount - this.getTotalAllocatedAmount();
-        // default allocation is remaining amount or bill amount whichever is smaller
-        this.allocationAmount = Math.min(billAmount, remaining);
+        const bill = this.normalizedBills.find((b) => b.id === newVal);
+        if (bill && this.isOverpaid(bill)) {
+          // Pre-fill with the full overpaid amount as negative
+          this.allocationAmount = -Math.abs(Number(bill.pendingAmount));
+        } else {
+          const billAmount = this.getSelectedBillAmount();
+          const remaining = this.totalAmount - this.getTotalAllocatedAmount();
+          this.allocationAmount = Math.min(billAmount, remaining);
+        }
       } else {
         this.allocationAmount = null;
       }

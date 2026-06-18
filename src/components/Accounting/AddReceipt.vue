@@ -1,12 +1,58 @@
 <template>
   <div class="receipt-container">
-    <v-card>
-      <v-card-title>Record Receipt</v-card-title>
+    <!-- Unsaved Changes Dialog -->
+    <v-dialog v-model="showUnsavedDialog" max-width="420" persistent>
+      <v-card>
+        <v-card-title class="text-h6">Discard unsaved changes?</v-card-title>
+        <v-card-text>
+          You have unsaved changes to this receipt. If you leave now, your
+          changes will be lost.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="cancelNavigation">Stay on page</v-btn>
+          <v-btn color="error" text @click="confirmNavigation">
+            Discard &amp; leave
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-card :loading="isLoadingDetail">
+      <v-card-title>
+        {{ isEditMode ? "Edit Receipt" : "Record Receipt" }}
+        <v-chip
+          v-if="isEditMode && receipt.voucherId"
+          class="ml-3"
+          small
+          outlined
+          color="primary"
+        >
+          {{ receipt.voucherId }}
+        </v-chip>
+        <v-chip
+          v-if="isDirty"
+          class="ml-2"
+          small
+          color="orange"
+          text-color="white"
+        >
+          Unsaved changes
+        </v-chip>
+      </v-card-title>
       <v-card-subtitle>
-        Enter payment details and optionally allocate against bills
+        {{
+          isEditMode
+            ? "Update payment details and bill allocations"
+            : "Enter payment details and optionally allocate against bills"
+        }}
       </v-card-subtitle>
 
       <v-card-text>
+        <v-alert v-if="loadDetailError" type="error" outlined class="mb-4">
+          {{ loadDetailError }}
+        </v-alert>
+
         <v-form ref="form" @submit.prevent="submitReceipt">
           <!-- Row 1: Customer Selection and Total Amount -->
           <v-row>
@@ -23,6 +69,7 @@
                 dense
                 clearable
                 :rules="[(v) => !!v || 'Customer is required']"
+                :disabled="isEditMode"
                 @change="onCustomerChange"
               >
                 <template v-slot:item="{ item }">
@@ -66,6 +113,7 @@
 
             <v-col cols="12" sm="6">
               <v-autocomplete
+                v-if="receipt.paymentMethod !== 'CASH'"
                 v-model="receipt.bankId"
                 :items="allBanks"
                 item-text="name"
@@ -76,7 +124,12 @@
                 outlined
                 dense
                 clearable
-                :rules="[(v) => !!v || 'Bank is required']"
+                :rules="[
+                  (v) =>
+                    receipt.paymentMethod === 'CASH' ||
+                    !!v ||
+                    'Bank is required for non-cash payments',
+                ]"
               >
                 <template v-slot:item="{ item }">
                   <div>
@@ -86,6 +139,16 @@
                   </div>
                 </template>
               </v-autocomplete>
+              <v-alert
+                v-else
+                type="info"
+                dense
+                outlined
+                class="mt-1"
+                style="font-size: 13px"
+              >
+                No bank required for cash payments.
+              </v-alert>
             </v-col>
           </v-row>
 
@@ -105,7 +168,7 @@
           <v-row v-if="receipt.paymentMethod === 'UPI'">
             <v-col cols="12" sm="6">
               <v-text-field
-                v-model="receipt.upiId"
+                v-model="receipt.upiRef"
                 label="UPI ID / Transaction ID *"
                 outlined
                 dense
@@ -136,9 +199,9 @@
             </v-col>
           </v-row>
 
-          <!-- Row 4: Voucher Date and Narration -->
+          <!-- Row 4: Voucher Date, Reference, and Narration -->
           <v-row>
-            <v-col cols="12" sm="6">
+            <v-col cols="12" sm="4">
               <v-text-field
                 v-model="receipt.voucherDate"
                 label="Voucher Date *"
@@ -148,10 +211,18 @@
                 :rules="[(v) => !!v || 'Voucher Date is required']"
               />
             </v-col>
-            <v-col cols="12" sm="6">
+            <v-col cols="12" sm="4">
+              <v-text-field
+                v-model="receipt.reference"
+                label="Reference"
+                outlined
+                dense
+              />
+            </v-col>
+            <v-col cols="12" sm="4">
               <v-text-field
                 v-model="receipt.narration"
-                label="Narration/Description"
+                label="Narration / Description"
                 outlined
                 dense
               />
@@ -159,8 +230,7 @@
           </v-row>
 
           <!-- Bill Allocation Section -->
-          <v-divider class="my-4"></v-divider>
-
+          <v-divider class="my-4" />
           <h3 class="mb-3">Bill Allocations (Optional)</h3>
 
           <v-row v-if="!receipt.customerId" class="mb-3">
@@ -182,6 +252,7 @@
                 :loading="isLoadingBills"
                 :total-amount="receipt.totalAmount"
                 :allocations="receipt.allocations"
+                :original-allocations="originalAllocations"
                 @update-allocation="updateAllocation"
                 @add-bill="addBillAllocation"
                 @remove-bill="removeBillAllocation"
@@ -207,8 +278,8 @@
                           getUnallocatedAmount() < 0
                             ? "Allocated amount exceeds total receipt amount."
                             : getTotalAllocated() === 0
-                              ? "Entire receipt will be recorded as on-account."
-                              : "Remaining amount will be recorded as on-account."
+                            ? "Entire receipt will be recorded as on-account."
+                            : "Remaining amount will be recorded as on-account."
                         }}
                       </v-alert>
                     </v-col>
@@ -218,8 +289,9 @@
                       }}
                     </v-col>
                     <v-col cols="6">
-                      <strong>Allocated to Bills:</strong>
-                      ₹{{ formatCurrency(getTotalAllocated()) }}
+                      <strong>Allocated to Bills:</strong> ₹{{
+                        formatCurrency(getTotalAllocated())
+                      }}
                     </v-col>
                   </v-row>
                   <v-row dense>
@@ -254,9 +326,19 @@
                 :loading="isCreatingReceipt"
                 :disabled="!canSubmit || isCreatingReceipt"
               >
-                Save Receipt
+                {{ isEditMode ? "Update Receipt" : "Save Receipt" }}
               </v-btn>
-              <v-btn text @click="resetForm"> Clear </v-btn>
+              <v-btn text @click="handleClear">
+                {{ isEditMode ? "Reset Changes" : "Clear" }}
+              </v-btn>
+              <v-btn
+                v-if="isEditMode"
+                text
+                color="grey"
+                @click="$router.back()"
+              >
+                Cancel
+              </v-btn>
             </v-col>
           </v-row>
         </v-form>
@@ -269,38 +351,74 @@
 import { mapGetters, mapActions } from "vuex";
 import BillAllocationTable from "./BillAllocationTable.vue";
 
+// Helper: base64url-encode a receipt number for safe URL usage
+const encodeReceiptPathId = (receiptNumber) =>
+  btoa(receiptNumber)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+// Blank receipt state factory
+const blankReceipt = () => ({
+  customerId: null,
+  voucherId: null,
+  totalAmount: null,
+  paymentMethod: null,
+  bankId: null,
+  utrNumber: "",
+  upiRef: "",
+  chequeNumber: "",
+  chequeDate: "",
+  voucherDate: new Date().toISOString().split("T")[0],
+  reference: "",
+  narration: "",
+  allocations: [],
+});
+
 export default {
-  name: "AddReceipt",
-  components: {
-    BillAllocationTable,
+  name: "AddEditReceipt",
+
+  components: { BillAllocationTable },
+
+  // Navigation guard: warn about unsaved changes when leaving the route
+  beforeRouteLeave(to, from, next) {
+    if (this.isDirty && !this.forcedLeave) {
+      this.pendingNavNext = next;
+      this.showUnsavedDialog = true;
+    } else {
+      next();
+    }
   },
+
   data() {
     return {
-      receipt: {
-        customerId: null,
-        totalAmount: null,
-        paymentMethod: null,
-        bankId: null,
-        utrNumber: "",
-        upiId: "",
-        chequeNumber: "",
-        chequeDate: "",
-        voucherDate: new Date().toISOString().split("T")[0],
-        narration: "",
-        allocations: [],
-      },
+      receipt: blankReceipt(),
+      // Snapshot of the last saved/loaded state for dirty-checking
+      savedSnapshot: null,
       paymentMethods: ["NEFT_RTGS", "CASH", "UPI", "CHEQUE"],
-      step: 1,
+      isLoadingDetail: false,
+      loadDetailError: null,
+      originalAllocations: [],
+      // Unsaved-changes dialog
+      showUnsavedDialog: false,
+      pendingNavNext: null,
+      forcedLeave: false,
     };
   },
+
   computed: {
-    ...mapGetters("customers", ["allCustomers", "isLoading: isLoading"]),
-    ...mapGetters("banks", ["allBanks", "isLoading: isLoading"]),
+    ...mapGetters("customers", ["allCustomers"]),
+    ...mapGetters("banks", ["allBanks"]),
     ...mapGetters("accounting", [
       "customerBills",
       "isLoadingBills",
       "getLoadingState",
     ]),
+
+    isEditMode() {
+      return !!this.$route.params.id;
+    },
+
     isLoadingCustomers() {
       return this.$store.state.customers.loading;
     },
@@ -310,17 +428,24 @@ export default {
     isCreatingReceipt() {
       return this.getLoadingState.createReceipt;
     },
+
+    isDirty() {
+      if (!this.savedSnapshot) return false;
+      return JSON.stringify(this.receipt) !== this.savedSnapshot;
+    },
+
     canSubmit() {
       return this.stepOneValid && this.getUnallocatedAmount() >= 0;
     },
+
     stepOneValid() {
-      // basic required fields for the first step
       if (!this.receipt.customerId || !this.receipt.totalAmount) return false;
-      if (!this.receipt.paymentMethod || !this.receipt.bankId) return false;
-      // payment-specific validations
+      if (!this.receipt.paymentMethod) return false;
+      if (this.receipt.paymentMethod !== "CASH" && !this.receipt.bankId)
+        return false;
       if (this.receipt.paymentMethod === "NEFT_RTGS" && !this.receipt.utrNumber)
         return false;
-      if (this.receipt.paymentMethod === "UPI" && !this.receipt.upiId)
+      if (this.receipt.paymentMethod === "UPI" && !this.receipt.upiRef)
         return false;
       if (
         this.receipt.paymentMethod === "CHEQUE" &&
@@ -330,26 +455,89 @@ export default {
       if (!this.receipt.voucherDate) return false;
       return true;
     },
-    stepTwoValid() {
-      return this.getUnallocatedAmount() >= 0;
-    },
   },
+
   methods: {
     ...mapActions("customers", ["fetchCustomers"]),
     ...mapActions("banks", ["fetchBanks"]),
-    ...mapActions("accounting", ["fetchCustomerBills", "createReceipt"]),
+    ...mapActions("accounting", [
+      "fetchCustomerBills",
+      "fetchReceiptDetail",
+      "createReceipt",
+      "updateReceipt",
+    ]),
 
-    goToStep(n) {
-      // allow manual step navigation from UI buttons
-      this.step = n;
+    // ── Load & map ──────────────────────────────────────────────────────────
+
+    async loadReceiptForEdit(receiptId) {
+      this.isLoadingDetail = true;
+      this.loadDetailError = null;
+      console.log("473");
+      try {
+        const pathId = receiptId.includes("/")
+          ? encodeReceiptPathId(receiptId)
+          : receiptId;
+        console.log("477");
+        const data = await this.fetchReceiptDetail(pathId); // ✅ use return value directly
+        console.log("479", data);
+        this.mapApiDataToForm(data);
+        await this.fetchCustomerBills(data.customerId);
+        this.takeSnapshot();
+      } catch (err) {
+        this.loadDetailError =
+          err?.response?.data?.message ||
+          "Failed to load receipt. Please try again.";
+      } finally {
+        this.isLoadingDetail = false;
+      }
     },
+
+    mapApiDataToForm(data) {
+      this.receipt = {
+        customerId: data.customerId,
+        voucherId: data.voucherId,
+        totalAmount: parseFloat(data.totalAmount),
+        paymentMethod: data.paymentMethod,
+        bankId: data.bankId || null,
+        utrNumber: data.utrNumber || "",
+        upiRef: data.upiRef || "",
+        chequeNumber: data.chequeNumber || "",
+        // API returns ISO date; strip to YYYY-MM-DD for <input type="date">
+        chequeDate: data.chequeDate ? data.chequeDate.split("T")[0] : "",
+        voucherDate: data.voucherDate
+          ? data.voucherDate.split("T")[0]
+          : new Date().toISOString().split("T")[0],
+        reference: data.reference || "",
+        narration: data.narration || "",
+        // Only keep bill allocations (billId !== null); on-account is derived
+        allocations: (data.allocations || [])
+          .filter((a) => a.billId !== null)
+          .map((a) => ({
+            billId: a.billId,
+            allocatedAmount: parseFloat(a.allocatedAmount),
+            narration: a.narration || null,
+          })),
+      };
+      this.originalAllocations = (data.allocations || [])
+        .filter((a) => a.billId !== null)
+        .map((a) => ({
+          billId: a.billId,
+          allocatedAmount: parseFloat(a.allocatedAmount),
+        }));
+    },
+
+    takeSnapshot() {
+      this.savedSnapshot = JSON.stringify(this.receipt);
+    },
+
+    // ── Customer change ──────────────────────────────────────────────────────
 
     async onCustomerChange() {
       if (this.receipt.customerId) {
         try {
           await this.fetchCustomerBills(this.receipt.customerId);
-          this.receipt.allocations = [];
-        } catch (error) {
+          if (!this.isEditMode) this.receipt.allocations = [];
+        } catch {
           this.$store.commit("snackbar/SHOW_SNACKBAR", {
             message: "Failed to fetch customer bills",
             color: "error",
@@ -358,27 +546,23 @@ export default {
       }
     },
 
+    // ── Allocation helpers ───────────────────────────────────────────────────
+
     updateAllocation(allocation) {
       const index = this.receipt.allocations.findIndex(
         (a) => a.billId === allocation.billId,
       );
       if (index !== -1) {
-        this.receipt.allocations[index] = allocation;
+        this.$set(this.receipt.allocations, index, allocation);
       }
     },
 
     addBillAllocation(billId) {
-      // billId is already the normalized id emitted by BillAllocationTable.
-      // No need to re-find the bill — just check it isn't already allocated.
       const alreadyAllocated = this.receipt.allocations.some(
         (a) => a.billId === billId,
       );
-
       if (!alreadyAllocated) {
-        this.receipt.allocations.push({
-          billId,
-          allocatedAmount: 0,
-        });
+        this.receipt.allocations.push({ billId, allocatedAmount: 0 });
       }
     },
 
@@ -390,7 +574,7 @@ export default {
 
     getTotalAllocated() {
       return this.receipt.allocations.reduce(
-        (sum, alloc) => sum + (alloc.allocatedAmount || 0),
+        (sum, a) => sum + (Number(a.allocatedAmount) || 0),
         0,
       );
     },
@@ -413,32 +597,37 @@ export default {
     },
 
     getStatusColor() {
-      const unallocated = this.getUnallocatedAmount();
-      if (unallocated < 0) return "red";
+      const u = this.getUnallocatedAmount();
+      if (u < 0) return "red";
       if (this.getTotalAllocated() === 0 && this.receipt.totalAmount)
         return "blue";
-      if (unallocated === 0) return "green";
+      if (u === 0) return "green";
       return "orange";
     },
 
     getUnallocatedClass() {
-      const unallocated = this.getUnallocatedAmount();
-      if (unallocated < 0) return "text-error";
-      if (unallocated === 0) return "text-success";
+      const u = this.getUnallocatedAmount();
+      if (u < 0) return "text-error";
+      if (u === 0) return "text-success";
       return "text-info";
     },
 
     formatCurrency(value) {
-      if (!value) return "0.00";
-      return value.toFixed(2);
+      if (!value && value !== 0) return "0.00";
+      return Number(value).toFixed(2);
     },
 
     resetPaymentFields() {
       this.receipt.utrNumber = "";
-      this.receipt.upiId = "";
+      this.receipt.upiRef = "";
       this.receipt.chequeNumber = "";
       this.receipt.chequeDate = "";
+      if (this.receipt.paymentMethod === "CASH") {
+        this.receipt.bankId = null;
+      }
     },
+
+    // ── Submit ───────────────────────────────────────────────────────────────
 
     async submitReceipt() {
       if (!this.$refs.form.validate()) {
@@ -458,88 +647,191 @@ export default {
       }
 
       const allocations = this.receipt.allocations
-        .filter(
-          (allocation) =>
-            allocation.billId &&
-            Number(allocation.allocatedAmount) > 0,
-        )
-        .map((allocation) => ({
-          ...allocation,
-          allocatedAmount: Number(allocation.allocatedAmount),
+        .filter((a) => a.billId && Number(a.allocatedAmount) > 0)
+        .map((a) => ({
+          billId: a.billId,
+          allocatedAmount: Number(a.allocatedAmount),
+          ...(a.narration ? { narration: a.narration } : {}),
         }));
 
-      // Prepare payload based on payment method
       const payload = {
         customerId: this.receipt.customerId,
         totalAmount: this.receipt.totalAmount,
         paymentMethod: this.receipt.paymentMethod,
-        bankId: this.receipt.bankId,
+        bankId:
+          this.receipt.paymentMethod === "CASH" ? null : this.receipt.bankId,
         voucherDate: this.receipt.voucherDate,
-        narration: this.receipt.narration,
+        reference: this.receipt.reference || null,
+        narration: this.receipt.narration || null,
         allocations,
       };
 
-      // Add payment-specific fields
       if (this.receipt.paymentMethod === "NEFT_RTGS") {
         payload.utrNumber = this.receipt.utrNumber;
       } else if (this.receipt.paymentMethod === "UPI") {
-        payload.upiRef = this.receipt.upiId;
+        payload.upiRef = this.receipt.upiRef;
       } else if (this.receipt.paymentMethod === "CHEQUE") {
         payload.chequeNumber = this.receipt.chequeNumber;
         payload.chequeDate = this.receipt.chequeDate;
       }
 
       try {
-        await this.createReceipt(payload);
-        this.$store.commit("snackbar/SHOW_SNACKBAR", {
-          message: "Receipt created successfully",
-          color: "success",
-        });
-        this.resetForm();
+        if (this.isEditMode) {
+          // Build path id from voucherId if present, else use route param
+          const rawId = this.receipt.voucherId || this.$route.params.receiptId;
+          const pathId = rawId.includes("/")
+            ? encodeReceiptPathId(rawId)
+            : rawId;
+
+          await this.updateReceipt({ pathId, payload });
+          this.$store.commit("snackbar/SHOW_SNACKBAR", {
+            message: "Receipt updated successfully",
+            color: "success",
+          });
+          // Re-snapshot so isDirty resets after save
+          this.takeSnapshot();
+        } else {
+          await this.createReceipt(payload);
+          this.$store.commit("snackbar/SHOW_SNACKBAR", {
+            message: "Receipt created successfully",
+            color: "success",
+          });
+          this.forcedLeave = true;
+          this.resetForm();
+        }
       } catch (error) {
         this.$store.commit("snackbar/SHOW_SNACKBAR", {
-          message: error.response?.data?.message || "Failed to create receipt",
+          message: error.response?.data?.message || "Failed to save receipt",
           color: "error",
         });
       }
     },
 
+    // ── Reset / clear ────────────────────────────────────────────────────────
+
+    handleClear() {
+      if (this.isEditMode) {
+        // Re-load from last snapshot to reset unsaved changes
+        const snap = JSON.parse(this.savedSnapshot);
+        this.receipt = snap;
+      } else {
+        this.resetForm();
+      }
+    },
+
     resetForm() {
-      this.$refs.form.reset();
-      this.receipt = {
-        customerId: null,
-        totalAmount: null,
-        paymentMethod: null,
-        bankId: null,
-        utrNumber: "",
-        upiId: "",
-        chequeNumber: "",
-        chequeDate: "",
-        voucherDate: new Date().toISOString().split("T")[0],
-        narration: "",
-        allocations: [],
-      };
+      this.$refs.form && this.$refs.form.reset();
+      this.receipt = blankReceipt();
+      this.savedSnapshot = JSON.stringify(this.receipt);
+    },
+
+    // ── Unsaved changes dialog ────────────────────────────────────────────────
+
+    cancelNavigation() {
+      this.showUnsavedDialog = false;
+      this.pendingNavNext = null;
+    },
+
+    confirmNavigation() {
+      this.showUnsavedDialog = false;
+      if (this.pendingNavNext) {
+        this.pendingNavNext();
+        this.pendingNavNext = null;
+      }
     },
   },
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
   async mounted() {
     try {
       await Promise.all([this.fetchCustomers(), this.fetchBanks()]);
+    } catch (err) {
+      console.error("Error loading reference data:", err);
+    }
 
-      // If customer ID is passed via query parameter, set it
-      if (this.$route.query.customerId) {
+    if (this.isEditMode) {
+      await this.loadReceiptForEdit(this.$route.params.id);
+    } else {
+      // Create mode — take snapshot of blank form
+      this.takeSnapshot();
+
+      // Check if coming from pending invoices settlement
+      const pendingInvoicesData = sessionStorage.getItem(
+        "pendingInvoicesToSettle",
+      );
+      if (pendingInvoicesData) {
+        try {
+          const data = JSON.parse(pendingInvoicesData);
+          // Prefill customer
+          this.receipt.customerId = data.customerId;
+          // Prefill total amount
+          this.receipt.totalAmount = data.totalPending;
+          // Fetch bills for this customer first (this will reset allocations)
+          await this.fetchCustomerBills(data.customerId);
+          // Now set allocations after bills are loaded
+          this.receipt.allocations = data.selectedInvoices.map((inv) => ({
+            billId: inv.invoiceId,
+            allocatedAmount: inv.pendingAmount,
+            narration: null,
+          }));
+          this.takeSnapshot();
+          // Clear sessionStorage after consuming
+          sessionStorage.removeItem("pendingInvoicesToSettle");
+        } catch (err) {
+          console.error("Error reading pending invoices data:", err);
+        }
+      } else if (this.$route.query.customerId) {
         this.receipt.customerId = this.$route.query.customerId;
         await this.onCustomerChange();
+        this.takeSnapshot();
       }
-    } catch (error) {
-      console.error("Error loading data:", error);
+      if (this.$route.query.bankId) {
+        this.receipt.bankId = this.$route.query.bankId;
+        await this.onCustomerChange();
+        this.takeSnapshot();
+      }
     }
+  },
+
+  beforeDestroy() {
+    // Clear sessionStorage on unmount to avoid stale data
+    sessionStorage.removeItem("pendingInvoicesToSettle");
   },
 };
 </script>
 
+<!-- Add to your Vuex accounting store: -->
+<!--
+  async updateReceipt({ commit }, { pathId, payload }) {
+    commit("SET_LOADING_STATE", { type: "createReceipt", value: true });
+    try {
+      const response = await apiClient.put(
+        `/accounting/receipts/${pathId}`,
+        payload,
+      );
+      if (response.data.success) {
+        commit("SET_RECEIPT_DETAIL", response.data.data);
+        return response.data.data;
+      } else {
+        throw new Error("Failed to update receipt");
+      }
+    } catch (error) {
+      console.error("Error updating receipt:", error);
+      throw error;
+    } finally {
+      commit("SET_LOADING_STATE", { type: "createReceipt", value: false });
+    }
+  },
+-->
+
 <style scoped>
 .receipt-container {
   padding: 20px;
+}
+
+.gap-2 {
+  gap: 8px;
 }
 
 .gap-2 {

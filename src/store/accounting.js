@@ -84,6 +84,7 @@ const actions = {
       const response = await apiClient.get(`/accounting/receipts/${receiptId}`);
       if (response.data.success) {
         commit("SET_RECEIPT_DETAIL", response.data.data);
+        return response.data.data; // ✅ return it
       } else {
         throw new Error("Failed to fetch receipt details");
       }
@@ -113,6 +114,26 @@ const actions = {
     } catch (error) {
       console.error("Error adding opening balance:", error);
       throw error;
+    }
+  },
+  async updateReceipt({ commit }, { pathId, payload }) {
+    commit("SET_LOADING_STATE", { type: "createReceipt", value: true });
+    try {
+      const response = await apiClient.put(
+        `/accounting/receipts/${pathId}`,
+        payload,
+      );
+      if (response.data.success) {
+        commit("SET_RECEIPT_DETAIL", response.data.data);
+        return response.data.data;
+      } else {
+        throw new Error("Failed to update receipt");
+      }
+    } catch (error) {
+      console.error("Error updating receipt:", error);
+      throw error;
+    } finally {
+      commit("SET_LOADING_STATE", { type: "createReceipt", value: false });
     }
   },
 

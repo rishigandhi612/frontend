@@ -111,6 +111,7 @@
           item-key="id"
           :footer-props="{
             'items-per-page-options': [5, 10, 15, 20],
+            showFirstLastPage: true,
           }"
           @update:options="handleTableOptions"
         >

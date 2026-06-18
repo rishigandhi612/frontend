@@ -1,11 +1,11 @@
 <template>
   <div class="bank-txn-page">
     <div class="col-left">
-      <div class="left-top">
-        <button class="back-btn" type="button" @click="backToBanks">
-          <v-icon size="13">mdi-arrow-left</v-icon>
-          Back to banks
-        </button>
+      <div>
+        <v-btn block @click="backToBanks" elevation="0" size="small">
+          <v-icon left>mdi-arrow-left</v-icon>
+          Back
+        </v-btn>
       </div>
 
       <div class="bank-card">
@@ -56,9 +56,7 @@
         </div>
         <div class="stat-item stat-divider">
           <span class="stat-lbl">
-            <v-icon size="12" color="var(--color-text-secondary)">
-              mdi-receipt-text-outline
-            </v-icon>
+            <v-icon size="12"> mdi-receipt-text-outline </v-icon>
             Transactions
           </span>
           <span class="stat-val">{{ summaryCards.count }}</span>
@@ -111,23 +109,21 @@
     </div>
 
     <div class="col-center">
-      <div class="center-topbar">
-        <div>
-          <div class="center-title">Transactions</div>
-          <div class="center-meta">{{ centerMeta }}</div>
-        </div>
+      <v-row align="center">
+        <v-col cols="8">
+          <v-card-subtitle>Transactions | {{ centerMeta }}</v-card-subtitle>
+        </v-col>
 
-        <div class="search-wrap">
-          <v-icon size="13" color="var(--color-text-tertiary)">
-            mdi-magnify
-          </v-icon>
-          <input
+        <v-col cols="4">
+          <v-text-field
+            prepend-icon=" mdi-magnify"
             v-model.trim="search"
             type="text"
+            dense
             placeholder="Voucher, customer, UTR…"
           />
-        </div>
-      </div>
+        </v-col>
+      </v-row>
 
       <div class="filter-row">
         <button
@@ -165,96 +161,110 @@
         </button>
 
         <span class="fsep2">|</span>
-
-        <select v-model="paymentFilter" class="fsel">
-          <option value="">All methods</option>
-          <option value="NEFT_RTGS">NEFT/RTGS</option>
-          <option value="CHEQUE">Cheque</option>
-          <option value="UPI">UPI</option>
-          <option value="CASH">Cash</option>
-        </select>
-
-        <select v-model="allocationFilter" class="fsel">
-          <option value="">All allocations</option>
-          <option value="full">Fully settled</option>
-          <option value="partial">Partial</option>
-          <option value="none">Unallocated</option>
-        </select>
+        <v-row>
+          <v-col cols="4">
+            <v-select
+              v-model="paymentFilter"
+              :items="paymentOptions"
+              item-text="text"
+              item-value="value"
+              label="Payment Method"
+              dense
+              x-small
+              hide-details
+              clearable
+          /></v-col>
+        </v-row>
 
         <button class="reset-link" type="button" @click="clearFilters">
           Reset
         </button>
       </div>
 
-      <div class="twrap">
-        <div v-if="transactionsLoading" class="skel-wrap">
-          <div v-for="index in pageSize" :key="index" class="skel-row">
-            <div class="skel-cell skel-exp"></div>
-            <div class="skel-cell skel-date"></div>
-            <div class="skel-cell skel-voucher"></div>
-            <div class="skel-cell skel-customer"></div>
-            <div class="skel-cell skel-method"></div>
-            <div class="skel-cell skel-alloc"></div>
-            <div class="skel-cell skel-amount"></div>
-            <div class="skel-cell skel-type"></div>
+      <div>
+        <!-- Loading -->
+        <div v-if="transactionsLoading">
+          <v-skeleton-loader
+            v-for="index in pageSize"
+            :key="index"
+            type="table-row"
+            class="mb-2"
+          />
+        </div>
+
+        <!-- Empty State -->
+        <div
+          v-else-if="filteredTransactions.length === 0"
+          class="d-flex flex-column align-center justify-center py-12 text-center"
+        >
+          <v-icon size="44" color="grey"> mdi-file-search-outline </v-icon>
+
+          <div class="text-h6 mt-3">No transactions found</div>
+
+          <div class="text-body-2 text-medium-emphasis">
+            Try adjusting your filters, date range, or search query.
           </div>
         </div>
 
-        <div v-else-if="filteredTransactions.length === 0" class="empty">
-          <v-icon size="44" color="var(--color-text-tertiary)">
-            mdi-file-search-outline
-          </v-icon>
-          <p class="empty-title">No transactions found</p>
-          <p class="empty-sub">
-            Try adjusting your filters, date range, or search query.
-          </p>
-        </div>
-
+        <!-- Data Table -->
         <v-data-table
           :headers="headers"
           :items="pagedTransactions"
-          :expanded.sync="expandedRows"
           item-key="id"
-          show-expand
+          mobile-breakpoint="0"
           hide-default-footer
           dense
-          class="txn"
         >
-          <!-- Date column -->
+          <!-- Date -->
           <template v-slot:[`item.voucherDate`]="{ item }">
-            <span class="d-day">{{ formatDay(item.voucherDate) }}</span>
-            <span class="d-mon">{{ formatMonth(item.voucherDate) }}</span>
-          </template>
-
-          <!-- Voucher column -->
-          <template v-slot:[`item.voucherId`]="{ item }">
-            <div class="dp dp-strong">{{ item.voucherId || "—" }}</div>
-            <div v-if="transactionReference(item)" class="dr">
-              {{ referenceLabel(item) }}: {{ transactionReference(item) }}
+            <div class="d-flex flex-column">
+              <span class="font-weight-bold">
+                {{ formatDay(item.voucherDate) }}
+              </span>
+              <span class="caption grey--text">
+                {{ formatMonth(item.voucherDate) }}
+              </span>
             </div>
           </template>
 
-          <!-- Customer column -->
+          <!-- Voucher -->
+          <template v-slot:[`item.voucherId`]="{ item }">
+            <div>
+              <div class="font-weight-medium">
+                {{ item.voucherId || "—" }}
+              </div>
+
+              <div v-if="transactionReference(item)" class="caption grey--text">
+                {{ referenceLabel(item) }}:
+                {{ transactionReference(item) }}
+              </div>
+            </div>
+          </template>
+          <!-- customers -->
           <template v-slot:[`item.customer`]="{ item }">
-            <div class="dp">{{ customerName(item) }}</div>
+            <p class="font-weight-bold" align="center" justify="center">
+              {{
+                item.customer ? capitalizeFirstLetter(item.customer.name) : "—"
+              }}
+            </p>
           </template>
-
-          <!-- Method column -->
+          <!-- Payment Method -->
           <template v-slot:[`item.paymentMethod`]="{ item }">
-            <span class="badge badge-pay">{{
-              paymentLabel(item.paymentMethod)
-            }}</span>
+            <v-chip x-small outlined>
+              {{ paymentLabel(item.paymentMethod) }}
+            </v-chip>
           </template>
 
-          <!-- Allocations column -->
+          <!-- Allocations -->
           <template v-slot:[`item.allocations`]="{ item }">
-            <button
+            <v-chip
               v-if="hasAllocationButton(item)"
-              class="badge-alloc"
-              type="button"
+              small
+              pill
+              outlined
               @click.stop="openModal(item.id)"
             >
-              <v-icon size="9">
+              <v-icon left x-small>
                 {{
                   allocationStatus(item) === "full"
                     ? "mdi-check"
@@ -263,47 +273,36 @@
                     : "mdi-circle-outline"
                 }}
               </v-icon>
+
               {{ allocationBadgeText(item) }}
-            </button>
-            <span v-else class="empty-inline">—</span>
+            </v-chip>
+
+            <span v-else>—</span>
           </template>
 
-          <!-- Amount column -->
+          <!-- Amount -->
           <template v-slot:[`item.totalAmount`]="{ item }">
-            <span class="amt" :class="isReceipt(item) ? 'amt-cr' : 'amt-db'">
+            <span
+              :class="
+                isReceipt(item)
+                  ? 'success--text font-weight-bold'
+                  : 'error--text font-weight-bold'
+              "
+            >
               {{ isReceipt(item) ? "+" : "−" }}
               {{ formatCurrency(transactionAmount(item)) }}
             </span>
           </template>
 
-          <!-- Type column -->
+          <!-- Type -->
           <template v-slot:[`item.type`]="{ item }">
-            <span
-              class="badge"
-              :class="isReceipt(item) ? 'badge-cr' : 'badge-db'"
+            <v-chip
+              small
+              :color="isReceipt(item) ? 'success' : 'error'"
+              outlined
             >
               {{ isReceipt(item) ? "Receipt" : "Payment" }}
-            </span>
-          </template>
-
-          <!-- Expanded detail row -->
-          <template v-slot:[`expanded-item`]="{ headers, item }">
-            <td :colspan="headers.length" class="detail-td">
-              <div class="detail-content">
-                <div
-                  v-if="allocationEntries(item).length === 0"
-                  class="detail-empty"
-                >
-                  <v-icon size="12" color="var(--color-text-tertiary)">
-                    mdi-receipt-text-remove-outline
-                  </v-icon>
-                  No allocations
-                </div>
-                <table v-else class="dtable">
-                  <!-- ... same dtable content as before ... -->
-                </table>
-              </div>
-            </td>
+            </v-chip>
           </template>
         </v-data-table>
       </div>
@@ -394,22 +393,6 @@
         </button>
       </div>
 
-      <div class="status-section">
-        <div class="right-title">Allocation status</div>
-        <div class="status-row">
-          <span class="status-dot-lbl s-ok">Fully settled</span>
-          <span class="status-count">{{ allocationCounts.full }}</span>
-        </div>
-        <div class="status-row">
-          <span class="status-dot-lbl s-part">Partial</span>
-          <span class="status-count">{{ allocationCounts.partial }}</span>
-        </div>
-        <div class="status-row">
-          <span class="status-dot-lbl s-open">Unallocated</span>
-          <span class="status-count">{{ allocationCounts.none }}</span>
-        </div>
-      </div>
-
       <div class="note-section">
         <div class="right-title">Notes</div>
         <textarea
@@ -421,194 +404,265 @@
       </div>
     </div>
 
-    <div class="modal-wrap" :class="{ on: showModal }" @click.self="closeModal">
-      <div v-if="selectedTransaction" class="modal">
-        <div class="mhdr">
-          <div>
-            <div class="mtitle">
-              Allocations — {{ selectedTransaction.voucherId || "—" }}
-            </div>
-            <div class="msub">
-              {{ customerName(selectedTransaction) }} ·
-              {{ formatLongDate(selectedTransaction.voucherDate) }}
-            </div>
-          </div>
-          <button class="mclose" type="button" @click="closeModal">
-            <v-icon size="14">mdi-close</v-icon>
-          </button>
-        </div>
+    <template>
+      <v-dialog v-model="showModal" scrollable>
+        <v-card v-if="selectedTransaction" class="modal-card" rounded="lg">
+          <!-- ── Header ── -->
+          <v-card-title class="modal-header pa-0">
+            <v-row no-gutters class="pa-5 pb-4">
+              <v-col justify="center" align="center">
+                <div class="modal-title">
+                  Allocations — {{ selectedTransaction.voucherId || "—" }}
+                </div>
+                <div class="modal-sub">
+                  {{ customerName(selectedTransaction) }} ·
+                  {{ formatLongDate(selectedTransaction.voucherDate) }}
+                </div>
+              </v-col>
+              <v-col cols="auto" justify="end" align="end">
+                <v-btn icon size="x-small" variant="tonal" @click="closeModal">
+                  <v-icon size="14">mdi-close</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-card-title>
 
-        <div class="mmeta">
-          <div class="mcell">
-            <div class="mlbl">Total amount</div>
-            <div
-              class="mval"
-              :class="isReceipt(selectedTransaction) ? 'val-cr' : 'val-db'"
-            >
-              {{ formatCurrency(transactionAmount(selectedTransaction)) }}
-            </div>
-          </div>
-          <div class="mcell">
-            <div class="mlbl">Method</div>
-            <div class="mval">
-              {{ paymentLabel(selectedTransaction.paymentMethod) }}
-            </div>
-          </div>
-          <div class="mcell">
-            <div class="mlbl">
-              {{ referenceLabel(selectedTransaction) }}
-            </div>
-            <div class="mval">
-              {{ transactionReference(selectedTransaction) || "—" }}
-            </div>
-          </div>
-          <div class="mcell">
-            <div class="mlbl">On account</div>
-            <div class="mval">
-              {{ formatCurrency(selectedOnAccountAmount) }}
-            </div>
-          </div>
-        </div>
-
-        <div class="mbody">
-          <div class="msec">
-            {{ allocationEntries(selectedTransaction).length }} allocation{{
-              allocationEntries(selectedTransaction).length === 1 ? "" : "s"
-            }}
-          </div>
-
-          <div
-            v-if="allocationEntries(selectedTransaction).length === 0"
-            class="modal-empty"
-          >
-            <v-icon size="28" color="var(--color-text-tertiary)">
-              mdi-receipt-text-remove-outline
-            </v-icon>
-            No allocations
-          </div>
-
-          <div
-            v-for="(allocation, index) in allocationEntries(
-              selectedTransaction,
-            )"
-            v-else
-            :key="allocation.id || `modal-allocation-${index}`"
-            class="acard"
-          >
-            <div class="acard-hdr">
-              <div class="acard-inv">
-                <v-icon size="13" color="#534AB7"
-                  >mdi-file-document-outline</v-icon
-                >
-                {{ allocationInvoiceLabel(allocation) }}
-              </div>
-              <span class="pill" :class="allocationPillClass(allocation)">
-                {{ allocationStatusText(allocation) }}
-              </span>
-            </div>
-
-            <div class="acard-body">
-              <span class="arow-lbl">Allocated</span>
-              <span class="arow-val val-nt">
-                {{ formatCurrency(allocation.allocatedAmount) }}
-              </span>
-
-              <span class="arow-lbl">Bill total</span>
-              <span class="arow-val">
-                {{
-                  isOnAccountAllocation(allocation)
-                    ? "—"
-                    : formatCurrency(allocation.totalAmount)
-                }}
-              </span>
-
-              <span class="arow-lbl">Pending</span>
-              <span
-                class="arow-val"
-                :class="
-                  isOnAccountAllocation(allocation)
-                    ? ''
-                    : parseAmount(allocation.pendingAmount) > 0
-                    ? 'pending-tone'
-                    : 'settled-tone'
-                "
-              >
-                {{
-                  isOnAccountAllocation(allocation)
-                    ? "—"
-                    : formatCurrency(allocation.pendingAmount)
-                }}
-              </span>
-
-              <span class="arow-lbl">Settlement</span>
-              <span class="arow-val">
-                {{
-                  isOnAccountAllocation(allocation)
-                    ? "On account"
-                    : `${allocationProgress(allocation)}%`
-                }}
-              </span>
-
-              <div class="prog2-bg">
-                <div
-                  class="prog2-fill"
-                  :style="{ width: `${allocationProgress(allocation)}%` }"
-                ></div>
-              </div>
-
-              <template v-if="allocation.narration">
-                <span class="arow-lbl">Note</span>
-                <span class="arow-val note-val">{{
-                  allocation.narration
-                }}</span>
-              </template>
-            </div>
-          </div>
-        </div>
-
-        <div class="mfoot">
-          <div class="mfoot-totals">
-            <div class="mft-item">
-              <div class="mft-lbl">Allocated</div>
-              <div class="mft-val val-nt">
-                {{ formatCurrency(selectedAllocatedAmount) }}
-              </div>
-            </div>
-            <div class="mft-item">
-              <div class="mft-lbl">Pending</div>
+          <!-- ── Summary Strip (4 equal columns) ── -->
+          <v-row no-gutters cols="3">
+            <v-col align="center" justify="center">
+              <div>Total amount</div>
               <div
-                class="mft-val"
-                :class="
-                  selectedPendingAmount > 0 ? 'pending-tone' : 'settled-tone'
-                "
+                class="sum-val"
+                :class="isReceipt(selectedTransaction) ? 'val-cr' : 'val-db'"
               >
-                {{ formatCurrency(selectedPendingAmount) }}
+                {{ formatCurrency(transactionAmount(selectedTransaction)) }}
               </div>
-            </div>
-            <div class="mft-item">
-              <div class="mft-lbl">On account</div>
-              <div class="mft-val">
+            </v-col>
+
+            <v-col cols="3" align="center" justify="center">
+              <div>Method</div>
+              <div class="sum-val">
+                {{ paymentLabel(selectedTransaction.paymentMethod) }}
+              </div>
+            </v-col>
+
+            <v-col cols="3" align="center" justify="center">
+              <div>
+                {{ referenceLabel(selectedTransaction) }}
+              </div>
+              <div class="sum-val">
+                {{ transactionReference(selectedTransaction) || "—" }}
+              </div>
+            </v-col>
+
+            <v-col cols="3" align="center" justify="center">
+              <div>On account</div>
+              <div class="sum-val">
                 {{ formatCurrency(selectedOnAccountAmount) }}
               </div>
-            </div>
-          </div>
+            </v-col>
+          </v-row>
 
-          <div class="mfoot-actions">
-            <button class="btn-sm" type="button" @click="closeModal">
-              Close
-            </button>
-            <button
-              class="btn-sm-p"
-              type="button"
-              @click="exportSelectedAllocations"
+          <v-divider />
+
+          <!-- ── Allocation List ── -->
+          <v-card-text>
+            <v-card-subtitle align="end" justify="end" class="pa-0">
+              {{ allocationEntries(selectedTransaction).length }} allocation{{
+                allocationEntries(selectedTransaction).length === 1 ? "" : "s"
+              }}
+            </v-card-subtitle>
+
+            <!-- Empty state -->
+            <div
+              v-if="allocationEntries(selectedTransaction).length === 0"
+              class="empty-state"
             >
-              <v-icon size="11" color="#fff">mdi-download</v-icon>
-              Export
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+              <v-icon size="28" color="grey-darken-1">
+                mdi-receipt-text-remove-outline
+              </v-icon>
+              <div class="mt-2 text-medium-emphasis text-body-2">
+                No allocations
+              </div>
+            </div>
+
+            <!-- Allocation Cards -->
+            <v-row align="center" justify="center">
+              <v-col
+                cols="4"
+                v-for="(allocation, index) in allocationEntries(
+                  selectedTransaction,
+                )"
+                :key="allocation.id || `modal-allocation-${index}`"
+              >
+                <v-card variant="outlined" rounded="lg">
+                  <!-- Card Header -->
+
+                  <v-row class="align-center" no-gutters>
+                    <v-col cols="3"></v-col>
+
+                    <v-col cols="6" class="text-center">
+                      <h3>
+                        {{ allocationInvoiceLabel(allocation) }}
+                        <v-btn icon>
+                          <v-icon
+                            color="deep-purple-lighten-2"
+                            @click="goToInvoice(allocation)"
+                          >
+                            mdi-information-outline
+                          </v-icon>
+                        </v-btn>
+                      </h3>
+                    </v-col>
+
+                    <v-col cols="3" class="text-right">
+                      <v-chip
+                        small
+                        pill
+                        :color="
+                          allocationChipColor(allocationStatusText(allocation))
+                        "
+                        text-color="white"
+                      >
+                        {{ allocationStatusText(allocation) }}
+                      </v-chip>
+                    </v-col>
+                  </v-row>
+                  <!-- Progress Bar -->
+                  <template>
+                    <v-progress-linear
+                      :value="allocationProgress(allocation)"
+                    ></v-progress-linear>
+                  </template>
+                  <!-- Detail Grid (4 equal columns) -->
+                  <v-row class="pa-2">
+                    <v-col cols="4" align="center" justify="center">
+                      <h5>Bill total</h5>
+                      <h4>
+                        {{
+                          isOnAccountAllocation(allocation)
+                            ? "—"
+                            : formatCurrency(allocation.totalAmount)
+                        }}
+                      </h4>
+                    </v-col>
+                    <v-col cols="4" align="center" justify="center">
+                      <h5>Allocated</h5>
+                      <h4 class="val-nt">
+                        {{ formatCurrency(allocation.allocatedAmount) }}
+                      </h4>
+                    </v-col>
+
+                    <v-col cols="4" align="center" justify="center">
+                      <h5>Pending</h5>
+                      <h4
+                        :class="
+                          isOnAccountAllocation(allocation)
+                            ? ''
+                            : parseAmount(allocation.pendingAmount) > 0
+                            ? 'pending-tone'
+                            : 'settled-tone'
+                        "
+                      >
+                        {{
+                          isOnAccountAllocation(allocation)
+                            ? "—"
+                            : formatCurrency(allocation.pendingAmount)
+                        }}
+                      </h4>
+                    </v-col>
+
+                    <!-- <v-col cols="3" align="center" justify="center">
+                      <h5>Settlement</h5>
+                      <h4>
+                        {{
+                          isOnAccountAllocation(allocation)
+                            ? "On account"
+                            : `${allocationProgress(allocation)}%`
+                        }}
+                      </h4>
+                    </v-col> -->
+                  </v-row>
+
+                  <!-- Note (optional) -->
+                  <template v-if="allocation.narration">
+                    <v-divider />
+                    <v-row no-gutters class="px-4 py-2">
+                      <v-col cols="3">
+                        <div>Note</div>
+                      </v-col>
+                      <v-col cols="9">
+                        <div class="note-val">
+                          {{ allocation.narration }}
+                        </div>
+                      </v-col>
+                    </v-row>
+                  </template>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-card-text>
+
+          <v-divider />
+
+          <!-- ── Footer ── -->
+          <v-card-actions class="modal-footer pa-4">
+            <v-row no-gutters align="center">
+              <!-- Totals -->
+              <v-col>
+                <v-row no-gutters>
+                  <v-col cols="auto" class="mr-6">
+                    <div class="mft-lbl">Allocated</div>
+                    <div class="mft-val val-nt">
+                      {{ formatCurrency(selectedAllocatedAmount) }}
+                    </div>
+                  </v-col>
+                  <v-col cols="auto" class="mr-6">
+                    <div class="mft-lbl">Pending</div>
+                    <div
+                      class="mft-val"
+                      :class="
+                        selectedPendingAmount > 0
+                          ? 'pending-tone'
+                          : 'settled-tone'
+                      "
+                    >
+                      {{ formatCurrency(selectedPendingAmount) }}
+                    </div>
+                  </v-col>
+                  <v-col cols="auto">
+                    <div class="mft-lbl">On account</div>
+                    <div class="mft-val">
+                      {{ formatCurrency(selectedOnAccountAmount) }}
+                    </div>
+                  </v-col>
+                </v-row>
+              </v-col>
+
+              <!-- Actions -->
+              <v-col cols="auto">
+                <v-btn
+                  variant="tonal"
+                  size="small"
+                  class="mr-2"
+                  @click="closeModal"
+                >
+                  Close
+                </v-btn>
+                <v-btn
+                  color="deep-purple"
+                  size="small"
+                  prepend-icon="mdi-download"
+                  @click="exportSelectedAllocations"
+                >
+                  Export
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </template>
   </div>
 </template>
 
@@ -648,18 +702,35 @@ export default {
       bankLoading: false,
       isHydratingNote: false,
       headers: [
-        { text: "Date", value: "voucherDate", width: "66px" },
-        { text: "Voucher", value: "voucherId", width: "120px" },
-        { text: "Customer", value: "customer" },
-        { text: "Method", value: "paymentMethod", width: "88px" },
+        { text: "Date", value: "voucherDate" },
+        { text: "Voucher", value: "voucherId" },
+        {
+          text: "Customer",
+          value: "customer",
+          align: "center",
+          sortable: false,
+        },
+        { text: "Method", value: "paymentMethod" },
         {
           text: "Allocations",
           value: "allocations",
-          width: "78px",
+
           sortable: false,
         },
-        { text: "Amount", value: "totalAmount", width: "104px" },
-        { text: "Type", value: "type", width: "74px", sortable: false },
+        { text: "Amount", value: "totalAmount" },
+        { text: "Type", value: "type", sortable: false },
+      ],
+      allocationOptions: [
+        { text: "Fully settled", value: "full" },
+        { text: "Partial", value: "partial" },
+        { text: "Unallocated", value: "none" },
+      ],
+      paymentOptions: [
+        { text: "All methods", value: "" },
+        { text: "NEFT/RTGS", value: "NEFT_RTGS" },
+        { text: "Cheque", value: "CHEQUE" },
+        { text: "UPI", value: "UPI" },
+        { text: "Cash", value: "CASH" },
       ],
     };
   },
@@ -986,6 +1057,7 @@ export default {
         await this.initializeView();
       },
     },
+
     search() {
       this.currentPage = 1;
     },
@@ -1022,7 +1094,23 @@ export default {
       "fetchTotals",
       "fetchTransactions",
     ]),
-
+    capitalizeFirstLetter(string) {
+      if (!string) return "";
+      return string.charAt(0).toUpperCase() + string.slice(1);
+    },
+    allocationChipColor(allocationStatus) {
+      console.log("allocationstatus", allocationStatus);
+      if (allocationStatus === "Settled") {
+        console.log("Settled allocation");
+        return "green";
+      } else if (allocationStatus === "Partial") {
+        return "orange";
+      } else if (allocationStatus === "none") {
+        return "grey-lighten-2";
+      } else {
+        return "grey-lighten-2";
+      }
+    },
     async initializeView() {
       this.currentPage = 1;
       this.expandedRows = [];
@@ -1048,7 +1136,7 @@ export default {
         await this.fetchTransactions({
           bankId: this.bankId,
           page: 1,
-          limit: 500,
+          limit: 20,
         });
 
         const total = Number(this.transactionsPagination?.total || 0);
@@ -1489,6 +1577,14 @@ export default {
         });
       }
     },
+    goToInvoice(allocation) {
+      if (this.isOnAccountAllocation(allocation)) return;
+
+      const billId = allocation?.billId;
+      if (!billId) return;
+
+      this.$router.push({ name: "invoiceDetail", params: { id: billId } });
+    },
   },
 };
 </script>
@@ -1531,7 +1627,6 @@ export default {
   border-left: 0.5px solid var(--color-border-secondary);
 }
 
-.left-top,
 .bank-card,
 .stat-section,
 .period-section,
@@ -1545,29 +1640,6 @@ export default {
 .mini-chart {
   padding: 14px 16px;
   flex: 1;
-}
-
-.back-btn {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font: inherit;
-  font-size: 12px;
-  padding: 5px 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.back-btn:hover {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-primary);
 }
 
 .bank-avatar {
@@ -1636,22 +1708,6 @@ export default {
   margin-top: 4px;
   padding-top: 8px;
   border-top: 0.5px solid var(--color-border-tertiary);
-}
-
-.stat-lbl,
-.status-dot-lbl {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--color-text-secondary);
-}
-
-.stat-val,
-.status-count {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-primary);
 }
 
 .val-cr {
@@ -1750,18 +1806,7 @@ export default {
   color: var(--color-text-tertiary);
 }
 
-.center-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 14px;
-  background: var(--color-background-primary);
-  border-bottom: 0.5px solid var(--color-border-secondary);
-}
-
 .center-title {
-  font-size: 13px;
   font-weight: 500;
   color: var(--color-text-primary);
 }
@@ -1769,32 +1814,6 @@ export default {
 .center-meta {
   font-size: 11px;
   color: var(--color-text-secondary);
-}
-
-.search-wrap {
-  flex: 1;
-  max-width: 240px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background: var(--color-background-secondary);
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: 6px;
-}
-
-.search-wrap input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--color-text-primary);
-  font: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
-.search-wrap input::placeholder {
-  color: var(--color-text-tertiary);
 }
 
 .filter-row {
@@ -2212,7 +2231,6 @@ table.txn td {
 }
 
 .skel-cell {
-  height: 13px;
   border-radius: 4px;
   background: linear-gradient(
     90deg,
@@ -2519,7 +2537,7 @@ table.txn td {
 
 .mval,
 .mft-val {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -2550,52 +2568,9 @@ table.txn td {
   text-align: center;
 }
 
-.acard {
-  overflow: hidden;
-  margin-bottom: 8px;
-  border: 0.5px solid var(--color-border-secondary);
-  border-radius: 6px;
-}
-
-.acard:last-child {
-  margin-bottom: 0;
-}
-
-.acard-hdr {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--color-background-secondary);
-}
-
-.acard-inv {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.acard-body {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 0;
-  padding: 8px 12px;
-  border-top: 0.5px solid var(--color-border-tertiary);
-}
-
 .arow-lbl {
   font-size: 11px;
   color: var(--color-text-secondary);
-}
-
-.arow-val {
-  text-align: right;
-  font-size: 11px;
-  font-weight: 500;
 }
 
 .note-val {
@@ -2717,18 +2692,6 @@ table.txn td {
     border-right: none;
     border-top: 0.5px solid var(--color-border-secondary);
     border-bottom: 0.5px solid var(--color-border-secondary);
-  }
-
-  .center-topbar,
-  .tfooter,
-  .mfoot {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .search-wrap {
-    max-width: none;
-    width: 100%;
   }
 
   .reset-link {
