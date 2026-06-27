@@ -197,7 +197,13 @@
           >
             <v-icon left>mdi-delete</v-icon> Delete
           </v-btn>
-          <v-btn color="success" block class="mt-2" @click="downloadInvoicePdf">
+          <v-btn
+            color="success"
+            block
+            class="mt-2"
+            @click="downloadInvoicePdf"
+            v-if="canDownloadInvoice()"
+          >
             <v-icon left>mdi-download</v-icon> Invoice
           </v-btn>
           <v-btn
@@ -312,6 +318,22 @@ export default {
           this.errorMessage = error?.message || "Failed to delete invoice.";
         }
       }
+    },
+    canDownloadInvoice() {
+      if (this.invoiceDetail.grandTotal <= 0) {
+        alert(
+          "Invoice grand total is zero or negative. Cannot download invoice.",
+        );
+        return false;
+      } else if (
+        this.invoiceDetail.grandTotal > 100000 &&
+        this.invoiceDetail.ewbNo === null
+      ) {
+        alert("Enter Eway Bill No First");
+        return false;
+      }
+      // Only allow download if invoiceDetail is loaded and has a valid invoiceNumber
+      return this.invoiceDetail && this.invoiceDetail.invoiceNumber;
     },
     goBack() {
       this.$router.go(-1);
