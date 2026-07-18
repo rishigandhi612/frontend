@@ -84,7 +84,7 @@ export default {
       currentY += addressLines.length * 5; // 5 is line height for address
 
       // Add space for other fixed elements (phone, GSTIN, dispatch)
-      currentY += 27; // 3 lines * 5 line height each
+      currentY += 15; // 3 lines * 5 line height each
 
       return {
         height: currentY,
@@ -148,14 +148,11 @@ export default {
       // Add Invoice Title
       doc.setFontSize(12);
 
-      const invoiceText = `DEBIT NOTE #${this.invoiceDetail.invoiceNumber}${
+      const invoiceText = `Invoice #${this.invoiceDetail.invoiceNumber}${
         this.invoiceDetail.ewbNo ? ` EWAY:${this.invoiceDetail.ewbNo}` : ""
       }`;
 
       doc.text(invoiceText, 14, 62);
-      const oginvoiceText = `Purchase Invoice No: SAC00001423/2627 dt 19 Jun 2026`;
-
-      doc.text(oginvoiceText, 14, 66);
 
       // Add Date
       doc.setFontSize(12);
@@ -167,112 +164,53 @@ export default {
         "right",
       );
       // Dynamic customer name handling
-      // let currentY = 70;
-      // ---- Bill To / Ship To (side-by-side columns) ----
-      const billToStartY = 72;
-      const colBillX = 14;
-      const colShipX = 105;
-      const colWidth = 85; // keep both columns within page width
+      let currentY = 70;
+      const customerName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;
+      const nameLines = this.splitTextToFitWidth(doc, customerName, 180, 12);
 
-      // Bill To data
-      const billName = `M/s ${this.invoiceDetail.customer?.name || "N/A"}`;
-      const billAddress = `${
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      nameLines.forEach((line, index) => {
+        doc.text(line, 105, currentY + index * 5, "center");
+      });
+      currentY += nameLines.length * 5;
+
+      // Dynamic address handling
+      const addressText = `${
         this.invoiceDetail.customer?.address?.line1 || "N/A"
-      }, ${this.invoiceDetail.customer?.address?.city || "N/A"}, ${
+      }, ${this.invoiceDetail.customer?.address?.city || "N/A"},${
         this.invoiceDetail.customer?.address?.pincode || "N/A"
       }`;
-
-      // Ship To data (falls back to Bill To if no separate shipping info is set)
-      const shipTo = this.invoiceDetail.shipping || this.invoiceDetail.customer;
-      const shipName = `M/s ${shipTo?.name || "N/A"} (UNIT - III)`;
-      const shipAddress = `J-91,MIDC Tarapur, Boisar,Tal & Dist. Palghar,401506 , BOISAR`;
+      const addressLines = this.splitTextToFitWidth(doc, addressText, 180, 12);
 
       doc.setFontSize(12);
-
-      // --- Bill To column ---
-      let billY = billToStartY;
-      doc.setFont("helvetica", "bold");
-      doc.text("Debited To:", colBillX, billY, "left");
-      billY += 5;
-
-      const billNameLines = this.splitTextToFitWidth(
-        doc,
-        billName,
-        colWidth,
-        12,
-      );
-      billNameLines.forEach((line, i) => {
-        doc.text(line, colBillX, billY + i * 5, "left");
-      });
-      billY += billNameLines.length * 5;
-
       doc.setFont("helvetica", "normal");
-      const billAddressLines = this.splitTextToFitWidth(
-        doc,
-        billAddress,
-        colWidth,
-        12,
-      );
-      billAddressLines.forEach((line, i) => {
-        doc.text(line, colBillX, billY + i * 5, "left");
+      addressLines.forEach((line, index) => {
+        doc.text(line, 105, currentY + index * 5, "center");
       });
-      billY += billAddressLines.length * 5;
+      currentY += addressLines.length * 5;
 
-      // --- Ship To column ---
-      let shipY = billToStartY;
-      doc.setFont("helvetica", "bold");
-      doc.text("Shipped To:", colShipX, shipY, "left");
-      shipY += 5;
-
-      const shipNameLines = this.splitTextToFitWidth(
-        doc,
-        shipName,
-        colWidth,
-        12,
-      );
-      shipNameLines.forEach((line, i) => {
-        doc.text(line, colShipX, shipY + i * 5, "left");
-      });
-      shipY += shipNameLines.length * 5;
-
-      doc.setFont("helvetica", "normal");
-      const shipAddressLines = this.splitTextToFitWidth(
-        doc,
-        shipAddress,
-        colWidth,
-        12,
-      );
-      shipAddressLines.forEach((line, i) => {
-        doc.text(line, colShipX, shipY + i * 5, "left");
-      });
-      shipY += shipAddressLines.length * 5;
-
-      // Continue below the taller of the two columns
-      let newY = Math.max(billY, shipY) + 3;
-
-      // Contact, GSTIN, and Dispatch info
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
+      // Contact, GSTIN, and Dispatch info (these typically don't need wrapping but can be made dynamic too if needed)
       doc.text(
         `Contact: ${this.invoiceDetail.customer?.phone_no || "N/A"}`,
         105,
-        newY,
+        currentY,
         "center",
       );
-      newY += 5;
+      currentY += 5;
 
       doc.text(
         `GSTIN/UIN: ${this.invoiceDetail.customer?.gstin || "N/A"}`,
         105,
-        newY,
+        currentY,
         "center",
       );
-      newY += 5;
+      currentY += 5;
 
       doc.text(
         `Dispatch through: ${this.invoiceDetail.transporter?.name || "N/A"}`,
         105,
-        newY,
+        currentY,
         "center",
       );
     },
