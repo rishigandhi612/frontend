@@ -28,9 +28,7 @@
             >
               <template v-slot:no-data>
                 <v-list-item>
-                  <v-list-item-title>
-                    No products available
-                  </v-list-item-title>
+                  <v-list-item-title> No products available </v-list-item-title>
                 </v-list-item>
               </template>
             </v-select>
@@ -66,25 +64,32 @@
               indeterminate
               color="primary"
             ></v-progress-circular>
-            <p class="mt-2">Loading inventory items for {{ selectedProduct.name }}...</p>
+            <p class="mt-2">
+              Loading inventory items for {{ selectedProduct.name }}...
+            </p>
           </v-col>
         </v-row>
 
         <!-- No Inventory Items -->
         <v-row
           v-if="
-            !loadingInventory && 
-            inventoryItems.length === 0 && 
-            selectedProduct && 
+            !loadingInventory &&
+            inventoryItems.length === 0 &&
+            selectedProduct &&
             hasSearchedInventory
           "
         >
           <v-col cols="12">
             <v-alert type="warning">
               <v-icon slot="prepend">mdi-package-variant</v-icon>
-              No available inventory items found for "{{ selectedProduct.name }}".
-              <br>
-              <small>Only items with status other than 'sold' or 'used' are shown.</small>
+              No available inventory items found for "{{
+                selectedProduct.name
+              }}".
+              <br />
+              <small
+                >Only items with status other than 'sold' or 'used' are
+                shown.</small
+              >
             </v-alert>
           </v-col>
         </v-row>
@@ -93,7 +98,9 @@
         <v-row v-if="!loadingInventory && inventoryItems.length > 0">
           <v-col cols="12">
             <div class="d-flex justify-space-between align-center mb-3">
-              <h3>Available Inventory Items for "{{ selectedProduct.name }}"</h3>
+              <h3>
+                Available Inventory Items for "{{ selectedProduct.name }}"
+              </h3>
               <div>
                 <v-btn
                   color="primary"
@@ -176,7 +183,8 @@
                 color="primary"
                 outlined
               >
-                Roll: {{ item.rollId }} | Width: {{ formatValue(item.width) }} | Weight: {{ formatValue(item.netWeight) }}
+                Roll: {{ item.rollId }} | Width: {{ formatValue(item.width) }} |
+                Weight: {{ formatValue(item.netWeight) }}
               </v-chip>
             </v-chip-group>
             <div class="mt-2">
@@ -195,9 +203,7 @@
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="grey darken-1" text @click="closeDialog"> 
-          Cancel 
-        </v-btn>
+        <v-btn color="grey darken-1" text @click="closeDialog"> Cancel </v-btn>
         <v-btn
           color="primary"
           @click="addInventoryToInvoice"
@@ -307,7 +313,9 @@ export default {
         return;
       }
 
-      console.log(`Product selected: ${this.selectedProduct.name} (ID: ${this.selectedProduct._id})`);
+      console.log(
+        `Product selected: ${this.selectedProduct.name} (ID: ${this.selectedProduct._id})`,
+      );
       await this.fetchInventoryForProduct();
     },
 
@@ -318,8 +326,10 @@ export default {
       this.hasSearchedInventory = false;
 
       try {
-        console.log(`Fetching inventory for product ID: ${this.selectedProduct._id}`);
-        
+        console.log(
+          `Fetching inventory for product ID: ${this.selectedProduct._id}`,
+        );
+
         // ✅ UPDATED: Use the new fetchInventoryForProduct action
         const response = await this.$store.dispatch(
           "inventory/fetchInventoryForProduct",
@@ -330,40 +340,48 @@ export default {
               limit: 1000, // Get all items for this product
               sortBy: "rollId",
               sortOrder: "asc",
-            }
-          }
+            },
+          },
         );
 
         if (response && response.data) {
-          console.log(`Found ${response.data.length} total inventory items for product ${this.selectedProduct._id}`);
-          
+          console.log(
+            `Found ${response.data.length} total inventory items for product ${this.selectedProduct._id}`,
+          );
+
           // Filter for items that are available/in-stock
           // Exclude sold, used, damaged items
           const availableItems = response.data.filter((item) => {
-            const status = item.status ? item.status.toLowerCase() : '';
-            const excludedStatuses = ['sold', 'used', 'damaged', 'out-of-stock'];
+            const status = item.status ? item.status.toLowerCase() : "";
+            const excludedStatuses = [
+              "sold",
+              "used",
+              "damaged",
+              "out-of-stock",
+            ];
             return !excludedStatuses.includes(status);
           });
 
-          console.log(`Filtered to ${availableItems.length} available inventory items`);
+          console.log(
+            `Filtered to ${availableItems.length} available inventory items`,
+          );
           this.inventoryItems = availableItems;
         } else {
-          console.log('No inventory data received for product');
+          console.log("No inventory data received for product");
           this.inventoryItems = [];
         }
 
         // Reset selection when new inventory is loaded
         this.selectedInventoryItems = [];
         this.hasSearchedInventory = true;
-
       } catch (error) {
         console.error("Error fetching inventory for product:", error);
         this.inventoryItems = [];
         this.hasSearchedInventory = true;
-        
+
         // Show user-friendly error message
         this.$toast?.error?.(
-          `Failed to load inventory items for "${this.selectedProduct.name}". Please try again.`
+          `Failed to load inventory items for "${this.selectedProduct.name}". Please try again.`,
         );
       } finally {
         this.loadingInventory = false;
@@ -380,7 +398,7 @@ export default {
 
     removeFromSelection(item) {
       const index = this.selectedInventoryItems.findIndex(
-        (selected) => selected.rollId === item.rollId
+        (selected) => selected.rollId === item.rollId,
       );
       if (index > -1) {
         this.selectedInventoryItems.splice(index, 1);
@@ -388,16 +406,16 @@ export default {
     },
 
     formatValue(value) {
-      if (value === null || value === undefined || value === '') {
-        return 'N/A';
+      if (value === null || value === undefined || value === "") {
+        return "N/A";
       }
-      return typeof value === 'number' ? value.toFixed(2) : value;
+      return typeof value === "number" ? value.toFixed(2) : value;
     },
 
     calculateEstimatedTotal() {
       const total = this.selectedInventoryItems.reduce((sum, item) => {
         const weight = parseFloat(item.netWeight) || 1;
-        return sum + (weight * parseFloat(this.unitPrice || 0));
+        return sum + weight * parseFloat(this.unitPrice || 0);
       }, 0);
       return total.toFixed(2);
     },
@@ -426,7 +444,9 @@ export default {
 
     addInventoryToInvoice() {
       if (!this.canAddToInvoice) {
-        this.$toast?.warning?.("Please select products and set unit price before adding to invoice.");
+        this.$toast?.warning?.(
+          "Please select products and set unit price before adding to invoice.",
+        );
         return;
       }
 
@@ -435,10 +455,11 @@ export default {
         // Product reference as object with _id
         productId: {
           _id: this.selectedProduct._id,
-          name: this.selectedProduct.name // Include name for better debugging
+          name: this.selectedProduct.name, // Include name for better debugging
         },
         width: parseFloat(item.width) || 0,
-        quantity: parseFloat(item.netWeight) || 1,
+        quantity: parseFloat(item.netWeight) || "",
+        grossWeight: parseFloat(item.grossWeight) || "",
         unit_price: parseFloat(this.unitPrice),
         totalPrice: (
           (parseFloat(item.netWeight) || 1) * parseFloat(this.unitPrice)
@@ -450,18 +471,21 @@ export default {
         inventoryMeta: {
           type: item.type,
           status: item.status,
-          mtr: item.mtr
-        }
+          mtr: item.mtr,
+        },
       }));
 
-      console.log(`Adding ${inventoryProducts.length} inventory products to invoice:`, inventoryProducts);
+      console.log(
+        `Adding ${inventoryProducts.length} inventory products to invoice:`,
+        inventoryProducts,
+      );
       this.$emit("inventory-products-added", inventoryProducts);
-      
+
       // Show success message
       this.$toast?.success?.(
-        `Successfully added ${inventoryProducts.length} items from inventory for "${this.selectedProduct.name}".`
+        `Successfully added ${inventoryProducts.length} items from inventory for "${this.selectedProduct.name}".`,
       );
-      
+
       this.closeDialog();
     },
 

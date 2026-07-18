@@ -55,7 +55,6 @@
               outlined
               dense
               :disabled="!selectedBill"
-              min="0"
               :max="getSelectedBillAmount()"
             />
           </v-col>
@@ -65,7 +64,7 @@
               block
               @click="addAllocation"
               :disabled="
-                !selectedBill || !allocationAmount || allocationAmount <= 0
+                !selectedBill || !allocationAmount || allocationAmount === 0
               "
             >
               <v-icon small>mdi-plus</v-icon>
@@ -211,8 +210,8 @@ export default {
     unallocatedBills() {
       return this.normalizedBills.filter(
         (bill) =>
-          bill.status !== "ON_ACCOUNT" &&
-          this.effectivePending(bill) !== 0 && // ← use effective pending
+          (bill.status !== "ON_ACCOUNT" || Number(bill.pendingAmount) < 0) &&
+          this.effectivePending(bill) !== 0 &&
           !this.allocations.find((a) => a.billId === bill.id),
       );
     },
@@ -220,7 +219,7 @@ export default {
       // Normalize incoming bills to a consistent shape so component
       // works with both old and new (v2) API responses.
       const raw = this.bills || [];
-
+      console.log("raw", raw);
       // If the prop is an object with `data` (v2 response), use that array
       const list = Array.isArray(raw) ? raw : raw.data || [];
 

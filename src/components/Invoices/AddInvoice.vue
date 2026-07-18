@@ -48,7 +48,10 @@
             />
           </v-col>
         </v-row>
-        <v-row class="mt-3" v-if="isEditing">
+        <v-row
+          class="mt-3"
+          v-if="isEditing && calculateTotalgrandTotal() > 100000"
+        >
           <v-col cols="12" md="6" offset-md="3">
             <v-text-field
               v-model="ewbNo"
@@ -582,6 +585,7 @@ export default {
             (p) => p._id === product.productId,
           );
           productReference = foundProduct || { _id: product.productId };
+          console.log("product", foundProduct);
         }
 
         return {
@@ -655,6 +659,22 @@ export default {
         const totalPrice =
           parseFloat(product.quantity * product.unit_price) || 0;
         return sum + totalPrice;
+      }, 0);
+    },
+
+    calculateTotalgrandTotal() {
+      return this.invoiceProducts.reduce((sum, product) => {
+        const totalPrice =
+          parseFloat(product.quantity * product.unit_price) || 0;
+        return (
+          sum +
+          totalPrice +
+          parseFloat(this.otherCharges) +
+          parseFloat(this.cgst) +
+          parseFloat(this.sgst) +
+          parseFloat(this.igst) -
+          parseFloat(this.discountAllowed)
+        );
       }, 0);
     },
 

@@ -647,7 +647,7 @@ export default {
       }
 
       const allocations = this.receipt.allocations
-        .filter((a) => a.billId && Number(a.allocatedAmount) > 0)
+        .filter((a) => a.billId && Number(a.allocatedAmount) !== 0)
         .map((a) => ({
           billId: a.billId,
           allocatedAmount: Number(a.allocatedAmount),

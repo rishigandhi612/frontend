@@ -158,6 +158,13 @@ export default {
   computed: {
     ...mapGetters(["isAuthenticated"]), // Get the isAuthenticated state from Vuex
   },
+  watch: {
+    isAuthenticated(newVal) {
+      if (!newVal) {
+        this.$router.push("/login");
+      }
+    },
+  },
 };
 </script>
 

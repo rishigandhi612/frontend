@@ -32,14 +32,14 @@
             <!-- Invoice Info -->
             <v-row class="mt-3">
               <v-col md="4" class="text-h6 font-weight-bold">
-                Invoice #{{ invoiceDetail.invoiceNumber }}
+                Invoice No.:{{ invoiceDetail.invoiceNumber }}
               </v-col>
               <v-col
                 md="4"
                 class="text-h6 font-weight-bold"
                 v-if="invoiceDetail.ewbNo"
               >
-                E-Way Bill #{{ invoiceDetail.ewbNo || "N/A" }}
+                E-Way Bill No.:{{ invoiceDetail.ewbNo || "N/A" }}
               </v-col>
               <v-col md="4" class="text-md-right">
                 <v-chip color="primary" text-color="white" small>
@@ -217,6 +217,15 @@
           <v-btn color="lime" block class="mt-2" @click="sendemail">
             <v-icon left>mdi-mail</v-icon> Email
           </v-btn>
+          <v-btn
+            color="deep-purple"
+            dark
+            block
+            class="mt-2"
+            @click="generateEwayBillJson"
+          >
+            <v-icon left>mdi-file-export</v-icon> E-Way Bill JSON
+          </v-btn>
 
           <!-- POD Manager Component -->
           <PodManager
@@ -249,6 +258,21 @@ import InvoicePdf from "@/components/Printables/InvoicePdf.vue";
 import DeliveryChallan from "@/components/Printables/DeliveryChallan.vue";
 import InvoiceEmailSender from "@/components/InvoiceEmailSender.vue";
 import PodManager from "@/components/Invoices/PodManager.vue";
+
+// ---- E-Way Bill JSON generation constants ----
+// TODO: move to a shared config/env file if this seller info is used elsewhere
+const MY_BUSINESS_GSTIN = "27AAVPG7824M1ZX"; // Hemant Traders - fixed seller GSTIN
+const MY_BUSINESS_NAME = "Hemant Traders";
+const MY_BUSINESS_ADDR1 = "Shop 5";
+const MY_BUSINESS_ADDR2 = "Vertex Arcade Sadashiv Peth";
+const MY_BUSINESS_PLACE = "Pune";
+const MY_BUSINESS_PINCODE = 411030;
+const BY_HAND_VEHICLE_NO = "MH12NW0855"; // default vehicle for self-transport ("By Hand")
+
+function gstinToStateCode(gstin) {
+  // First 2 digits of any GSTIN are the state code
+  return parseInt(gstin.substring(0, 2), 10);
+}
 
 export default {
   components: {
@@ -306,6 +330,14 @@ export default {
         { month: "short" },
       )} ${date.getFullYear()}`;
     },
+    // Converts createdAt (ISO string) directly to DD/MM/YYYY as required by the EWB schema
+    formatDateForEwb(dateString) {
+      const date = new Date(dateString);
+      const dd = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const yyyy = date.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    },
     updateInvoice() {
       this.$router.push(`/addinvoice/${this.invoiceDetail._id}`);
     },
@@ -352,6 +384,155 @@ export default {
       } else {
         alert("Email component not loaded!");
       }
+    },
+
+    // ---- E-Way Bill bulk-upload JSON generator ----
+    generateEwayBillJson() {
+      const inv = this.invoiceDetail;
+      if (!inv) {
+        alert("Invoice not loaded.");
+        return;
+      }
+      if (!inv.customer?.gstin) {
+        alert("Customer GSTIN is missing - cannot generate E-Way Bill JSON.");
+        return;
+      }
+
+      // Distance isn't stored on the invoice yet, so ask for it here.
+      const distanceInput = prompt(
+        "Enter approximate transport distance (in km):",
+        "8",
+      );
+      if (distanceInput === null) return; // user cancelled
+      const transDistance = parseInt(distanceInput, 10);
+      if (isNaN(transDistance) || transDistance <= 0) {
+        alert("Please enter a valid distance in km.");
+        return;
+      }
+
+      // 1. Club products by HSN code, summing taxable value per group.
+      //    Width/rate/quantity are ignored for clubbing purposes - only
+      //    taxable value (quantity * unit_price) matters for the EWB.
+      const hsnGroups = {};
+      (inv.products || []).forEach((p) => {
+        const hsn = String(p.product?.hsn_code || "").trim();
+        const taxable = (p.quantity || 0) * (p.unit_price || 0);
+        if (!hsnGroups[hsn]) {
+          hsnGroups[hsn] = {
+            hsnCode: hsn,
+            productName: (p.product?.name || "ITEM").replace(/\.$/, "").trim(),
+            productDesc: p.product?.desc || (p.product?.name || "ITEM").trim(),
+            taxableAmount: 0,
+          };
+        }
+        hsnGroups[hsn].taxableAmount += taxable;
+      });
+
+      // GST is always a flat 18% (9% CGST + 9% SGST intra-state, 18% IGST inter-state)
+      const isInterState = (inv.igst || 0) > 0;
+      const cgstRatePct = isInterState ? 0 : 9;
+      const sgstRatePct = isInterState ? 0 : 9;
+      const igstRatePct = isInterState ? 18 : 0;
+
+      const itemList = Object.values(hsnGroups).map((item, idx) => ({
+        itemNo: idx + 1,
+        productName: item.productName,
+        productDesc: item.productDesc,
+        hsnCode: item.hsnCode,
+        taxableAmount: +item.taxableAmount.toFixed(2),
+        sgstRate: sgstRatePct,
+        cgstRate: cgstRatePct,
+        igstRate: igstRatePct,
+        cessRate: 0,
+        cessNonAdvol: 0,
+      }));
+
+      // 2. Transport details: "By Hand" (no transporter GSTIN) uses your
+      //    vehicle number directly; otherwise pass the transporter's GSTIN.
+      const transporterGstin = inv.transporter?.gstNumber?.trim();
+      const isByHand = !transporterGstin;
+
+      const transportFields = isByHand
+        ? {
+            transporterId: "",
+            transporterName: "",
+            vehicleNo: BY_HAND_VEHICLE_NO,
+            vehicleType: "R",
+          }
+        : {
+            transporterId: transporterGstin,
+            transporterName: inv.transporter?.name || "",
+            vehicleNo: "",
+            vehicleType: "",
+          };
+
+      // 3. State codes derived from GSTIN (first 2 digits)
+      const fromStateCode = gstinToStateCode(MY_BUSINESS_GSTIN);
+      const toStateCode = gstinToStateCode(inv.customer.gstin);
+
+      // 4. Assemble bulk-upload JSON per NIC schema
+      const bill = {
+        userGstin: MY_BUSINESS_GSTIN,
+        supplyType: "O",
+        subSupplyType: 1,
+        subSupplyDesc: "",
+        docType: "INV",
+        docNo: inv.invoiceNumber,
+        docDate: this.formatDateForEwb(inv.createdAt),
+        transType: 1,
+        fromGstin: MY_BUSINESS_GSTIN,
+        fromTrdName: MY_BUSINESS_NAME,
+        fromAddr1: MY_BUSINESS_ADDR1,
+        fromAddr2: MY_BUSINESS_ADDR2,
+        fromPlace: MY_BUSINESS_PLACE,
+        actualFromStateCode: fromStateCode,
+        fromPincode: MY_BUSINESS_PINCODE,
+        fromStateCode: fromStateCode,
+        toGstin: inv.customer.gstin,
+        toTrdName: inv.customer?.name || "",
+        toAddr1: inv.customer?.address?.line1 || "",
+        toAddr2: "",
+        toPlace: inv.customer?.address?.city || "",
+        toPincode: inv.customer?.address?.pincode || 0,
+        actualToStateCode: toStateCode,
+        toStateCode: toStateCode,
+        totalValue: inv.totalAmount || 0,
+        cgstValue: inv.cgst || 0,
+        sgstValue: inv.sgst || 0,
+        igstValue: inv.igst || 0,
+        cessValue: 0,
+        TotNonAdvolVal: 0,
+        OthValue: inv.otherCharges || 0,
+        totInvValue: inv.grandTotal || 0,
+        transMode: 1,
+        transDistance: transDistance,
+        ...transportFields,
+        transDocNo: "",
+        transDocDate: "",
+        mainHsnCode: itemList[0]?.hsnCode || "",
+        itemList: itemList,
+      };
+
+      const payload = {
+        version: "1.0.0421",
+        billLists: [bill],
+      };
+
+      // 5. Trigger browser download.
+      //    Filename kept purely alphanumeric - the NIC tool rejects names
+      //    with underscores/hyphens/spaces.
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const safeDocNo = inv.invoiceNumber.replace(/[^a-zA-Z0-9]/g, "");
+      a.href = url;
+      a.download = `ewaybill${safeDocNo}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     },
   },
   watch: {
