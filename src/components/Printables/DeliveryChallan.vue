@@ -12,6 +12,10 @@ export default {
       default: () => null,
       validator: (value) => value === null || typeof value === "object",
     },
+    includeDuplicateCopy: {
+      type: Boolean,
+      default: true,
+    },
   },
 
   methods: {
@@ -714,11 +718,13 @@ export default {
       // Generate first copy (Original For Recipient)
       this.generateInvoiceCopy(doc, groupedProducts, "Original For Recipient");
 
-      // Add a page break
-      doc.addPage();
+      if (this.includeDuplicateCopy) {
+        // Add a page break
+        doc.addPage();
 
-      // Generate second copy (Duplicate For Supplier)
-      this.generateInvoiceCopy(doc, groupedProducts, "Duplicate For Supplier");
+        // Generate second copy (Duplicate For Supplier)
+        this.generateInvoiceCopy(doc, groupedProducts, "Duplicate For Supplier");
+      }
 
       return doc;
     },

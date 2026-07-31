@@ -121,6 +121,39 @@
             </v-card-actions>
           </v-card>
         </v-col>
+
+        <!-- Bulk Invoice Email Card -->
+        <v-col cols="12" sm="6" md="4" lg="3">
+          <v-card
+            class="mx-auto my-4"
+            color="indigo"
+            dark
+            outlined
+            tile
+            elevation="4"
+            hover
+          >
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" color="white"> mdi-email-multiple </v-icon>
+              Bulk Invoice Email
+            </v-card-title>
+
+            <v-card-subtitle class="text-h6 font-weight-bold">
+              Send Customer Invoices
+            </v-card-subtitle>
+
+            <v-card-actions class="justify-end">
+              <v-btn
+                color="primary"
+                rounded
+                @click="$router.push('/bulk-customer-invoice-email')"
+                elevation="2"
+              >
+                Open
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
       </v-row>
       <!-- No Data Message -->
       <v-alert v-if="hasNoData" type="error" border="left" colored-border>

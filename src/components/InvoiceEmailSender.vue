@@ -20,6 +20,7 @@
       v-if="isInvoiceMode && !isMultiInvoiceMode"
       ref="challanPdfGenerator"
       :invoiceDetail="invoiceDetail"
+      :includeDuplicateCopy="false"
       style="display: none"
     />
     <LedgerPdfGenerator

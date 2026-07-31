@@ -28,6 +28,7 @@ import TransporterList from "@/components/Transporters/TransporterList.vue";
 import montlySummary from "@/components/InvoiceSummary/montlySummary.vue";
 import visualData from "@/components/DataAnalytics/visualData.vue";
 import CustomerInvoiceSummary from "@/components/Invoices/CustomerInvoice/CustomerInvoiceSummary.vue";
+import BulkCustomerInvoiceEmail from "@/components/Invoices/BulkCustomerInvoiceEmail.vue";
 import BankList from "@/components/Bank/BankList.vue";
 import BankDetail from "@/components/Bank/BankDetail.vue";
 import AddEditBank from "@/components/Bank/AddEditBank.vue";
@@ -258,6 +259,12 @@ const routes = [
     path: "/customer-invoices",
     component: CustomerInvoiceSummary,
     name: "customerInvoiceSummary",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/bulk-customer-invoice-email",
+    component: BulkCustomerInvoiceEmail,
+    name: "bulkCustomerInvoiceEmail",
     meta: { requiresAuth: true },
   },
   {
