@@ -263,10 +263,10 @@ import PodManager from "@/components/Invoices/PodManager.vue";
 // TODO: move to a shared config/env file if this seller info is used elsewhere
 const MY_BUSINESS_GSTIN = "27AAVPG7824M1ZX"; // Hemant Traders - fixed seller GSTIN
 const MY_BUSINESS_NAME = "Hemant Traders";
-const MY_BUSINESS_ADDR1 = "Shop 5";
-const MY_BUSINESS_ADDR2 = "Vertex Arcade Sadashiv Peth";
-const MY_BUSINESS_PLACE = "Pune";
-const MY_BUSINESS_PINCODE = 411030;
+const MY_BUSINESS_ADDR1 = "Purna Village";
+const MY_BUSINESS_ADDR2 = "Bhiwandi";
+const MY_BUSINESS_PLACE = "Bhiwandi";
+const MY_BUSINESS_PINCODE = 421302;
 const BY_HAND_VEHICLE_NO = "MH12NW0855"; // default vehicle for self-transport ("By Hand")
 
 function gstinToStateCode(gstin) {
@@ -389,68 +389,142 @@ export default {
     // ---- E-Way Bill bulk-upload JSON generator ----
     generateEwayBillJson() {
       const inv = this.invoiceDetail;
+
       if (!inv) {
         alert("Invoice not loaded.");
         return;
       }
-      if (!inv.customer?.gstin) {
-        alert("Customer GSTIN is missing - cannot generate E-Way Bill JSON.");
+
+      // ----------------------------
+      // Validate Customer GSTIN
+      // ----------------------------
+      const customerGstin = (inv.customer?.gstin || "").trim().toUpperCase();
+
+      if (
+        !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/.test(customerGstin)
+      ) {
+        alert("Invalid Customer GSTIN");
         return;
       }
 
-      // Distance isn't stored on the invoice yet, so ask for it here.
+      if (!inv.customer?.address?.pincode) {
+        alert("Customer pincode missing.");
+        return;
+      }
+
+      if (!inv.invoiceNumber) {
+        alert("Invoice number missing.");
+        return;
+      }
+
+      if (!inv.products?.length) {
+        alert("Invoice has no products.");
+        return;
+      }
+
       const distanceInput = prompt(
-        "Enter approximate transport distance (in km):",
+        "Enter approximate transport distance (KM)",
         "8",
       );
-      if (distanceInput === null) return; // user cancelled
-      const transDistance = parseInt(distanceInput, 10);
-      if (isNaN(transDistance) || transDistance <= 0) {
-        alert("Please enter a valid distance in km.");
+
+      if (distanceInput === null) return;
+
+      const transDistance = Number(distanceInput);
+
+      if (!Number.isInteger(transDistance) || transDistance <= 0) {
+        alert("Please enter a valid transport distance.");
         return;
       }
 
-      // 1. Club products by HSN code, summing taxable value per group.
-      //    Width/rate/quantity are ignored for clubbing purposes - only
-      //    taxable value (quantity * unit_price) matters for the EWB.
+      // ----------------------------
+      // Group Products by HSN
+      // ----------------------------
       const hsnGroups = {};
-      (inv.products || []).forEach((p) => {
+
+      for (const p of inv.products) {
         const hsn = String(p.product?.hsn_code || "").trim();
-        const taxable = (p.quantity || 0) * (p.unit_price || 0);
+
+        if (!/^\d{4,8}$/.test(hsn)) {
+          alert(`Invalid HSN for ${p.product?.name || "Product"}`);
+          return;
+        }
+
+        const qty = Number(p.quantity || 0);
+        const rate = Number(p.unit_price || 0);
+        const taxable = qty * rate;
+
+        const gstRate = Number(p.product?.gst_rate || 18);
+
         if (!hsnGroups[hsn]) {
           hsnGroups[hsn] = {
             hsnCode: hsn,
-            productName: (p.product?.name || "ITEM").replace(/\.$/, "").trim(),
-            productDesc: p.product?.desc || (p.product?.name || "ITEM").trim(),
+
+            productName: (p.product?.name || "ITEM").trim().replace(/\.$/, ""),
+
+            productDesc: (
+              p.product?.description ||
+              p.product?.name ||
+              "ITEM"
+            ).trim(),
+
+            quantity: 0,
+
+            qtyUnit: (p.product?.unit || "KGS").toUpperCase(),
+
             taxableAmount: 0,
+
+            gstRate,
           };
         }
+
+        hsnGroups[hsn].quantity += qty;
         hsnGroups[hsn].taxableAmount += taxable;
-      });
+      }
 
-      // GST is always a flat 18% (9% CGST + 9% SGST intra-state, 18% IGST inter-state)
-      const isInterState = (inv.igst || 0) > 0;
-      const cgstRatePct = isInterState ? 0 : 9;
-      const sgstRatePct = isInterState ? 0 : 9;
-      const igstRatePct = isInterState ? 18 : 0;
+      const isInterState = Number(inv.igst || 0) > 0;
 
-      const itemList = Object.values(hsnGroups).map((item, idx) => ({
-        itemNo: idx + 1,
+      const itemList = Object.values(hsnGroups).map((item, index) => ({
+        itemNo: index + 1,
+
         productName: item.productName,
+
         productDesc: item.productDesc,
+
         hsnCode: item.hsnCode,
-        taxableAmount: +item.taxableAmount.toFixed(2),
-        sgstRate: sgstRatePct,
-        cgstRate: cgstRatePct,
-        igstRate: igstRatePct,
+
+        quantity: Number(item.quantity.toFixed(3)),
+
+        qtyUnit: item.qtyUnit,
+
+        taxableAmount: Number(item.taxableAmount.toFixed(2)),
+
+        cgstRate: isInterState ? 0 : item.gstRate / 2,
+
+        sgstRate: isInterState ? 0 : item.gstRate / 2,
+
+        igstRate: isInterState ? item.gstRate : 0,
+
         cessRate: 0,
+
         cessNonAdvol: 0,
       }));
 
-      // 2. Transport details: "By Hand" (no transporter GSTIN) uses your
-      //    vehicle number directly; otherwise pass the transporter's GSTIN.
-      const transporterGstin = inv.transporter?.gstNumber?.trim();
-      const isByHand = !transporterGstin;
+      // ----------------------------
+      // Main HSN
+      // ----------------------------
+      const mainHsnCode =
+        Object.values(hsnGroups).sort(
+          (a, b) => b.taxableAmount - a.taxableAmount,
+        )[0]?.hsnCode || "";
+
+      // ----------------------------
+      // Transport Details
+      // ----------------------------
+      const transporterGstin = (inv.transporter?.gstNumber || "")
+        .trim()
+        .toUpperCase();
+
+      const isByHand = transporterGstin === "";
 
       const transportFields = isByHand
         ? {
@@ -461,78 +535,138 @@ export default {
           }
         : {
             transporterId: transporterGstin,
-            transporterName: inv.transporter?.name || "",
+            transporterName: (inv.transporter?.name || "").trim(),
             vehicleNo: "",
-            vehicleType: "",
+            vehicleType: "R",
           };
 
-      // 3. State codes derived from GSTIN (first 2 digits)
       const fromStateCode = gstinToStateCode(MY_BUSINESS_GSTIN);
-      const toStateCode = gstinToStateCode(inv.customer.gstin);
+      const toStateCode = gstinToStateCode(customerGstin);
 
-      // 4. Assemble bulk-upload JSON per NIC schema
+      const taxableValue = Number(inv.totalAmount || 0);
+
+      const cgst = Number(inv.cgst || 0);
+      const sgst = Number(inv.sgst || 0);
+      const igst = Number(inv.igst || 0);
+      const otherCharges = Number(inv.otherCharges || 0);
+
+      const totInvValue = Number(
+        (taxableValue + cgst + sgst + igst + otherCharges).toFixed(2),
+      );
+
+      // ----------------------------
+      // Build Bill
+      // ----------------------------
       const bill = {
         userGstin: MY_BUSINESS_GSTIN,
+
         supplyType: "O",
         subSupplyType: 1,
         subSupplyDesc: "",
+
         docType: "INV",
-        docNo: inv.invoiceNumber,
+        docNo: String(inv.invoiceNumber).trim(),
         docDate: this.formatDateForEwb(inv.createdAt),
+
         transType: 1,
+
+        // ----------------------------
+        // From Details
+        // ----------------------------
         fromGstin: MY_BUSINESS_GSTIN,
         fromTrdName: MY_BUSINESS_NAME,
         fromAddr1: MY_BUSINESS_ADDR1,
-        fromAddr2: MY_BUSINESS_ADDR2,
+        fromAddr2: MY_BUSINESS_ADDR2 || "",
         fromPlace: MY_BUSINESS_PLACE,
-        actualFromStateCode: fromStateCode,
-        fromPincode: MY_BUSINESS_PINCODE,
+        fromPincode: Number(MY_BUSINESS_PINCODE),
         fromStateCode: fromStateCode,
-        toGstin: inv.customer.gstin,
-        toTrdName: inv.customer?.name || "",
-        toAddr1: inv.customer?.address?.line1 || "",
-        toAddr2: "",
-        toPlace: inv.customer?.address?.city || "",
-        toPincode: inv.customer?.address?.pincode || 0,
-        actualToStateCode: toStateCode,
+        actualFromStateCode: fromStateCode,
+
+        // ----------------------------
+        // To Details
+        // ----------------------------
+        toGstin: customerGstin,
+        toTrdName: (inv.customer.name || "").trim(),
+        toAddr1: (inv.customer.address?.line1 || "").trim(),
+        toAddr2: (inv.customer.address?.line2 || "").trim(),
+        toPlace: (inv.customer.address?.city || "").trim(),
+        toPincode: Number(inv.customer.address.pincode),
         toStateCode: toStateCode,
-        totalValue: inv.totalAmount || 0,
-        cgstValue: inv.cgst || 0,
-        sgstValue: inv.sgst || 0,
-        igstValue: inv.igst || 0,
+        actualToStateCode: toStateCode,
+
+        // ----------------------------
+        // Invoice Values
+        // ----------------------------
+        totalValue: Number(taxableValue.toFixed(2)),
+        cgstValue: Number(cgst.toFixed(2)),
+        sgstValue: Number(sgst.toFixed(2)),
+        igstValue: Number(igst.toFixed(2)),
         cessValue: 0,
         TotNonAdvolVal: 0,
-        OthValue: inv.otherCharges || 0,
-        totInvValue: inv.grandTotal || 0,
+        OthValue: Number(otherCharges.toFixed(2)),
+        totInvValue: totInvValue,
+
+        // ----------------------------
+        // Transport
+        // ----------------------------
         transMode: 1,
         transDistance: transDistance,
-        ...transportFields,
+
+        transporterId: transportFields.transporterId,
+        transporterName: transportFields.transporterName,
+
+        vehicleNo: transportFields.vehicleNo || "",
+        vehicleType: transportFields.vehicleType || "R",
+
         transDocNo: "",
         transDocDate: "",
-        mainHsnCode: itemList[0]?.hsnCode || "",
+
+        // ----------------------------
+        // HSN
+        // ----------------------------
+        mainHsnCode: mainHsnCode,
+
+        // ----------------------------
+        // Items
+        // ----------------------------
         itemList: itemList,
       };
 
+      // ----------------------------
+      // Payload
+      // ----------------------------
       const payload = {
         version: "1.0.0421",
         billLists: [bill],
       };
 
-      // 5. Trigger browser download.
-      //    Filename kept purely alphanumeric - the NIC tool rejects names
-      //    with underscores/hyphens/spaces.
+      console.log("EWB Payload", payload);
+
+      // ----------------------------
+      // Download JSON
+      // ----------------------------
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
       });
+
       const url = URL.createObjectURL(blob);
+
       const a = document.createElement("a");
-      const safeDocNo = inv.invoiceNumber.replace(/[^a-zA-Z0-9]/g, "");
+
+      const safeDocNo = String(inv.invoiceNumber).replace(/[^A-Za-z0-9]/g, "");
+
       a.href = url;
-      a.download = `ewaybill${safeDocNo}.json`;
+      a.download = `ewaybill_${safeDocNo}.json`;
+
       document.body.appendChild(a);
+
       a.click();
+
       document.body.removeChild(a);
+
       URL.revokeObjectURL(url);
+
+      this.$toast?.success?.("E-Way Bill JSON generated successfully.");
     },
   },
   watch: {

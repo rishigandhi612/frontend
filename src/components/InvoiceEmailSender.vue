@@ -2,13 +2,22 @@
   <div>
     <!-- PDF Generator Components (hidden) -->
     <InvoicePdfGenerator
-      v-if="isInvoiceMode"
+      v-if="isInvoiceMode && !isMultiInvoiceMode"
       ref="invoicePdfGenerator"
       :invoiceDetail="invoiceDetail"
       style="display: none"
     />
+    <template v-if="isInvoiceMode && isMultiInvoiceMode">
+      <InvoicePdfGenerator
+        v-for="invoice in invoiceDetails"
+        :key="invoice._id"
+        ref="invoicePdfGenerators"
+        :invoiceDetail="invoice"
+        style="display: none"
+      />
+    </template>
     <DeliveryChallanGenerator
-      v-if="isInvoiceMode"
+      v-if="isInvoiceMode && !isMultiInvoiceMode"
       ref="challanPdfGenerator"
       :invoiceDetail="invoiceDetail"
       style="display: none"
@@ -40,7 +49,7 @@
         <v-card-text class="pt-4">
           <v-container>
             <v-row>
-              <v-col cols="12" v-if="isInvoiceMode">
+              <v-col cols="12" v-if="isInvoiceMode && !isMultiInvoiceMode">
                 <v-checkbox
                   v-model="includeChallan"
                   label="Include Delivery Challan"
@@ -273,6 +282,10 @@ export default {
       type: Object,
       default: () => null,
     },
+    invoiceDetails: {
+      type: Array,
+      default: () => [],
+    },
     ledger: {
       type: Array,
       default: () => [],
@@ -349,6 +362,14 @@ export default {
     isInvoiceMode() {
       return this.documentType === "invoice";
     },
+    isMultiInvoiceMode() {
+      return this.isInvoiceMode && this.invoiceDetails.length > 1;
+    },
+    activeInvoiceDetail() {
+      return this.isMultiInvoiceMode
+        ? this.invoiceDetails[0] || null
+        : this.invoiceDetail;
+    },
     isLedgerMode() {
       return this.documentType === "ledger";
     },
@@ -367,7 +388,7 @@ export default {
     },
     currentCustomer() {
       if (this.isInvoiceMode) {
-        return this.invoiceDetail?.customer || this.customer || {};
+        return this.activeInvoiceDetail?.customer || this.customer || {};
       }
 
       return this.customer || this.invoiceDetail?.customer || {};
@@ -378,11 +399,13 @@ export default {
     dialogTitle() {
       if (this.isLedgerMode) return "Send Ledger via Email";
       if (this.isPendingMode) return "Send Pending Invoices via Email";
+      if (this.isMultiInvoiceMode) return "Send Invoices via Email";
       return "Send Invoice via Email";
     },
     primaryDocumentLabel() {
       if (this.isLedgerMode) return "Ledger";
       if (this.isPendingMode) return "Pending Invoices";
+      if (this.isMultiInvoiceMode) return "Invoices";
       return "Invoice";
     },
     // Combine default contacts with any passed via props
@@ -547,7 +570,16 @@ export default {
 
     getDocumentReference() {
       if (this.isInvoiceMode) {
-        return this.invoiceDetail?.invoiceNumber || "Invoice";
+        if (this.isMultiInvoiceMode) {
+          return (
+            this.invoiceDetails
+              .map((invoice) => invoice.invoiceNumber)
+              .filter(Boolean)
+              .join(", ") || "Invoices"
+          );
+        }
+
+        return this.activeInvoiceDetail?.invoiceNumber || "Invoice";
       }
 
       if (this.isLedgerMode) {
@@ -559,7 +591,11 @@ export default {
 
     getPrimaryDocumentFilename() {
       if (this.isInvoiceMode) {
-        return `Invoice_${this.invoiceDetail?.invoiceNumber || "Document"}.pdf`;
+        if (this.isMultiInvoiceMode) {
+          return "Invoices.pdf";
+        }
+
+        return `Invoice_${this.activeInvoiceDetail?.invoiceNumber || "Document"}.pdf`;
       }
 
       if (this.isLedgerMode) {
@@ -576,6 +612,10 @@ export default {
 
       if (this.isPendingMode) {
         return `Pending Invoices - ${this.currentCustomerName} - Hemant Traders`;
+      }
+
+      if (this.isMultiInvoiceMode) {
+        return `Invoices - ${this.currentCustomerName} - Hemant Traders`;
       }
 
       return `Invoice #${this.invoiceDetail?.invoiceNumber || ""} - Hemant Traders`;
@@ -624,14 +664,37 @@ Pending Summary:
 ${signature}`;
       }
 
+      if (this.isMultiInvoiceMode) {
+        const invoiceNumbers =
+          this.invoiceDetails
+            .map((invoice) => invoice.invoiceNumber)
+            .filter(Boolean)
+            .join(", ") || "As attached";
+        const selectedTotal = this.invoiceDetails.reduce(
+          (total, invoice) => total + (Number(invoice.grandTotal) || 0),
+          0,
+        );
+
+        return `Dear <strong>${customerName}</strong>,
+
+Please find attached the selected invoices for your purchase.
+
+Invoice Details:
+- Invoice Numbers:<strong> ${invoiceNumbers}</strong>
+- Total Invoices:<strong> ${this.invoiceDetails.length}</strong>
+- Total Amount:<strong> ${this.formatCurrency(selectedTotal)}</strong>
+
+${signature}`;
+      }
+
       return `Dear <strong>${customerName}</strong>,
 
 Please find attached the invoice for your purchase.
 
 Invoice Details:
-- Invoice Number:<strong> ${this.invoiceDetail?.invoiceNumber || "N/A"}</strong>
-- Date:<strong> ${this.formatDate(this.invoiceDetail?.createdAt)}</strong>
-- Amount:<strong> ${this.formatCurrency(this.invoiceDetail?.grandTotal)}</strong>
+- Invoice Number:<strong> ${this.activeInvoiceDetail?.invoiceNumber || "N/A"}</strong>
+- Date:<strong> ${this.formatDate(this.activeInvoiceDetail?.createdAt)}</strong>
+- Amount:<strong> ${this.formatCurrency(this.activeInvoiceDetail?.grandTotal)}</strong>
 
 ${signature}`;
     },
@@ -639,9 +702,15 @@ ${signature}`;
     getAttachmentSummary() {
       const attachments = [];
 
-      attachments.push(this.getPrimaryDocumentFilename());
+      if (this.isMultiInvoiceMode) {
+        this.invoiceDetails.forEach((invoice) => {
+          attachments.push(this.getInvoicePdfFilename(invoice));
+        });
+      } else {
+        attachments.push(this.getPrimaryDocumentFilename());
+      }
 
-      if (this.isInvoiceMode && this.includeChallan) {
+      if (this.isInvoiceMode && !this.isMultiInvoiceMode && this.includeChallan) {
         attachments.push(`Delivery Challan.pdf`);
       }
 
@@ -653,6 +722,24 @@ ${signature}`;
       }
 
       return attachments;
+    },
+
+    getInvoicePdfFilename(invoice) {
+      const invoiceNumber = invoice?.invoiceNumber || invoice?._id || "Document";
+      const safeInvoiceNumber = String(invoiceNumber).replace(
+        /[^a-zA-Z0-9_-]/g,
+        "_",
+      );
+      return `Invoice_${safeInvoiceNumber}.pdf`;
+    },
+
+    makePdfFile(blob, filename) {
+      if (typeof File !== "undefined") {
+        return new File([blob], filename, { type: "application/pdf" });
+      }
+
+      blob.name = filename;
+      return blob;
     },
 
     async sendEmail() {
@@ -672,11 +759,13 @@ ${signature}`;
       try {
         this.generating = true;
         this.progressMessage = `Generating ${this.primaryDocumentLabel.toLowerCase()} PDF...`;
-        const primaryPdfData = await this.generatePrimaryPDF();
+        const primaryPdfData = this.isMultiInvoiceMode
+          ? await this.generateMultiInvoicePDFs()
+          : await this.generatePrimaryPDF();
 
         let challanPdfData = null;
 
-        if (this.isInvoiceMode && this.includeChallan) {
+        if (this.isInvoiceMode && !this.isMultiInvoiceMode && this.includeChallan) {
           this.progressMessage = "Generating delivery challan PDF...";
           challanPdfData = await this.generateChallanPDF();
         }
@@ -696,9 +785,13 @@ ${signature}`;
 
         const result = await this.sendDocumentEmail({
           emailData,
-          primaryPdfData,
+          primaryPdfData: this.isMultiInvoiceMode
+            ? primaryPdfData.primaryPdfData
+            : primaryPdfData,
           challanPdfData,
-          additionalFiles: this.additionalFiles,
+          additionalFiles: this.isMultiInvoiceMode
+            ? [...primaryPdfData.additionalPdfFiles, ...this.additionalFiles]
+            : this.additionalFiles,
         });
 
         console.log("Email send result:", emailData, result);
@@ -721,6 +814,39 @@ ${signature}`;
           error.message || "Failed to send email. Please try again.";
         this.progressMessage = "";
       }
+    },
+
+    async generateMultiInvoicePDFs() {
+      return new Promise((resolve, reject) => {
+        try {
+          const generators = Array.isArray(this.$refs.invoicePdfGenerators)
+            ? this.$refs.invoicePdfGenerators
+            : [this.$refs.invoicePdfGenerators].filter(Boolean);
+
+          if (generators.length !== this.invoiceDetails.length) {
+            throw new Error("Invoice PDF generators are not available");
+          }
+
+          const pdfFiles = generators.map((generator, index) => {
+            const invoice = this.invoiceDetails[index];
+            return this.makePdfFile(
+              generator.getPdfBlob(),
+              this.getInvoicePdfFilename(invoice),
+            );
+          });
+          const [primaryPdfFile, ...additionalPdfFiles] = pdfFiles;
+
+          resolve({
+            primaryPdfData: {
+              blob: primaryPdfFile,
+              filename: primaryPdfFile.name,
+            },
+            additionalPdfFiles,
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
     },
 
     async generatePrimaryPDF() {

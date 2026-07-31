@@ -204,6 +204,15 @@
                 </div>
               </v-col>
               <v-col cols="12" md="4" class="text-right">
+                <v-btn
+                  color="primary"
+                  small
+                  class="mr-2"
+                  @click="openMailDialog"
+                >
+                  <v-icon left small>mdi-email-send</v-icon>
+                  Mail
+                </v-btn>
                 <v-btn color="error" small outlined @click="clearSelection">
                   <v-icon left small>mdi-close</v-icon>
                   Clear Selection
@@ -361,18 +370,39 @@
               <v-icon>mdi-file-export</v-icon> Export Selected
             </v-btn>
           </v-col>
+          <v-col cols="12" v-if="selectedInvoices.length > 0">
+            <v-btn
+              @click="openMailDialog"
+              color="primary"
+              block
+            >
+              <v-icon>mdi-email-send</v-icon> Mail Selected
+            </v-btn>
+          </v-col>
         </v-row>
       </v-col>
     </v-row>
+
+    <InvoiceEmailSender
+      ref="invoiceEmailSender"
+      document-type="invoice"
+      :invoice-detail="selectedInvoices[0] || null"
+      :invoice-details="selectedInvoices"
+      :customer="selectedEmailCustomer"
+    />
   </v-container>
 </template>
 
 <script>
 import { mapGetters } from "vuex";
 import debounce from "lodash/debounce";
+import InvoiceEmailSender from "@/components/InvoiceEmailSender.vue";
 
 export default {
   name: "CustomerInvoiceHistory",
+  components: {
+    InvoiceEmailSender,
+  },
   data() {
     return {
       selectedCustomerId: null,
@@ -442,6 +472,15 @@ export default {
       return this.selectedInvoices.reduce((total, invoice) => {
         return total + (invoice.grandTotal || 0);
       }, 0);
+    },
+    selectedCustomer() {
+      return this.customerInvoicesData?.customer || {};
+    },
+    selectedCustomerName() {
+      return this.selectedCustomer?.name || "Customer";
+    },
+    selectedEmailCustomer() {
+      return this.selectedInvoices[0]?.customer || this.selectedCustomer;
     },
   },
   watch: {
@@ -529,6 +568,24 @@ export default {
     },
     clearSelection() {
       this.selectedInvoices = [];
+    },
+    openMailDialog() {
+      if (this.selectedInvoices.length === 0) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "No invoices selected",
+          color: "warning",
+        });
+        return;
+      }
+
+      if (!this.selectedEmailCustomer?.email_id) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Selected customer email is not available",
+          color: "warning",
+        });
+      }
+
+      this.$refs.invoiceEmailSender.openDialog();
     },
     formatDate(dateString) {
       const date = new Date(dateString);
