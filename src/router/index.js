@@ -39,6 +39,7 @@ import AddEditTransaction from "@/components/Transaction/AddEditTransaction.vue"
 import viewCustomerLedger from "@/components/Ledger/viewCustomerLedger.vue";
 import AddReceipt from "@/components/Accounting/AddReceipt.vue";
 import AddOpeningBalances from "@/components/Accounting/AddOpeningBalances.vue";
+import OutstandingReport from "@/components/Accounting/OutstandingReport.vue";
 import BankTransactions from "@/components/Bank/ BankTransactions.vue";
 
 Vue.use(Router);
@@ -307,6 +308,12 @@ const routes = [
     path: "/opening-balances",
     component: AddOpeningBalances,
     name: "addOpeningBalances",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/outstanding-report",
+    component: OutstandingReport,
+    name: "outstandingReport",
     meta: { requiresAuth: true },
   },
   {

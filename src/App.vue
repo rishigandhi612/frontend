@@ -124,6 +124,12 @@
           </v-list-item-icon>
           <v-list-item-title>Opening Balances</v-list-item-title>
         </v-list-item>
+        <v-list-item link @click="$router.push('/outstanding-report')">
+          <v-list-item-icon>
+            <v-icon>mdi-file-chart-outline</v-icon>
+          </v-list-item-icon>
+          <v-list-item-title>Outstanding Report</v-list-item-title>
+        </v-list-item>
       </v-list>
     </v-navigation-drawer>
 

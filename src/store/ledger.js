@@ -3,6 +3,8 @@ import apiClient from "./apiClient";
 const state = {
   ledgerEntries: [],
   outStandingInvoices: [],
+  outstandingReport: null,
+  onAccountByCustomer: {},
   outstandingBills: [],
   // holds the last fetched customer ledger response
   customerLedger: null,
@@ -12,6 +14,8 @@ const getters = {
   ledgerEntries: (state) => state.ledgerEntries,
   customerLedger: (state) => state.customerLedger,
   outStandingInvoices: (state) => state.outStandingInvoices,
+  outstandingReport: (state) => state.outstandingReport,
+  onAccountByCustomer: (state) => state.onAccountByCustomer,
 };
 
 const actions = {
@@ -30,6 +34,70 @@ const actions = {
       commit("SET_OUTSTANDING_INVOICE_ENTRIES", response.data);
     } catch (error) {
       console.error("Error fetching outstanding invoice entries:", error);
+      throw error;
+    }
+  },
+  async fetchOutstandingReport({ commit }, params = {}) {
+    try {
+      const query = {
+        startDate: params.startDate || "2025-01-01",
+        endDate: params.endDate || "2025-12-31",
+        page: params.page || 1,
+        limit: params.limit || 500000,
+      };
+      const response = await apiClient.get("/reports/outstanding", {
+        params: query,
+      });
+
+      const rows = response.data?.data || [];
+      const customerIds = [
+        ...new Set(rows.map((row) => row.customerId).filter(Boolean)),
+      ];
+
+      const onAccountPairs = await Promise.all(
+        customerIds.map(async (customerId) => {
+          try {
+            const billsResponse = await apiClient.get(
+              `/accounting/customers/${customerId}/bills`,
+            );
+            const summary = billsResponse.data?.summary || {};
+            return [
+              customerId,
+              {
+                onAccount: Number(
+                  summary.onAccount ?? summary.totalOnAccount ?? 0,
+                ),
+                grossPending: Number(
+                  summary.grossPending ?? summary.totalPending ?? 0,
+                ),
+              },
+            ];
+          } catch (error) {
+            console.error(
+              `Error fetching on-account balance for customer ${customerId}:`,
+              error,
+            );
+            return [
+              customerId,
+              {
+                onAccount: 0,
+                grossPending: 0,
+              },
+            ];
+          }
+        }),
+      );
+
+      const onAccountByCustomer = Object.fromEntries(onAccountPairs);
+      const payload = {
+        ...response.data,
+        onAccountByCustomer,
+      };
+
+      commit("SET_OUTSTANDING_REPORT", payload);
+      return payload;
+    } catch (error) {
+      console.error("Error fetching outstanding report:", error);
       throw error;
     }
   },
@@ -62,6 +130,11 @@ const mutations = {
   },
   SET_OUTSTANDING_INVOICE_ENTRIES(state, entries) {
     state.outStandingInvoices = entries;
+  },
+  SET_OUTSTANDING_REPORT(state, payload) {
+    state.outstandingReport = payload;
+    state.outStandingInvoices = payload?.data || [];
+    state.onAccountByCustomer = payload?.onAccountByCustomer || {};
   },
   SET_CUSTOMER_LEDGER(state, payload) {
     state.customerLedger = payload;
