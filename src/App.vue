@@ -167,7 +167,7 @@ export default {
   watch: {
     isAuthenticated(newVal) {
       if (!newVal) {
-        this.$router.push("/login");
+        this.$router.push("/");
       }
     },
   },
