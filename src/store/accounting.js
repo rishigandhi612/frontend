@@ -15,8 +15,8 @@ const state = {
     fetchBills: false,
   },
   openingBalance: {},
+  pendingReceiptPrefill: null,
 };
-
 const getters = {
   allReceipts: (state) => state.receipts,
   receiptDetail: (state) => state.receiptDetail,
@@ -27,6 +27,7 @@ const getters = {
   isLoadingBills: (state) => state.loadingBills,
   getLoadingState: (state) => state.loadingState,
   getOpeningBalance: (state) => state.openingBalance,
+  pendingReceiptPrefill: (state) => state.pendingReceiptPrefill,
 };
 
 const actions = {
@@ -152,6 +153,29 @@ const actions = {
       throw error;
     }
   },
+  async deleteReceipt({ commit }, receiptId) {
+    commit("SET_LOADING_STATE", { type: "createReceipt", value: true });
+    try {
+      const response = await apiClient.delete(
+        `/accounting/receipts/${receiptId}`,
+      );
+      if (response.data.success) {
+        // Optionally, you can remove the deleted receipt from the state
+        commit(
+          "SET_RECEIPTS",
+          state.receipts.filter((r) => r.id !== receiptId),
+        );
+        return response.data;
+      } else {
+        throw new Error("Failed to delete receipt");
+      }
+    } catch (error) {
+      console.error("Error deleting receipt:", error);
+      throw error;
+    } finally {
+      commit("SET_LOADING_STATE", { type: "createReceipt", value: false });
+    }
+  },
 };
 
 const mutations = {
@@ -195,6 +219,13 @@ const mutations = {
     state.customerBills = [];
     state.customerBillsSummary = {};
     state.customerBillsCustomer = {};
+  },
+  SET_PENDING_RECEIPT_PREFILL(state, prefill) {
+    state.pendingReceiptPrefill = prefill;
+  },
+
+  CLEAR_PENDING_RECEIPT_PREFILL(state) {
+    state.pendingReceiptPrefill = null;
   },
 };
 

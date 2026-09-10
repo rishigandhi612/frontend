@@ -339,6 +339,14 @@
               >
                 Cancel
               </v-btn>
+              <v-btn
+                v-if="isEditMode"
+                text
+                color="grey"
+                @click="deleteReceipt()"
+              >
+                Delete
+              </v-btn>
             </v-col>
           </v-row>
         </v-form>
@@ -739,6 +747,32 @@ export default {
         this.pendingNavNext = null;
       }
     },
+    async deleteReceipt() {
+      if (!this.isEditMode) return;
+
+      const confirmed = confirm(
+        "Are you sure you want to delete this receipt? This action cannot be undone.",
+      );
+      if (!confirmed) return;
+
+      try {
+        const rawId = this.receipt.voucherId || this.$route.params.receiptId;
+        const pathId = rawId.includes("/") ? encodeReceiptPathId(rawId) : rawId;
+
+        await this.$store.dispatch("accounting/deleteReceipt", pathId);
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Receipt deleted successfully",
+          color: "success",
+        });
+        this.forcedLeave = true;
+        this.$router.back();
+      } catch (error) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: error.response?.data?.message || "Failed to delete receipt",
+          color: "error",
+        });
+      }
+    },
   },
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -757,29 +791,22 @@ export default {
       this.takeSnapshot();
 
       // Check if coming from pending invoices settlement
-      const pendingInvoicesData = sessionStorage.getItem(
-        "pendingInvoicesToSettle",
-      );
-      if (pendingInvoicesData) {
+      const prefill = this.$store.getters["accounting/pendingReceiptPrefill"];
+      if (prefill) {
         try {
-          const data = JSON.parse(pendingInvoicesData);
-          // Prefill customer
-          this.receipt.customerId = data.customerId;
-          // Prefill total amount
-          this.receipt.totalAmount = data.totalPending;
-          // Fetch bills for this customer first (this will reset allocations)
-          await this.fetchCustomerBills(data.customerId);
-          // Now set allocations after bills are loaded
-          this.receipt.allocations = data.selectedInvoices.map((inv) => ({
+          this.receipt.customerId = prefill.customerId;
+          this.receipt.totalAmount = prefill.totalPending;
+          await this.fetchCustomerBills(prefill.customerId);
+          this.receipt.allocations = prefill.selectedInvoices.map((inv) => ({
             billId: inv.invoiceId,
             allocatedAmount: inv.pendingAmount,
             narration: null,
           }));
           this.takeSnapshot();
-          // Clear sessionStorage after consuming
-          sessionStorage.removeItem("pendingInvoicesToSettle");
         } catch (err) {
-          console.error("Error reading pending invoices data:", err);
+          console.error("Error applying pending invoices prefill:", err);
+        } finally {
+          this.$store.commit("accounting/CLEAR_PENDING_RECEIPT_PREFILL");
         }
       } else if (this.$route.query.customerId) {
         this.receipt.customerId = this.$route.query.customerId;

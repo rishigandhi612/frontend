@@ -1118,34 +1118,38 @@ export default {
         return;
       }
 
-      // Store selected invoices in sessionStorage for AddReceipt to consume
-      const selectedData = {
-        customerId: this.customerLedger?.customer?.id,
-        selectedInvoices: this.selectedPendingInvoices.map((inv) => ({
-          invoiceId: inv.invoiceno,
-          invoiceno: inv.invoiceno,
-          invoiceDate: inv.invoiceDate,
-          pendingAmount: Number(inv.pendingAmount),
-          openingAmount: Number(inv.openingAmount),
-        })),
+      const customerId = this.customerLedger?.customer?.id;
+      if (!customerId) {
+        this.$store.commit("snackbar/SHOW_SNACKBAR", {
+          message: "Customer information is missing",
+          color: "error",
+        });
+        return;
+      }
+
+      this.$store.commit("accounting/SET_PENDING_RECEIPT_PREFILL", {
+        customerId,
         totalPending: this.pendingSelectedSummary.totalPending,
-      };
+        selectedInvoices: this.selectedPendingInvoices.map((inv) => ({
+          invoiceId: inv.id,
+          invoiceno: inv.invoiceno,
+          pendingAmount: Number(inv.pendingAmount),
+        })),
+      });
 
-      window.sessionStorage.setItem(
-        "pendingInvoicesToSettle",
-        JSON.stringify(selectedData),
-      );
-
-      // Close dialog and navigate
       this.pendingDialog = false;
       this.$router.push({
         name: "addReceipt",
-        query: { customerId: this.customerLedger?.customer?.id },
+        query: { customerId },
       });
     },
   },
   mounted() {
     this.fetchLedger();
+  },
+  beforeDestroy() {
+    // Clear sessionStorage on unmount to avoid stale data
+    sessionStorage.removeItem("pendingInvoicesToSettle");
   },
 };
 </script>

@@ -123,6 +123,9 @@
       <template v-slot:item="{ item }">
         <tr>
           <td>
+            {{ item.period }}
+          </td>
+          <td>
             <v-chip small :color="getWidthColor(item.width)">
               {{ formatWidth(item.width) }}
             </v-chip>
@@ -213,6 +216,7 @@ export default {
         { text: "Revenue", value: "revenue" },
       ],
       headers: [
+        { text: "Month", value: "period", sortable: true },
         { text: "Width", value: "width", sortable: true },
         { text: "Quantity", value: "quantity", sortable: true, align: "right" },
         { text: "Revenue", value: "revenue", sortable: true, align: "right" },
@@ -275,6 +279,7 @@ export default {
         // Normalize the API data
         this.widthData = (response.data || []).map((d) => ({
           width: d.width,
+          period: d.period || "N/A",
           quantity: d.totalQuantity || 0,
           revenue: d.totalRevenue || 0,
           averagePrice: d.averageUnitPrice || 0,

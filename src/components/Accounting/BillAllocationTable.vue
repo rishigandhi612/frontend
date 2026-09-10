@@ -95,7 +95,10 @@
             </v-list-item-title>
             <v-list-item-subtitle>
               <span
-                v-if="isOverpaid(getBill(allocation.billId))"
+                v-if="
+                  getBill(allocation.billId) &&
+                  isOverpaid(getBill(allocation.billId))
+                "
                 class="text-warning"
               >
                 Overpayment adjustment: ₹{{
@@ -298,6 +301,7 @@ export default {
       return Math.min(Number(bill.pendingAmount), parentUnallocated);
     },
     isOverpaid(bill) {
+      if (!bill) return false;
       return Number(bill.pendingAmount) < 0;
     },
     getBill(billId) {

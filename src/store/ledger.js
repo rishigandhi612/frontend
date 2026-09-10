@@ -39,11 +39,15 @@ const actions = {
   },
   async fetchOutstandingReport({ commit }, params = {}) {
     try {
+      const today = new Date();
+      const fyStartYear =
+        today.getMonth() < 3 ? today.getFullYear() - 1 : today.getFullYear();
+
       const query = {
-        startDate: params.startDate || "2025-01-01",
-        endDate: params.endDate || "2025-12-31",
+        startDate: params.startDate || `${fyStartYear}-04-01`,
+        endDate: params.endDate || `${fyStartYear + 1}-03-31`,
         page: params.page || 1,
-        limit: params.limit || 500000,
+        limit: params.limit || 10,
       };
       const response = await apiClient.get("/reports/outstanding", {
         params: query,

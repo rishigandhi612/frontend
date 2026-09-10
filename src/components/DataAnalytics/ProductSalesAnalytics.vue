@@ -155,7 +155,12 @@
           </td>
 
           <!-- Product name column for month grouping -->
-          <td v-if="localFilters.groupBy === 'month'">
+          <td
+            v-if="
+              localFilters.groupBy === 'month' ||
+              localFilters.groupBy === 'customer'
+            "
+          >
             <div class="py-2">
               <v-btn class="font-weight-bold text-subtitle-2" text small>
                 {{ item.productName }}
@@ -320,12 +325,20 @@ export default {
           width: "150px",
         });
       } else if (this.localFilters.groupBy === "customer") {
-        baseHeaders.push({
-          text: "Customer Name",
-          value: "customerName",
-          sortable: true,
-          width: "200px",
-        });
+        baseHeaders.push(
+          {
+            text: "Customer Name",
+            value: "customerName",
+            sortable: true,
+            width: "200px",
+          },
+          {
+            text: "Product Name",
+            value: "productName",
+            sortable: true,
+            width: "200px",
+          },
+        );
       } else {
         baseHeaders.push({
           text: "Product Name",
@@ -370,7 +383,7 @@ export default {
           value: "uniqueInvoiceCount",
           sortable: true,
           align: "center",
-        }
+        },
       );
 
       // Add customers column except when grouping by customer
@@ -397,7 +410,7 @@ export default {
           align: "center",
         },
         { text: "Widths Available", value: "widths", sortable: false },
-        { text: "Revenue Share", value: "percentage", sortable: false }
+        { text: "Revenue Share", value: "percentage", sortable: false },
       );
 
       return baseHeaders;
@@ -482,7 +495,7 @@ export default {
         this.summary = response.summary || null;
         console.log(
           "Fetched product sales data:",
-          this.salesData[0]?.productName
+          this.salesData[0]?.productName,
         );
       } catch (error) {
         console.error("Error fetching product sales:", error);

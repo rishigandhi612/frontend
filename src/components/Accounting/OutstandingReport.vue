@@ -1006,7 +1006,7 @@ export default {
           this.$store.dispatch("ledger/fetchOutstandingReport", {
             ...this.filters,
             page: 1,
-            limit: 500000,
+            limit: 1000,
           }),
         ]);
       } catch (error) {

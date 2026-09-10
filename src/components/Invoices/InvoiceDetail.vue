@@ -104,6 +104,139 @@
                 </template>
               </v-data-table>
             </v-card>
+            <!-- Quantity Summary: size-wise, then product-wise, then overall -->
+            <v-card class="mt-4 rounded-lg" outlined>
+              <v-card-title
+                class="text-subtitle-1 font-weight-bold d-flex align-center"
+              >
+                <v-icon left color="teal">mdi-weight-kilogram</v-icon>
+                Quantity Summary
+                <v-spacer></v-spacer>
+                <span class="text-body-2 grey--text">
+                  {{ productQuantitySummary.length }} product{{
+                    productQuantitySummary.length === 1 ? "" : "s"
+                  }}
+                </span>
+              </v-card-title>
+
+              <v-expansion-panels multiple flat class="px-2">
+                <v-expansion-panel
+                  v-for="product in productQuantitySummary"
+                  :key="product.name"
+                  class="mb-2 rounded-lg"
+                  style="border: 1px solid #e0e0e0"
+                >
+                  <v-expansion-panel-header>
+                    <div
+                      class="d-flex align-center justify-space-between"
+                      style="width: 100%; padding-right: 12px"
+                    >
+                      <div>
+                        <span class="font-weight-bold">{{ product.name }}</span>
+                        <span class="grey--text text-caption ml-1"
+                          >({{ product.hsn_code }})</span
+                        >
+                      </div>
+                      <div class="text-right">
+                        <div class="font-weight-bold">
+                          {{ product.totalQuantity }} Kgs
+                        </div>
+                        <div class="text-caption grey--text">
+                          {{ product.rollCount }} roll{{
+                            product.rollCount === 1 ? "" : "s"
+                          }}, {{ Object.keys(product.widths).length }} size{{
+                            Object.keys(product.widths).length === 1 ? "" : "s"
+                          }}
+                        </div>
+                      </div>
+                    </div>
+                  </v-expansion-panel-header>
+
+                  <v-expansion-panel-content>
+                    <v-simple-table dense>
+                      <thead>
+                        <tr>
+                          <th class="text-left">Width</th>
+                          <th class="text-right">Net Wt</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template v-for="(w, idx) in product.widths">
+                          <!-- zero-width, all rolls same weight: collapsed line -->
+                          <tr
+                            v-if="
+                              w.hasZeroWidth &&
+                              w.allSameWeight &&
+                              w.rolls.length > 1
+                            "
+                            :key="`w-${idx}`"
+                          >
+                            <td
+                              colspan="2"
+                              class="text-center font-weight-medium"
+                            >
+                              {{ w.rolls.length }} x
+                              {{ w.singleQuantity.toFixed(3) }} Kgs =
+                              {{ w.total.toFixed(3) }} Kgs
+                            </td>
+                          </tr>
+
+                          <!-- zero-width, mixed weights: just show total -->
+                          <tr v-else-if="w.hasZeroWidth" :key="`w-${idx}`">
+                            <td
+                              colspan="2"
+                              class="text-center font-weight-medium"
+                            >
+                              {{ w.total.toFixed(3) }} Kgs
+                            </td>
+                          </tr>
+
+                          <!-- normal width: one row per roll, then subtotal if >1 roll -->
+                          <template v-else>
+                            <tr
+                              v-for="(roll, rIdx) in w.rolls"
+                              :key="`w-${idx}-r-${rIdx}`"
+                            >
+                              <td>{{ w.label }}</td>
+                              <td class="text-right">
+                                {{ roll.quantity.toFixed(3) }} Kgs
+                              </td>
+                            </tr>
+                            <tr
+                              v-if="w.rolls.length > 1"
+                              :key="`w-${idx}-sub`"
+                              class="grey lighten-4"
+                            >
+                              <td class="font-weight-medium">
+                                Total {{ w.label }} ({{ w.rolls.length }})
+                              </td>
+                              <td class="text-right font-weight-medium">
+                                {{ w.total.toFixed(3) }} Kgs
+                              </td>
+                            </tr>
+                          </template>
+                        </template>
+                      </tbody>
+                    </v-simple-table>
+                  </v-expansion-panel-content>
+                </v-expansion-panel>
+              </v-expansion-panels>
+
+              <v-divider class="my-3"></v-divider>
+
+              <!-- overall total summary -->
+              <v-card-text class="text-right">
+                <div class="font-weight-bold text-h6">
+                  Overall Total: {{ overallTotalQuantity }} Kgs
+                </div>
+                <div
+                  v-if="itemCountText"
+                  class="text-subtitle-1 grey--text text--darken-1"
+                >
+                  FOR {{ itemCountText }}
+                </div>
+              </v-card-text>
+            </v-card>
 
             <!-- Charges / Summary -->
             <v-card class="mt-4 rounded-lg" outlined>
@@ -263,10 +396,10 @@ import PodManager from "@/components/Invoices/PodManager.vue";
 // TODO: move to a shared config/env file if this seller info is used elsewhere
 const MY_BUSINESS_GSTIN = "27AAVPG7824M1ZX"; // Hemant Traders - fixed seller GSTIN
 const MY_BUSINESS_NAME = "Hemant Traders";
-const MY_BUSINESS_ADDR1 = "Purna Village";
-const MY_BUSINESS_ADDR2 = "Bhiwandi";
-const MY_BUSINESS_PLACE = "Bhiwandi";
-const MY_BUSINESS_PINCODE = 421302;
+const MY_BUSINESS_ADDR1 = "Sadashiv Peth";
+const MY_BUSINESS_ADDR2 = "Pune";
+const MY_BUSINESS_PLACE = "Pune";
+const MY_BUSINESS_PINCODE = 411030;
 const BY_HAND_VEHICLE_NO = "MH12NW0855"; // default vehicle for self-transport ("By Hand")
 
 function gstinToStateCode(gstin) {
@@ -305,6 +438,109 @@ export default {
         rate: p.unit_price,
         amount: (p.quantity * p.unit_price).toFixed(3),
       }));
+    },
+
+    // NEW: Product -> Width -> Rolls, with subtotals at each level
+    // (mirrors groupProducts() in DeliveryChallan.vue)
+    productQuantitySummary() {
+      if (!this.invoiceDetail?.products?.length) return [];
+
+      const organized = {};
+
+      this.invoiceDetail.products.forEach((p) => {
+        const name = p.product?.name || "N/A";
+        const width =
+          p.width === 0
+            ? "no-width"
+            : p.width.toFixed(2) + (p.width > 70 ? " mm" : " ''");
+
+        if (!organized[name]) {
+          organized[name] = {
+            name,
+            hsn_code: p.product?.hsn_code || "N/A",
+            widths: {},
+          };
+        }
+
+        if (!organized[name].widths[width]) {
+          organized[name].widths[width] = {
+            label: width,
+            rolls: [],
+            total: 0,
+            hasZeroWidth: p.width === 0,
+          };
+        }
+
+        organized[name].widths[width].rolls.push({
+          quantity: parseFloat(p.quantity || 0),
+        });
+        organized[name].widths[width].total += parseFloat(p.quantity || 0);
+      });
+
+      return Object.values(organized).map((product) => {
+        const widths = Object.values(product.widths);
+        const totalQuantity = widths.reduce((sum, w) => sum + w.total, 0);
+        const rollCount = widths.reduce((sum, w) => sum + w.rolls.length, 0);
+
+        // collapse identical zero-width rolls, same as the PDF (e.g. "3 x 50.000 Kgs")
+        widths.forEach((w) => {
+          if (w.hasZeroWidth && w.rolls.length > 1) {
+            const first = w.rolls[0].quantity;
+            w.allSameWeight = w.rolls.every((r) => r.quantity === first);
+            if (w.allSameWeight) w.singleQuantity = first;
+          }
+        });
+
+        return {
+          name: product.name,
+          hsn_code: product.hsn_code,
+          widths,
+          totalQuantity: totalQuantity.toFixed(3),
+          rollCount,
+        };
+      });
+    },
+
+    // roll / drum / can classification — same rule as DeliveryChallan.vue
+    itemCounts() {
+      const products = this.invoiceDetail?.products || [];
+      let rollCount = 0,
+        drumCount = 0,
+        canCount = 0;
+
+      products.forEach((p) => {
+        const qty = parseFloat(p.quantity || 0);
+        if (p.width === 0) {
+          if (qty === 50) drumCount++;
+          else if (qty === 5) canCount++;
+          else rollCount++;
+        } else {
+          rollCount++;
+        }
+      });
+
+      return { rollCount, drumCount, canCount };
+    },
+
+    itemCountText() {
+      const { rollCount, drumCount, canCount } = this.itemCounts;
+      const parts = [];
+      if (rollCount > 0)
+        parts.push(`${rollCount} ${rollCount === 1 ? "Roll" : "Rolls"}`);
+      if (drumCount > 0)
+        parts.push(`${drumCount} ${drumCount === 1 ? "Drum" : "Drums"}`);
+      if (canCount > 0)
+        parts.push(`${canCount} ${canCount === 1 ? "Can" : "Cans"}`);
+      return parts.join(", ");
+    },
+
+    overallTotalQuantity() {
+      const products = this.invoiceDetail?.products || [];
+      const total = products.reduce(
+        (sum, p) => sum + parseFloat(p.quantity || 0),
+        0,
+      );
+      return total.toFixed(3);
     },
   },
   methods: {
