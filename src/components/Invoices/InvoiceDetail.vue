@@ -396,10 +396,10 @@ import PodManager from "@/components/Invoices/PodManager.vue";
 // TODO: move to a shared config/env file if this seller info is used elsewhere
 const MY_BUSINESS_GSTIN = "27AAVPG7824M1ZX"; // Hemant Traders - fixed seller GSTIN
 const MY_BUSINESS_NAME = "Hemant Traders";
-const MY_BUSINESS_ADDR1 = "Sadashiv Peth";
-const MY_BUSINESS_ADDR2 = "Pune";
-const MY_BUSINESS_PLACE = "Pune";
-const MY_BUSINESS_PINCODE = 411030;
+const MY_BUSINESS_ADDR1 = "Bhiwandi";
+const MY_BUSINESS_ADDR2 = "Bhiwandi, Maharashtra"; 
+const MY_BUSINESS_PLACE = "Bhiwandi, Maharashtra"; 
+const MY_BUSINESS_PINCODE = 421302;
 const BY_HAND_VEHICLE_NO = "MH12NW0855"; // default vehicle for self-transport ("By Hand")
 
 function gstinToStateCode(gstin) {

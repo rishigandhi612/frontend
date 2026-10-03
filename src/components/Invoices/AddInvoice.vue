@@ -269,6 +269,9 @@ export default {
       mailInvoiceDialog: false,
       createdInvoiceDetail: null,
       redirectAfterEmailDialog: false,
+      rollIds: [],        // current roll IDs attached to this invoice (existing + newly added this session)
+    removedRollIds: [],  // rolls explicitly removed this session that need to be released on save
+    originalRollIds: [], // snapshot of what the invoice had on load — used to know what's actually worth reporting as "removed"
     };
   },
 
@@ -345,37 +348,41 @@ export default {
       }
     },
 
-    async fetchInvoiceDetail(id) {
-      try {
-        const response = await this.$store.dispatch(
-          "invoices/fetchInvoiceById",
-          id,
-        );
-        if (response && response.success) {
-          const invoice = response.data;
-          this.selectedCustomerId = invoice.customer._id;
-          this.selectedTransporterId = invoice.transporter?._id || null;
-          this.invoiceProducts = invoice.products.map((product) => ({
-            productId: product.product._id,
-            width: product.width,
-            quantity: product.quantity,
-            unit_price: product.unit_price || 0,
-            totalPrice: (product.unit_price * product.quantity).toFixed(2),
-          }));
-          this.otherCharges = invoice.otherCharges || 0;
-          this.discountAllowed = invoice.discountAllowed || 0;
-          this.ewbNo = invoice.ewbNo || "";
-          this.invoiceNumber = invoice.invoiceNumber || "";
-          this.isIntraStateTransaction = invoice.igst === 0;
-          this.originalInvoice = { ...invoice };
-        } else {
-          throw new Error("Failed to load invoice details for edit.");
-        }
-      } catch (err) {
-        console.error("Error fetching invoice details:", err);
-        this.error = "Failed to load invoice details.";
-      }
-    },
+   async fetchInvoiceDetail(id) {
+  try {
+    const response = await this.$store.dispatch("invoices/fetchInvoiceById", id);
+    if (response && response.success) {
+      const invoice = response.data;
+      this.selectedCustomerId = invoice.customer._id;
+      this.selectedTransporterId = invoice.transporter?._id || null;
+      this.invoiceProducts = invoice.products.map((product) => ({
+        productId: product.product._id,
+        width: product.width,
+        quantity: product.quantity,
+        unit_price: product.unit_price || 0,
+        totalPrice: (product.unit_price * product.quantity).toFixed(2),
+      }));
+      this.otherCharges = invoice.otherCharges || 0;
+      this.discountAllowed = invoice.discountAllowed || 0;
+      this.ewbNo = invoice.ewbNo || "";
+      this.invoiceNumber = invoice.invoiceNumber || "";
+      this.isIntraStateTransaction = invoice.igst === 0;
+
+      // FIX: carry existing rollIds into state, and snapshot them separately
+      // so we can tell "removed this session" from "never existed" later.
+      this.rollIds = invoice.rollIds ? [...invoice.rollIds] : [];
+      this.originalRollIds = invoice.rollIds ? [...invoice.rollIds] : [];
+      this.removedRollIds = [];
+
+      this.originalInvoice = { ...invoice };
+    } else {
+      throw new Error("Failed to load invoice details for edit.");
+    }
+  } catch (err) {
+    console.error("Error fetching invoice details:", err);
+    this.error = "Failed to load invoice details.";
+  }
+},
 
     addProduct() {
       this.invoiceProducts.push({
@@ -387,9 +394,20 @@ export default {
       });
     },
 
-    removeProduct(index) {
-      this.invoiceProducts.splice(index, 1);
-    },
+  removeProduct(index){
+    const product = this.invoiceProducts[index];
+    if(product && product.rollId){
+      this.rollIds = this.rollIds.filter((id) => id !== product.rollId);
+       if (
+      this.originalRollIds.includes(product.rollId) &&
+      !this.removedRollIds.includes(product.rollId)
+    ) {
+      this.removedRollIds.push(product.rollId);
+    }
+  }
+
+  this.invoiceProducts.splice(index, 1);
+  },
 
     openBatchDialog() {
       this.batchDialog = true;
@@ -405,16 +423,24 @@ export default {
       this.inventoryDialog = true;
     },
 
-    addInventoryProductsToInvoice(inventoryProducts) {
-      // Add inventory products to the existing invoice products
-      this.invoiceProducts = [...this.invoiceProducts, ...inventoryProducts];
-      this.inventoryDialog = false;
+ addInventoryProductsToInvoice(inventoryProducts) {
+  this.invoiceProducts = [...this.invoiceProducts, ...inventoryProducts];
 
-      // Show success message
-      this.$toast?.success?.(
-        `Added ${inventoryProducts.length} items from inventory to invoice.`,
-      );
-    },
+  const newRollIds = inventoryProducts
+    .filter((p) => p.rollId)
+    .map((p) => p.rollId);
+
+  // A roll being re-added in the same session as a removal cancels the removal.
+  this.removedRollIds = this.removedRollIds.filter(
+    (id) => !newRollIds.includes(id),
+  );
+  this.rollIds = [...new Set([...this.rollIds, ...newRollIds])];
+
+  this.inventoryDialog = false;
+  this.$toast?.success?.(
+    `Added ${inventoryProducts.length} items from inventory to invoice.`,
+  );
+},
 
     updateTotals() {
       // This method can be called when needed to update any dependent calculations
@@ -543,85 +569,77 @@ export default {
 
     // Fixed prepareInvoicePayload method for InvoiceForm.vue
 
-    prepareInvoicePayload() {
-      const totalItemsPrice = this.calculateTotalItemsPrice();
-      const otherCharges = parseFloat(this.otherCharges) || 0;
-      const discountAllowed = parseFloat(this.discountAllowed) || 0;
-      const totalWithOtherCharges = totalItemsPrice + otherCharges;
+  prepareInvoicePayload() {
+  const totalItemsPrice = this.calculateTotalItemsPrice();
+  const otherCharges = parseFloat(this.otherCharges) || 0;
+  const discountAllowed = parseFloat(this.discountAllowed) || 0;
+  const totalWithOtherCharges = totalItemsPrice + otherCharges;
 
-      let cgstAmount = 0;
-      let sgstAmount = 0;
-      let igstAmount = 0;
+  let cgstAmount = 0;
+  let sgstAmount = 0;
+  let igstAmount = 0;
 
-      if (this.isIntraStateTransaction) {
-        cgstAmount = totalWithOtherCharges * 0.09;
-        sgstAmount = totalWithOtherCharges * 0.09;
-      } else {
-        igstAmount = totalWithOtherCharges * 0.18;
-      }
+  if (this.isIntraStateTransaction) {
+    cgstAmount = totalWithOtherCharges * 0.09;
+    sgstAmount = totalWithOtherCharges * 0.09;
+  } else {
+    igstAmount = totalWithOtherCharges * 0.18;
+  }
 
-      const grandTotal = Math.round(
-        totalWithOtherCharges +
-          cgstAmount +
-          sgstAmount +
-          igstAmount -
-          discountAllowed,
-      );
+  const grandTotal = Math.round(
+    totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount - discountAllowed,
+  );
 
-      // ✅ FIXED: Properly handle product structure
-      const products = this.invoiceProducts.map((product) => {
-        // Handle both cases: when productId is a string and when it's an object
-        let productReference;
+  const products = this.invoiceProducts.map((product) => {
+    let productReference;
+    if (typeof product.productId === "string") {
+      productReference = { _id: product.productId };
+    } else if (product.productId && product.productId._id) {
+      productReference = product.productId;
+    } else {
+      const foundProduct = this.allProducts.find((p) => p._id === product.productId);
+      productReference = foundProduct || { _id: product.productId };
+    }
 
-        if (typeof product.productId === "string") {
-          // Normal case: productId is just the ID string
-          productReference = { _id: product.productId };
-        } else if (product.productId && product.productId._id) {
-          // From inventory dialog: productId is already an object with _id
-          productReference = product.productId;
-        } else {
-          // Fallback: try to find the product in allProducts
-          const foundProduct = this.allProducts.find(
-            (p) => p._id === product.productId,
-          );
-          productReference = foundProduct || { _id: product.productId };
-          console.log("product", foundProduct);
-        }
+    return {
+      product: productReference,
+      width: parseFloat(product.width || 0),
+      quantity: parseFloat(product.quantity),
+      unit_price: parseFloat(product.unit_price),
+      totalPrice: parseFloat(product.quantity * product.unit_price),
+      ...(product.rollId && { rollId: product.rollId }),
+      ...(product.inventoryItemId && { inventoryItemId: product.inventoryItemId }),
+    };
+  });
 
-        return {
-          product: productReference,
-          width: parseFloat(product.width || 0),
-          quantity: parseFloat(product.quantity),
-          unit_price: parseFloat(product.unit_price),
-          totalPrice: parseFloat(product.quantity * product.unit_price),
-          // Include inventory reference if available
-          ...(product.rollId && { rollId: product.rollId }),
-          ...(product.inventoryItemId && {
-            inventoryItemId: product.inventoryItemId,
-          }),
-        };
-      });
+  // FIX: rollIds is now sourced from this.rollIds (existing + session additions,
+  // minus session removals) instead of being re-derived purely from
+  // invoiceProducts, which previously lost every pre-existing roll on edit.
+  const rollIds = [...new Set(this.rollIds)];
 
-      // ✅ Also collect all rollIds for inventory tracking
-      const rollIds = this.invoiceProducts
-        .filter((product) => product.rollId)
-        .map((product) => product.rollId);
+  const payload = {
+    customer: this.selectedCustomerId,
+    transporter: this.selectedTransporterId || "",
+    invoiceNumber: this.invoiceNumber,
+    ewbNo: this.ewbNo,
+    products,
+    rollIds: rollIds.length > 0 ? rollIds : undefined,
+    otherCharges,
+    discountAllowed,
+    cgst: cgstAmount,
+    sgst: sgstAmount,
+    igst: igstAmount,
+    grandTotal,
+  };
 
-      return {
-        customer: this.selectedCustomerId,
-        transporter: this.selectedTransporterId || "",
-        invoiceNumber: this.invoiceNumber,
-        ewbNo: this.ewbNo,
-        products,
-        rollIds: rollIds.length > 0 ? rollIds : undefined, // Only include if there are roll IDs
-        otherCharges,
-        discountAllowed,
-        cgst: cgstAmount,
-        sgst: sgstAmount,
-        igst: igstAmount,
-        grandTotal,
-      };
-    },
+  // FIX: send removedRollIds as an explicit, separate signal — only relevant
+  // on edit, since a brand-new invoice has nothing to remove yet.
+  if (this.isEditing && this.removedRollIds.length > 0) {
+    payload.removedRollIds = [...new Set(this.removedRollIds)];
+  }
+
+  return payload;
+},
 
     validateInvoicePayload(payload) {
       if (!payload.customer) {
