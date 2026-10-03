@@ -490,6 +490,45 @@ const actions = {
       throw new Error("Failed to download POD. Please try again.");
     }
   },
+  async fetchInvoicesForDownload(_, params = {}) {
+  try {
+    const queryParams = {
+      page: 1,
+      itemsPerPage: params.itemsPerPage || 5000,
+      sortBy: "createdAt",
+      sortDesc: true,
+    };
+
+    if (params.startDate) {
+      queryParams.startDate = params.startDate;
+    }
+
+    if (params.endDate) {
+      queryParams.endDate = params.endDate;
+    }
+
+    if (params.period) {
+      queryParams.period = params.period;
+    }
+
+    if (params.monthName) {
+      queryParams.monthName = params.monthName;
+    }
+
+    const response = await apiClient.get("/custprod", {
+      params: queryParams,
+    });
+
+    if (!response.data.success) {
+      throw new Error("Failed to fetch invoices");
+    }
+
+    return response.data.data;
+  } catch (error) {
+    console.error("Error fetching invoices for download:", error);
+    throw error;
+  }
+},
 };
 
 const mutations = {

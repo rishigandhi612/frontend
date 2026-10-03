@@ -84,7 +84,7 @@
               <div class="text-h5 font-weight-bold">
                 ₹{{
                   formatCurrency(
-                    summaryData.overallStatistics?.totalRevenue || 0
+                    summaryData.overallStatistics?.totalRevenue || 0,
                   )
                 }}
               </div>
@@ -108,7 +108,7 @@
               <div class="text-h5 font-weight-bold">
                 ₹{{
                   formatCurrency(
-                    summaryData.overallStatistics?.averageInvoiceValue || 0
+                    summaryData.overallStatistics?.averageInvoiceValue || 0,
                   )
                 }}
               </div>
@@ -212,7 +212,7 @@
                     {{ summaryData.comparison.changes.revenueChangePercent }}%
                     (₹{{
                       formatCurrency(
-                        summaryData.comparison.changes.revenueChange
+                        summaryData.comparison.changes.revenueChange,
                       )
                     }})
                   </div>
@@ -290,7 +290,7 @@
                   <div class="text-caption">
                     ₹{{
                       formatCurrency(
-                        summaryData.trends.worstPeriod.totalRevenue
+                        summaryData.trends.worstPeriod.totalRevenue,
                       )
                     }}
                   </div>
@@ -383,6 +383,10 @@
         <v-card-title class="text-h6">
           Period Details:
           {{ selectedPeriod.period || selectedPeriod.monthName }}
+          <v-spacer></v-spacer>
+          <v-btn icon @click="DownloadInvoices(selectedPeriod)">
+            <v-icon>mdi-arrow-down</v-icon> Download Invoice
+          </v-btn>
         </v-card-title>
         <v-card-text>
           <v-simple-table>
@@ -460,8 +464,8 @@
 </template>
 
 <script>
-import { mapActions, mapState } from "vuex";
-
+import { mapActions, mapState, mapGetters } from "vuex";
+import * as XLSX from "xlsx";
 export default {
   name: "MonthlySummary",
   data() {
@@ -495,6 +499,9 @@ export default {
     },
     summaryData() {
       return this.summaries;
+    },
+    computed: {
+      ...mapGetters("invoices", ["allInvoices", "isLoading", "pagination"]),
     },
   },
   methods: {
@@ -538,6 +545,66 @@ export default {
       this.selectedPeriod = item;
       this.detailsDialog = true;
     },
+ async DownloadInvoices(selectedPeriod) {
+  try {
+    const invoices = await this.$store.dispatch(
+      "invoices/fetchInvoicesForDownload",
+      {
+        startDate: this.startDate,
+        endDate: this.endDate,
+        period: selectedPeriod?.period,
+        monthName: selectedPeriod?.monthName,
+      }
+    );
+
+    if (!invoices || invoices.length === 0) {
+      console.warn("No invoices found for download.");
+      return;
+    }
+
+    const rows = invoices.map((invoice) => ({
+      "Invoice Number": invoice.invoiceNumber,
+      "Invoice Date": invoice.createdAt
+        ? new Date(invoice.createdAt).toLocaleDateString("en-IN")
+        : "",
+
+      Customer: invoice.customer?.name || "",
+
+      "Total Amount": invoice.totalAmount || 0,
+      CGST: invoice.cgst || 0,
+      SGST: invoice.sgst || 0,
+      IGST: invoice.igst || 0,
+      "Other Charges": invoice.otherCharges || 0,
+      Discount: invoice.discountAllowed || 0,
+
+      "Grand Total": invoice.grandTotal || 0,
+      "Paid Amount": invoice.paidAmount || 0,
+      "Pending Amount": invoice.pendingAmount || 0,
+
+      "Payment Status": invoice.paymentStatus || "",
+      "Delivery Status": invoice.deliveryStatus || "",
+
+      "E-Way Bill": invoice.ewbNo || "",
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Invoices"
+    );
+
+    XLSX.writeFile(
+      workbook,
+      "invoices_summary.xlsx"
+    );
+  } catch (error) {
+    console.error("Error downloading invoices:", error);
+  }
+},
   },
 
   mounted() {
