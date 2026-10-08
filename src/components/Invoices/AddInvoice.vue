@@ -48,10 +48,7 @@
             />
           </v-col>
         </v-row>
-        <v-row
-          class="mt-3"
-          v-if="isEditing && calculateTotalgrandTotal() > 100000"
-        >
+        <v-row class="mt-3" v-if="isEditing && grandtotal > 100000">
           <v-col cols="12" md="6" offset-md="3">
             <v-text-field
               v-model="ewbNo"
@@ -259,6 +256,7 @@ export default {
       igst: 0,
       invoiceNumber: "",
       ewbNo: "",
+      grandtotal: 0,
       canEditInvoiceNumber: false,
       rules: {
         required: (value) => !!value || "Required.",
@@ -269,9 +267,9 @@ export default {
       mailInvoiceDialog: false,
       createdInvoiceDetail: null,
       redirectAfterEmailDialog: false,
-      rollIds: [],        // current roll IDs attached to this invoice (existing + newly added this session)
-    removedRollIds: [],  // rolls explicitly removed this session that need to be released on save
-    originalRollIds: [], // snapshot of what the invoice had on load — used to know what's actually worth reporting as "removed"
+      rollIds: [], // current roll IDs attached to this invoice (existing + newly added this session)
+      removedRollIds: [], // rolls explicitly removed this session that need to be released on save
+      originalRollIds: [], // snapshot of what the invoice had on load — used to know what's actually worth reporting as "removed"
     };
   },
 
@@ -374,7 +372,7 @@ export default {
           this.ewbNo = invoice.ewbNo || "";
           this.invoiceNumber = invoice.invoiceNumber || "";
           this.isIntraStateTransaction = invoice.igst === 0;
-
+          this.grandtotal = invoice.grandTotal || 0;
           // FIX: carry existing rollIds into state, and snapshot them separately
           // so we can tell "removed this session" from "never existed" later.
           this.rollIds = invoice.rollIds ? [...invoice.rollIds] : [];
@@ -401,20 +399,20 @@ export default {
       });
     },
 
-  removeProduct(index){
-    const product = this.invoiceProducts[index];
-    if(product && product.rollId){
-      this.rollIds = this.rollIds.filter((id) => id !== product.rollId);
-       if (
-      this.originalRollIds.includes(product.rollId) &&
-      !this.removedRollIds.includes(product.rollId)
-    ) {
-      this.removedRollIds.push(product.rollId);
-    }
-  }
+    removeProduct(index) {
+      const product = this.invoiceProducts[index];
+      if (product && product.rollId) {
+        this.rollIds = this.rollIds.filter((id) => id !== product.rollId);
+        if (
+          this.originalRollIds.includes(product.rollId) &&
+          !this.removedRollIds.includes(product.rollId)
+        ) {
+          this.removedRollIds.push(product.rollId);
+        }
+      }
 
-  this.invoiceProducts.splice(index, 1);
-  },
+      this.invoiceProducts.splice(index, 1);
+    },
 
     openBatchDialog() {
       this.batchDialog = true;
@@ -430,24 +428,24 @@ export default {
       this.inventoryDialog = true;
     },
 
- addInventoryProductsToInvoice(inventoryProducts) {
-  this.invoiceProducts = [...this.invoiceProducts, ...inventoryProducts];
+    addInventoryProductsToInvoice(inventoryProducts) {
+      this.invoiceProducts = [...this.invoiceProducts, ...inventoryProducts];
 
-  const newRollIds = inventoryProducts
-    .filter((p) => p.rollId)
-    .map((p) => p.rollId);
+      const newRollIds = inventoryProducts
+        .filter((p) => p.rollId)
+        .map((p) => p.rollId);
 
-  // A roll being re-added in the same session as a removal cancels the removal.
-  this.removedRollIds = this.removedRollIds.filter(
-    (id) => !newRollIds.includes(id),
-  );
-  this.rollIds = [...new Set([...this.rollIds, ...newRollIds])];
+      // A roll being re-added in the same session as a removal cancels the removal.
+      this.removedRollIds = this.removedRollIds.filter(
+        (id) => !newRollIds.includes(id),
+      );
+      this.rollIds = [...new Set([...this.rollIds, ...newRollIds])];
 
-  this.inventoryDialog = false;
-  this.$toast?.success?.(
-    `Added ${inventoryProducts.length} items from inventory to invoice.`,
-  );
-},
+      this.inventoryDialog = false;
+      this.$toast?.success?.(
+        `Added ${inventoryProducts.length} items from inventory to invoice.`,
+      );
+    },
 
     updateTotals() {
       // This method can be called when needed to update any dependent calculations
@@ -576,77 +574,85 @@ export default {
 
     // Fixed prepareInvoicePayload method for InvoiceForm.vue
 
-  prepareInvoicePayload() {
-  const totalItemsPrice = this.calculateTotalItemsPrice();
-  const otherCharges = parseFloat(this.otherCharges) || 0;
-  const discountAllowed = parseFloat(this.discountAllowed) || 0;
-  const totalWithOtherCharges = totalItemsPrice + otherCharges;
+    prepareInvoicePayload() {
+      const totalItemsPrice = this.calculateTotalItemsPrice();
+      const otherCharges = parseFloat(this.otherCharges) || 0;
+      const discountAllowed = parseFloat(this.discountAllowed) || 0;
+      const totalWithOtherCharges = totalItemsPrice + otherCharges;
 
-  let cgstAmount = 0;
-  let sgstAmount = 0;
-  let igstAmount = 0;
+      let cgstAmount = 0;
+      let sgstAmount = 0;
+      let igstAmount = 0;
 
-  if (this.isIntraStateTransaction) {
-    cgstAmount = totalWithOtherCharges * 0.09;
-    sgstAmount = totalWithOtherCharges * 0.09;
-  } else {
-    igstAmount = totalWithOtherCharges * 0.18;
-  }
+      if (this.isIntraStateTransaction) {
+        cgstAmount = totalWithOtherCharges * 0.09;
+        sgstAmount = totalWithOtherCharges * 0.09;
+      } else {
+        igstAmount = totalWithOtherCharges * 0.18;
+      }
 
-  const grandTotal = Math.round(
-    totalWithOtherCharges + cgstAmount + sgstAmount + igstAmount - discountAllowed,
-  );
+      const grandTotal = Math.round(
+        totalWithOtherCharges +
+          cgstAmount +
+          sgstAmount +
+          igstAmount -
+          discountAllowed,
+      );
 
-  const products = this.invoiceProducts.map((product) => {
-    let productReference;
-    if (typeof product.productId === "string") {
-      productReference = { _id: product.productId };
-    } else if (product.productId && product.productId._id) {
-      productReference = product.productId;
-    } else {
-      const foundProduct = this.allProducts.find((p) => p._id === product.productId);
-      productReference = foundProduct || { _id: product.productId };
-    }
+      const products = this.invoiceProducts.map((product) => {
+        let productReference;
+        if (typeof product.productId === "string") {
+          productReference = { _id: product.productId };
+        } else if (product.productId && product.productId._id) {
+          productReference = product.productId;
+        } else {
+          const foundProduct = this.allProducts.find(
+            (p) => p._id === product.productId,
+          );
+          productReference = foundProduct || { _id: product.productId };
+        }
 
-    return {
-      product: productReference,
-      width: parseFloat(product.width || 0),
-      quantity: parseFloat(product.quantity),
-      unit_price: parseFloat(product.unit_price),
-      totalPrice: parseFloat(product.quantity * product.unit_price),
-      ...(product.rollId && { rollId: product.rollId }),
-      ...(product.inventoryItemId && { inventoryItemId: product.inventoryItemId }),
-    };
-  });
+        return {
+          product: productReference,
+          width: parseFloat(product.width || 0),
+          quantity: parseFloat(product.quantity),
+          unit_price: parseFloat(product.unit_price),
+          totalPrice: parseFloat(product.quantity * product.unit_price),
+          ...(product.rollId && { rollId: product.rollId }),
+          ...(product.inventoryItemId && {
+            inventoryItemId: product.inventoryItemId,
+          }),
+        };
+      });
 
-  // FIX: rollIds is now sourced from this.rollIds (existing + session additions,
-  // minus session removals) instead of being re-derived purely from
-  // invoiceProducts, which previously lost every pre-existing roll on edit.
-  const rollIds = [...new Set(this.rollIds)];
+      // FIX: rollIds is now sourced from this.rollIds (existing + session additions,
+      // minus session removals) instead of being re-derived purely from
+      // invoiceProducts, which previously lost every pre-existing roll on edit.
+      const rollIds = [...new Set(this.rollIds)];
 
-  const payload = {
-    customer: this.selectedCustomerId,
-    transporter: this.selectedTransporterId || "",
-    invoiceNumber: this.invoiceNumber,
-    ewbNo: this.ewbNo,
-    products,
-    rollIds: rollIds.length > 0 ? rollIds : undefined,
-    otherCharges,
-    discountAllowed,
-    cgst: cgstAmount,
-    sgst: sgstAmount,
-    igst: igstAmount,
-    grandTotal,
-  };
+      const payload = {
+        customer: this.selectedCustomerId,
+        transporter: this.selectedTransporterId || "",
+        invoiceNumber: this.invoiceNumber,
+        ewbNo: this.ewbNo,
+        products,
+        rollIds: rollIds.length > 0 ? rollIds : undefined,
+        otherCharges,
+        discountAllowed,
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        igst: igstAmount,
+        grandTotal,
+      };
 
-  // FIX: send removedRollIds as an explicit, separate signal — only relevant
-  // on edit, since a brand-new invoice has nothing to remove yet.
-  if (this.isEditing && this.removedRollIds.length > 0) {
-    payload.removedRollIds = [...new Set(this.removedRollIds)];
-  }
+      // FIX: send removedRollIds as an explicit, separate signal — only relevant
+      // on edit, since a brand-new invoice has nothing to remove yet.
+      if (this.isEditing && this.removedRollIds.length > 0) {
+        payload.removedRollIds = [...new Set(this.removedRollIds)];
+      }
 
-  return payload;
-},
+      return payload;
+    },
 
     validateInvoicePayload(payload) {
       if (!payload.customer) {
