@@ -348,41 +348,48 @@ export default {
       }
     },
 
-   async fetchInvoiceDetail(id) {
-  try {
-    const response = await this.$store.dispatch("invoices/fetchInvoiceById", id);
-    if (response && response.success) {
-      const invoice = response.data;
-      this.selectedCustomerId = invoice.customer._id;
-      this.selectedTransporterId = invoice.transporter?._id || null;
-      this.invoiceProducts = invoice.products.map((product) => ({
-        productId: product.product._id,
-        width: product.width,
-        quantity: product.quantity,
-        unit_price: product.unit_price || 0,
-        totalPrice: (product.unit_price * product.quantity).toFixed(2),
-      }));
-      this.otherCharges = invoice.otherCharges || 0;
-      this.discountAllowed = invoice.discountAllowed || 0;
-      this.ewbNo = invoice.ewbNo || "";
-      this.invoiceNumber = invoice.invoiceNumber || "";
-      this.isIntraStateTransaction = invoice.igst === 0;
+    async fetchInvoiceDetail(id) {
+      try {
+        const response = await this.$store.dispatch(
+          "invoices/fetchInvoiceById",
+          id,
+        );
+        if (response && response.success) {
+          const invoice = response.data;
+          console.log("Fetched invoice details:", invoice);
+          this.selectedCustomerId = invoice.customer._id;
+          this.selectedTransporterId = invoice.transporter?._id || null;
+          this.invoiceProducts = invoice.products.map((product) => ({
+            productId: product.product._id,
+            width: product.width,
+            quantity: product.quantity,
+            unit_price: product.unit_price || 0,
+            totalPrice: (product.unit_price * product.quantity).toFixed(2),
+          }));
+          this.otherCharges = invoice.otherCharges || 0;
+          this.cgst = invoice.cgst || 0;
+          this.sgst = invoice.sgst || 0;
+          this.igst = invoice.igst || 0;
+          this.discountAllowed = invoice.discountAllowed || 0;
+          this.ewbNo = invoice.ewbNo || "";
+          this.invoiceNumber = invoice.invoiceNumber || "";
+          this.isIntraStateTransaction = invoice.igst === 0;
 
-      // FIX: carry existing rollIds into state, and snapshot them separately
-      // so we can tell "removed this session" from "never existed" later.
-      this.rollIds = invoice.rollIds ? [...invoice.rollIds] : [];
-      this.originalRollIds = invoice.rollIds ? [...invoice.rollIds] : [];
-      this.removedRollIds = [];
+          // FIX: carry existing rollIds into state, and snapshot them separately
+          // so we can tell "removed this session" from "never existed" later.
+          this.rollIds = invoice.rollIds ? [...invoice.rollIds] : [];
+          this.originalRollIds = invoice.rollIds ? [...invoice.rollIds] : [];
+          this.removedRollIds = [];
 
-      this.originalInvoice = { ...invoice };
-    } else {
-      throw new Error("Failed to load invoice details for edit.");
-    }
-  } catch (err) {
-    console.error("Error fetching invoice details:", err);
-    this.error = "Failed to load invoice details.";
-  }
-},
+          this.originalInvoice = { ...invoice };
+        } else {
+          throw new Error("Failed to load invoice details for edit.");
+        }
+      } catch (err) {
+        console.error("Error fetching invoice details:", err);
+        this.error = "Failed to load invoice details.";
+      }
+    },
 
     addProduct() {
       this.invoiceProducts.push({
