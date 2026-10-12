@@ -130,10 +130,19 @@
               :items="inventoryItems"
               :items-per-page="10"
               item-key="rollId"
+              :search="search"
               show-select
               class="elevation-1"
               :loading="loadingInventory"
             >
+              <template v-slot:top>
+                <v-text-field
+                  v-model="search"
+                  label="Search Inventory"
+                  prepend-inner-icon="mdi-magnify"
+                  class="mx-4"
+                ></v-text-field>
+              </template>
               <!-- Custom slot for width display -->
               <template slot="item.width" slot-scope="{ item }">
                 {{ formatValue(item.width) }}
@@ -245,9 +254,11 @@ export default {
       loadingInventory: false,
       loadingProducts: false,
       hasSearchedInventory: false, // Track if we've attempted to search
+      search: "",
       inventoryHeaders: [
         { text: "Roll ID", value: "rollId", sortable: true },
-        { text: "Width", value: "width", sortable: true },
+        { text: "Width in MM", value: "widthmm", sortable: true },
+        { text: "Width in Inches", value: "widthin", sortable: true },
         { text: "Net Weight", value: "netWeight", sortable: true },
         { text: "Status", value: "status", sortable: true },
         { text: "Meters", value: "mtr", sortable: true },
@@ -362,10 +373,23 @@ export default {
             return !excludedStatuses.includes(status);
           });
 
-          console.log(
-            `Filtered to ${availableItems.length} available inventory items`,
-          );
-          this.inventoryItems = availableItems;
+          console.log(availableItems);
+          if (availableItems.length > 0) {
+            availableItems.forEach((item) => {
+              if (item.width > 70) {
+                item.widthmm = item.width;
+                item.widthin = (item.width / 25.4).toFixed(2);
+              } else {
+                item.widthin = item.width;
+                item.widthmm = (item.width * 25.4).toFixed(2);
+              }
+            });
+
+            this.inventoryItems = availableItems;
+          } else {
+            console.log("No available inventory items for product");
+            this.inventoryItems = [];
+          }
         } else {
           console.log("No inventory data received for product");
           this.inventoryItems = [];
