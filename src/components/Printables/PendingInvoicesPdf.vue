@@ -407,14 +407,34 @@ export default {
       return doc;
     },
 
-    generatePdf() {
-      const doc = this.createPdfDocument();
-      if (!doc) return;
-      const blob = doc.output("blob");
-      const url = URL.createObjectURL(blob);
-      window.open(url);
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+   generatePdf  () {
+ try {    
+        const doc =  this.createPdfDocument();
+
+        const blob = doc.output("blob");
+        const pdfUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(pdfUrl, "_blank");
+
+        if (!newWindow) {
+          alert("Please allow pop-ups to view and print the PDF.");
+        } else {
+          newWindow.onload = function () {
+            if (!/Mobi|Android/i.test(navigator.userAgent)) {
+              newWindow.focus();
+              newWindow.print();
+            } else {
+              alert(
+                "PDF opened in a new tab. Use your device's options to print."
+              );
+            }
+          };
+        }
+      } catch (error) {
+        console.error("PDF generation error:", error);
+        alert(error.message);
+      }
     },
+
 
     getPdfBlob() {
       const doc = this.createPdfDocument();
