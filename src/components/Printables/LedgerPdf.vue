@@ -372,7 +372,7 @@ export default {
     },
     generatePdf() {
  try {
-        const doc =  this.createPdfDocument();;
+        const doc =  this.createPdfDocument();
 
         const blob = doc.output("blob");
         const pdfUrl = URL.createObjectURL(blob);
