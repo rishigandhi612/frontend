@@ -359,6 +359,15 @@
           >
             <v-icon left>mdi-file-export</v-icon> E-Way Bill JSON
           </v-btn>
+           <v-btn
+            color="deep-purple"
+            dark
+            block
+            class="mt-2"
+            @click="downloadTallyXml"
+          >
+            <v-icon left>mdi-file-export</v-icon> Tally XML
+          </v-btn>
 
           <!-- POD Manager Component -->
           <PodManager
@@ -425,6 +434,7 @@ export default {
         { text: "Rate (₹/kg)", value: "rate" },
         { text: "Amount (₹)", value: "amount" },
       ],
+      downloadingXml: false,
     };
   },
   computed: {
@@ -904,6 +914,274 @@ export default {
 
       this.$toast?.success?.("E-Way Bill JSON generated successfully.");
     },
+       downloadTallyXml() {
+      try {
+        this.downloadingXml = true;
+
+        const invoice = this.invoiceDetail;
+
+        if (!invoice || !invoice.invoiceNumber) {
+          throw new Error("Invoice details are missing.");
+        }
+
+        // Merge duplicate products into one inventory line.
+        const products = new Map();
+
+        for (const item of invoice.products || []) {
+          const name = item.name || item.product?.name;
+
+          if (!name) {
+            throw new Error("A product is missing its name.");
+          }
+
+          const productId = item.product?._id || name;
+          const rate = Number(item.unit_price || 0);
+          const width = item.width ?? 0;
+          const unit = item.unit || "Kg";
+
+          const key = JSON.stringify([
+            productId,
+            name,
+            rate,
+            width,
+            unit,
+          ]);
+
+          if (!products.has(key)) {
+            products.set(key, {
+              name,
+              rate,
+              width,
+              unit,
+              quantity: 0,
+              amount: 0,
+            });
+          }
+
+          const product = products.get(key);
+          product.quantity += Number(item.quantity || 0);
+          product.amount += Number(
+            item.total_price ??
+            Number(item.quantity || 0) * rate
+          );
+        }
+
+        const lines = [...products.values()];
+
+        const amount = Number(invoice.totalAmount || 0);
+        const cgst = Number(invoice.cgst || 0);
+        const sgst = Number(invoice.sgst || 0);
+        const igst = Number(invoice.igst || 0);
+        const otherCharges = Number(invoice.otherCharges || 0);
+        const grandTotal = Number(invoice.grandTotal || 0);
+
+        const roundOff = Number((
+          grandTotal -
+          amount -
+          cgst -
+          sgst -
+          igst -
+          otherCharges+0.01
+        ).toFixed(2));
+
+        // Use createdAt as the voucher date.
+        const d = new Date(invoice.createdAt);
+        if (Number.isNaN(d.getTime())) {
+          throw new Error("Invalid invoice creation date.");
+        }
+
+        const voucherDate =
+          `${d.getFullYear()}` +
+          `${String(d.getMonth() + 1).padStart(2, "0")}` +
+          `${String(d.getDate()).padStart(2, "0")}`;
+
+        const escapeXml = (value) =>
+          String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&apos;");
+
+        const tag = (name, value) =>
+          `<${name}>${escapeXml(value)}</${name}>`;
+
+        const amountText = (value) =>
+          Number(value).toFixed(2);
+
+        const address = invoice.customer?.address || {};
+
+        const addressLines = [
+          address.line1,
+          address.line2,
+          address.city,
+          address.state,
+          address.pincode,
+        ].filter(Boolean);
+
+        const addressXml = addressLines
+          .map((line) => tag("ADDRESS", line))
+          .join("");
+
+        const buyerAddressXml = addressLines
+          .map((line) => tag("BASICBUYERADDRESS", line))
+          .join("");
+
+        const inventoryXml = lines.map((item) => {
+          const qty = Number(item.quantity);
+          const lineAmount = Number(item.amount);
+
+          return `
+            <ALLINVENTORYENTRIES.LIST>
+              ${tag("STOCKITEMNAME", item.name)}
+              ${tag("ISDEEMEDPOSITIVE", "No")}
+              ${tag("ISLASTDEEMEDPOSITIVE", "No")}
+              ${tag("RATE", `${amountText(item.rate)}/${item.unit}.`)}
+              ${tag("AMOUNT", amountText(lineAmount))}
+              ${tag("ACTUALQTY", ` ${qty} ${item.unit}.`)}
+              ${tag("BILLEDQTY", ` ${qty} ${item.unit}.`)}
+
+              <BATCHALLOCATIONS.LIST>
+                ${tag("GODOWNNAME", "Company")}
+                ${tag("BATCHNAME", "Primary Batch")}
+                ${tag("DESTINATIONGODOWNNAME", "Company")}
+                ${tag("AMOUNT", amountText(lineAmount))}
+                ${tag("ACTUALQTY", ` ${qty} ${item.unit}.`)}
+                ${tag("BILLEDQTY", ` ${qty} ${item.unit}.`)}
+              </BATCHALLOCATIONS.LIST>
+
+              <ACCOUNTINGALLOCATIONS.LIST>
+                ${tag("OLDAUDITENTRYIDS.LIST", "")}
+                ${tag("LEDGERNAME", "Sales @ 18%")}
+                ${tag("ISDEEMEDPOSITIVE", "No")}
+                ${tag("AMOUNT", amountText(lineAmount))}
+              </ACCOUNTINGALLOCATIONS.LIST>
+            </ALLINVENTORYENTRIES.LIST>`;
+        }).join("");
+
+        const ledgerXml = ({
+          name,
+          value,
+          isParty = false,
+        }) => `
+          <LEDGERENTRIES.LIST>
+            ${tag("OLDAUDITENTRYIDS.LIST", "")}
+            ${tag("LEDGERNAME", name)}
+            ${tag("ISDEEMEDPOSITIVE", value < 0 ? "Yes" : "No")}
+            ${tag("ISPARTYLEDGER", isParty ? "Yes" : "No")}
+            ${tag("AMOUNT", amountText(value))}
+            ${
+              isParty
+                ? `<BILLALLOCATIONS.LIST>
+                    ${tag("NAME", invoice.invoiceNumber)}
+                    ${tag("BILLTYPE", "New Ref")}
+                    ${tag("AMOUNT", amountText(value))}
+                  </BILLALLOCATIONS.LIST>`
+                : ""
+            }
+          </LEDGERENTRIES.LIST>`;
+
+        const partyName = invoice.customer?.name || "";
+        const state = address.state || "Maharashtra";
+
+        const ledgerEntries = [
+          ledgerXml({
+            name: partyName,
+            value: -grandTotal,
+            isParty: true,
+          }),
+          cgst ? ledgerXml({
+            name: "CGST @ 9%",
+            value: cgst,
+          }) : "",
+          sgst ? ledgerXml({
+            name: "SGST @ 9%",
+            value: sgst,
+          }) : "",
+          igst ? ledgerXml({
+            name: "IGST @ 18%",
+            value: igst,
+          }) : "",
+          otherCharges ? ledgerXml({
+            name: "Other Charges",
+            value: otherCharges,
+          }) : "",
+          roundOff ? ledgerXml({
+            name: "Round Off",
+            value: roundOff,
+          }) : "",
+        ].join("");
+
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+  <HEADER>
+    <TALLYREQUEST>Import Data</TALLYREQUEST>
+  </HEADER>
+  <BODY>
+    <IMPORTDATA>
+      <REQUESTDESC>
+        <REPORTNAME>Vouchers</REPORTNAME>
+        <STATICVARIABLES>
+          <SVCURRENTCOMPANY>HEMANT TRADERS</SVCURRENTCOMPANY>
+        </STATICVARIABLES>
+      </REQUESTDESC>
+      <REQUESTDATA>
+        <TALLYMESSAGE xmlns:UDF="TallyUDF">
+          <VOUCHER VCHTYPE="Sales" ACTION="Create" OBJVIEW="Invoice Voucher View">
+            <ADDRESS.LIST TYPE="String">${addressXml}</ADDRESS.LIST>
+            <BASICBUYERADDRESS.LIST TYPE="String">${buyerAddressXml}</BASICBUYERADDRESS.LIST>
+            ${tag("OLDAUDITENTRYIDS.LIST", "")}
+            ${tag("DATE", voucherDate)}
+            ${tag("BILLOFLADINGDATE", voucherDate)}
+            ${tag("STATENAME", state)}
+            ${tag("NARRATION", invoice.narration || invoice.transporter?.name ? (invoice.narration || `By ${invoice.transporter?.name || "Hand"}`) : "")}
+            ${invoice.customer?.gstin ? tag("PARTYGSTIN", invoice.customer.gstin) : ""}
+            ${tag("PARTYNAME", partyName)}
+            ${tag("VOUCHERTYPENAME", "Sales")}
+            ${tag("REFERENCE", invoice.invoiceNumber)}
+            ${tag("VOUCHERNUMBER", invoice.invoiceNumber)}
+            ${tag("PARTYLEDGERNAME", partyName)}
+            ${tag("BASICBASEPARTYNAME", partyName)}
+            ${tag("PERSISTEDVIEW", "Invoice Voucher View")}
+            ${tag("PLACEOFSUPPLY", state)}
+            ${tag("COUNTRYOFRESIDENCE", "India")}
+            ${tag("BASICSHIPPEDBY", invoice.transporter?.name || "By Hand")}
+            ${tag("ISINVOICE", "Yes")}
+            ${tag("ISCANCELLED", "No")}
+            ${tag("EFFECTIVEDATE", voucherDate)}
+            ${inventoryXml}
+            ${ledgerEntries}
+          </VOUCHER>
+        </TALLYMESSAGE>
+      </REQUESTDATA>
+    </IMPORTDATA>
+  </BODY>
+</ENVELOPE>`;
+
+        const blob = new Blob(
+          [xml],
+          { type: "application/xml;charset=utf-8" }
+        );
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download =
+          `${invoice.invoiceNumber.replace(/[\\/]/g, "-")}.xml`;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (error) {
+        console.error("Tally XML download failed:", error);
+        alert(error.message || "Unable to generate Tally XML.");
+      } finally {
+        this.downloadingXml = false;
+      }
+    },
   },
   watch: {
     "$route.params.id": "loadInvoiceDetails",
@@ -919,3 +1197,7 @@ export default {
   min-height: 80vh;
 }
 </style>
+
+
+ 
+
