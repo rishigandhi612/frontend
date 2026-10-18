@@ -110,7 +110,7 @@
           v-model="selectedItems"
           item-key="id"
           :footer-props="{
-            'items-per-page-options': [5, 10, 15, 20],
+            'items-per-page-options': [5, 10, 15, 20, 100],
             showFirstLastPage: true,
           }"
           @update:options="handleTableOptions"
@@ -305,7 +305,7 @@
           </v-col>
           <v-col cols="12" md="12">
             <v-btn @click="goToBatchAddInventory" color="secondary" block>
-              <v-icon>mdi-plus</v-icon> Batch Add Inventory
+              <v-icon>mdi-plus</v-icon> Batch Add Inven...
             </v-btn>
           </v-col>
           <v-col cols="12" md="12">
@@ -317,6 +317,17 @@
             >
               <v-icon>mdi-printer-multiple</v-icon>
               Print All ({{ inventoryWithProductNames.length }})
+            </v-btn>
+          </v-col>
+          <v-col cols="12" md="12">
+            <v-btn
+              @click="printSummaryPdf"
+              color="grey"
+              block
+              :disabled="inventoryWithProductNames.length === 0"
+            >
+              <v-icon>mdi-printer-multiple</v-icon>
+              Print Summary ({{ inventoryWithProductNames.length }})
             </v-btn>
           </v-col>
         </v-row>
@@ -331,8 +342,12 @@
         :inventory-items="stickerItems"
         :product-name="stickerProductName"
       />
+      <InventorySummaryPdf
+        :inventoryitems="allInventory"
+        :allProducts="allProducts"
+        ref="summaryComponent"
+      />
     </div>
-
     <!-- Print Confirmation Dialog -->
     <v-dialog v-model="printDialog" max-width="500">
       <v-card>
@@ -371,6 +386,7 @@
 import { mapGetters } from "vuex";
 import InventorySearch from "./InventorySearch.vue";
 import InventorySticker from "../Printables/InventorySticker.vue";
+import InventorySummaryPdf from "../Printables/InventorySummary.vue";
 import { debounce } from "lodash";
 
 export default {
@@ -378,6 +394,7 @@ export default {
   components: {
     InventorySearch,
     InventorySticker,
+    InventorySummaryPdf,
   },
   data() {
     return {
@@ -415,6 +432,7 @@ export default {
         { text: "Status", value: "status", sortable: true },
         // { text: "Actions", value: "actions", sortable: false, width: "100px" },
       ],
+      summaryPdfBlob: null,
     };
   },
   computed: {
@@ -503,7 +521,36 @@ export default {
         this.executePrint(this.inventoryWithProductNames);
       this.printDialog = true;
     },
+    async printSummaryPdf() {
+      try {
+        if (!this.allInventory.length) {
+          this.$toast?.warning?.("No inventory items available.");
+          return;
+        }
 
+        await this.$nextTick();
+
+        const summaryComponent = this.$refs.summaryComponent;
+
+        if (!summaryComponent) {
+          throw new Error("Inventory Summary component not found.");
+        }
+
+        // Generate the PDF as a Blob
+        this.summaryPdfBlob = summaryComponent.getPdfBlob();
+
+        console.log("PDF Blob:", this.summaryPdfBlob);
+        console.log("PDF size:", this.summaryPdfBlob.size, "bytes");
+        console.log("PDF type:", this.summaryPdfBlob.type);
+
+        // Optional: preview the generated PDF in a new tab
+        const pdfUrl = URL.createObjectURL(this.summaryPdfBlob);
+        window.open(pdfUrl, "_blank");
+      } catch (error) {
+        console.error("Error generating summary PDF:", error);
+        this.$toast?.error?.("Failed to generate summary PDF.");
+      }
+    },
     async confirmPrint() {
       this.printDialog = false;
       if (this.pendingPrintAction) {
