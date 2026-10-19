@@ -25,7 +25,7 @@
           <template v-slot:top>
             <v-text-field
               v-model="search"
-              label="Search Customer"
+              label="Search Suppliers"
               prepend-inner-icon="mdi-magnify"
               class="mx-4"
             ></v-text-field>
@@ -41,7 +41,7 @@
               <td>
                 <v-row>
                   <v-col cols="3">
-                    <v-icon color="blue" @click="handleRowClick(item._id)"
+                    <v-icon color="blue" @click="handleRowClick(item.id)"
                       >mdi-eye</v-icon
                     >
                   </v-col>
@@ -131,8 +131,8 @@ export default {
       if (!string) return "";
       return string.charAt(0).toUpperCase() + string.slice(1);
     },
-    handleRowClick(customerId) {
-      this.$router.push({ name: "customerDetail", params: { id: customerId } });
+    handleRowClick(supplierId) {
+      this.$router.push({ name: "SupplierDetail", params: { id: supplierId } });
     },
     addSupplier() {
       this.$router.push({ name: "addSupplier" });
@@ -140,9 +140,9 @@ export default {
     goBack() {
       this.$router.go(-1); // Go back to the previous page
     },
-    // openledger(customerId) {
-    //   console.log("openledger", customerId);
-    //   this.$router.push({ name: "supplierLedger", params: { id: customerId } });
+    // openledger(supplierId) {
+    //   console.log("openledger", supplierId);
+    //   this.$router.push({ name: "supplierLedger", params: { id: supplierId } });
     //   // this.$router.push({ name: "supplierLedger", params: { id: customerId } });
     // },
   },

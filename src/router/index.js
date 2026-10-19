@@ -43,6 +43,7 @@ import OutstandingReport from "@/components/Accounting/OutstandingReport.vue";
 import BankTransactions from "@/components/Bank/ BankTransactions.vue";
 import AddSupplier from "@/components/Suppliers/AddSupplier.vue";
 import SupplierList from "@/components/Suppliers/SupplierList.vue";
+import SupplierDetail from "@/components/Suppliers/SupplierDetail.vue";
 Vue.use(Router);
 
 // Define routes
@@ -334,6 +335,12 @@ const routes = [
     path: "/supplier",
     component: SupplierList,
     name: "SupplierList",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/supplier/:id",
+    component: SupplierDetail,
+    name: "SupplierDetail",
     meta: { requiresAuth: true },
   },
   {
