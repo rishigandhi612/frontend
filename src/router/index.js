@@ -41,7 +41,8 @@ import AddReceipt from "@/components/Accounting/AddReceipt.vue";
 import AddOpeningBalances from "@/components/Accounting/AddOpeningBalances.vue";
 import OutstandingReport from "@/components/Accounting/OutstandingReport.vue";
 import BankTransactions from "@/components/Bank/ BankTransactions.vue";
-
+import AddSupplier from "@/components/Suppliers/AddSupplier.vue";
+import SupplierList from "@/components/Suppliers/SupplierList.vue";
 Vue.use(Router);
 
 // Define routes
@@ -63,6 +64,7 @@ const routes = [
     name: "customerList",
     meta: { requiresAuth: true },
   },
+
   {
     path: "/customer/:id",
     component: CustomerDetail,
@@ -322,7 +324,18 @@ const routes = [
     component: AddReceipt,
     meta: { requiresAuth: true },
   },
-
+  {
+    name: "addSupplier",
+    path: "/addSupplier/:id?",
+    component: AddSupplier,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/supplier",
+    component: SupplierList,
+    name: "SupplierList",
+    meta: { requiresAuth: true },
+  },
   {
     path: "*",
     component: NotFound,

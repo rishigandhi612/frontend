@@ -15,6 +15,7 @@ import transactions from "./transaction";
 import accounting from "./accounting";
 import ledger from "./ledger";
 import snackbar from "./snackbar";
+import suppliers from "./suppliers";
 // import auth from "./apiClient";
 import store from "./index";
 
@@ -40,6 +41,7 @@ export default new Vuex.Store({
     banks,
     transactions,
     ledger,
+    suppliers,
     snackbar,
   },
   state: {

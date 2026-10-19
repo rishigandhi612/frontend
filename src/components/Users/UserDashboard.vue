@@ -241,6 +241,14 @@ export default {
           buttonText: "View Banks",
           route: "/bank",
         },
+        totalSuppliers: {
+          title: "Total Suppliers",
+          icon: "mdi-truck-delivery",
+          iconColor: "white",
+          color: "brown",
+          buttonText: "View Suppliers",
+          route: "/supplier",
+        },
         availableInventory: {
           title: "Available Inventory",
           icon: "mdi-store-check",
