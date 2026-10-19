@@ -97,6 +97,13 @@
         </v-row>
         <v-row>
           <v-col cols="12">
+            <v-btn color="success" @click="showStickerThermal = true" block>
+              <v-icon left>mdi-printer</v-icon> Print Thermal Sticker
+            </v-btn>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col cols="12">
             <v-btn color="error" @click="confirmDelete = true" block>
               <v-icon left>mdi-delete</v-icon> Delete Item
             </v-btn>
@@ -135,21 +142,42 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="showStickerThermal" max-width="800">
+      <v-card>
+        <v-card-title class="text-h5"
+          >Inventory Thermal Sticker Preview</v-card-title
+        >
+        <v-card-text>
+          <ThermalSticker
+            v-if="inventoryItem && showStickerThermal"
+            :inventoryItem="inventoryItem"
+            :productName="productName"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="grey" text @click="showStickerThermal = false"
+            >Close</v-btn
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
 <script>
 import InventorySticker from "../Printables/InventorySticker.vue";
-
+import ThermalSticker from "@/components/Printables/ThermalSticker.vue";
 export default {
   components: {
     InventorySticker,
+    ThermalSticker,
   },
   props: {},
   data() {
     return {
       confirmDelete: false,
       showSticker: false,
+      showStickerThermal: false,
       loading: false,
       inventoryItem: null,
       products: [],
@@ -200,7 +228,7 @@ export default {
       }
 
       const product = allProducts.find(
-        (p) => p._id === this.inventoryItem.productId
+        (p) => p._id === this.inventoryItem.productId,
       );
       const productName = product
         ? product.name
@@ -226,7 +254,7 @@ export default {
         const id = this.$route.params.id;
         const response = await this.$store.dispatch(
           "inventory/fetchInventoryDetail",
-          id
+          id,
         );
         this.inventoryItem = response;
       } catch (err) {
@@ -258,7 +286,7 @@ export default {
         this.products = [];
         // Show user-friendly error message
         this.$toast?.error?.(
-          "Failed to load products. Product names may not display correctly."
+          "Failed to load products. Product names may not display correctly.",
         );
       }
     },
@@ -269,7 +297,7 @@ export default {
       try {
         await this.$store.dispatch(
           "inventory/deleteInventory",
-          this.inventoryItem._id
+          this.inventoryItem._id,
         );
         this.$router.push("/inventory");
       } catch (err) {

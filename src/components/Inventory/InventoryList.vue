@@ -321,6 +321,17 @@
           </v-col>
           <v-col cols="12" md="12">
             <v-btn
+              @click="printThermalStickers"
+              color="orange"
+              block
+              :disabled="inventoryWithProductNames.length === 0"
+            >
+              <v-icon>mdi-printer-multiple</v-icon>
+              Thermal Print All ({{ inventoryWithProductNames.length }})
+            </v-btn>
+          </v-col>
+          <v-col cols="12" md="12">
+            <v-btn
               @click="printSummaryPdf"
               color="grey"
               block
@@ -347,6 +358,11 @@
         :allProducts="allProducts"
         ref="summaryComponent"
       />
+      <ThermalSticker
+        v-if="thermalItems.length > 0"
+        ref="thermalComponent"
+        :inventory-items="thermalItems"
+      />
     </div>
     <!-- Print Confirmation Dialog -->
     <v-dialog v-model="printDialog" max-width="500">
@@ -356,17 +372,21 @@
           Print Stickers Confirmation
         </v-card-title>
         <v-card-text>
-          <p>
-            You are about to print
-            <strong>{{ printItemsCount }}</strong> sticker(s).
-          </p>
-          <p v-if="printItemsCount > 4">
+          <p v-if="printMode === 'a4' && printItemsCount > 4">
             This will use
             <strong>{{ Math.ceil(printItemsCount / 4) }}</strong> A4 page(s) (4
             stickers per page).
           </p>
+          <p v-if="printMode === 'thermal'">
+            This will print <strong>{{ printItemsCount }}</strong> label(s), one
+            per 4×6 in page.
+          </p>
           <p class="text-caption text--secondary mt-3">
-            Make sure your printer is ready and loaded with A4 paper.
+            {{
+              printMode === "thermal"
+                ? "Select your thermal printer and 4×6 in paper, scale 100%."
+                : "Make sure your printer is ready and loaded with A4 paper."
+            }}
           </p>
         </v-card-text>
         <v-card-actions>
@@ -387,6 +407,8 @@ import { mapGetters } from "vuex";
 import InventorySearch from "./InventorySearch.vue";
 import InventorySticker from "../Printables/InventorySticker.vue";
 import InventorySummaryPdf from "../Printables/InventorySummary.vue";
+
+import ThermalSticker from "@/components/Printables/ThermalSticker.vue";
 import { debounce } from "lodash";
 
 export default {
@@ -395,6 +417,7 @@ export default {
     InventorySearch,
     InventorySticker,
     InventorySummaryPdf,
+    ThermalSticker,
   },
   data() {
     return {
@@ -403,6 +426,9 @@ export default {
       selectedItems: [],
       stickerItems: [],
       stickerProductName: "",
+      thermalItems: [],
+      printMode: "a4", // "a4" | "thermal"
+      thermalStickerProductName: "",
       printDialog: false,
       printItemsCount: 0,
       pendingPrintAction: null,
@@ -506,6 +532,7 @@ export default {
         this.$toast?.warning?.("Please select items to print stickers for.");
         return;
       }
+      this.printMode = "a4";
       this.printItemsCount = this.selectedItems.length;
       this.pendingPrintAction = () => this.executePrint(this.selectedItems);
       this.printDialog = true;
@@ -516,10 +543,52 @@ export default {
         this.$toast?.warning?.("No inventory items available to print.");
         return;
       }
+      this.printMode = "a4";
       this.printItemsCount = this.inventoryWithProductNames.length;
       this.pendingPrintAction = () =>
         this.executePrint(this.inventoryWithProductNames);
       this.printDialog = true;
+    },
+
+    printThermalStickers() {
+      // Prefer selected rows, otherwise everything loaded
+      const items = this.selectedItems.length
+        ? this.selectedItems
+        : this.inventoryWithProductNames;
+      if (items.length === 0) {
+        this.$toast?.warning?.("No inventory items available to print.");
+        return;
+      }
+      this.printMode = "thermal";
+      this.printItemsCount = items.length;
+      this.pendingPrintAction = () => this.executeThermalPrint(items);
+      this.printDialog = true;
+    },
+    mapStickerItems(items) {
+      return items.map((item) => ({
+        rollId: item.rollId,
+        type: item.type,
+        micron: item.micron,
+        width: item.width,
+        netWeight: item.netWeight,
+        grossWeight: item.grossWeight,
+        mtr: item.mtr,
+        productName: item.productName,
+      }));
+    },
+    async executeThermalPrint(items) {
+      try {
+        this.thermalItems = this.mapStickerItems(items);
+        await this.$nextTick();
+        if (!this.$refs.thermalComponent) {
+          throw new Error("Thermal sticker component not found");
+        }
+        await this.$refs.thermalComponent.printAllStickers();
+        this.showResultsMessage(`Printing ${items.length} label(s)...`);
+      } catch (error) {
+        console.error("Error printing thermal labels:", error);
+        this.$toast?.error?.("Failed to print labels. Please try again.");
+      }
     },
     async printSummaryPdf() {
       try {
