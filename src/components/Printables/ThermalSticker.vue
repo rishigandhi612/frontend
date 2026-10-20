@@ -4,7 +4,6 @@
     <iframe
       v-if="inventoryItem"
       class="preview-frame"
-      :class="{ landscape: isLandscape(inventoryItem) }"
       :srcdoc="previewDoc"
       title="Sticker preview"
     />
@@ -144,7 +143,39 @@ export default {
       const barcodeImg = barcode
         ? `<img src="${barcode}" alt="Barcode">`
         : `<div class="no-barcode">No Barcode</div>`;
+      if (item.type !== "film" && this.isLandscape(item)) {
+        return `
+    <div class="sticker-content landscape">
+      <div class="product-name-header">
+        <h1 class="product-name">${e(
+          this.capitalizeFirstLetter(item.productName) || "Product Name",
+        )}</h1>
+      </div>
 
+      <div class="ls-batch">
+        <div>Batch No: <strong>${e(item.rollId || "N/A")}</strong></div>
+        <div>Net Weight: <strong>${e(item.netWeight || "N/A")}</strong> kg</div>
+      </div>
+
+      <div class="ls-middle">
+        <div class="ls-barcode">${barcodeImg}</div>
+        
+      </div>
+<div class="ls-company">
+          <p class="address">Marketed By:</p>
+          <h2 class="company-name">HEMANT TRADERS</h2>
+          <p class="address">1281, Sadashiv Peth, Vertex Arcade, Pune - 411030</p>
+          <p class="contact-web">
+            Contact: <strong>(+91) 9422080922 / 9420699675</strong><br>
+            Web: hemanttraders.vercel.app
+          </p>
+        </div>
+      <div class="ls-bottom">
+        <h2 class="product-line1">Dealers in <strong>BOPP, POLYESTER, PVC, THERMAL Films</strong></h2>
+        <h2 class="product-line2"><strong>Adhesives for Lamination, Bookbinding, and Pasting, UV Coats</strong></h2>
+      </div>
+    </div>`;
+      }
       const rows =
         item.type === "film"
           ? `
@@ -176,7 +207,6 @@ export default {
             )}</strong> kg</div>
           </div>
         </div>`;
-
       return `
         <div class="sticker-content ${
           this.isLandscape(item) ? "landscape" : ""
@@ -206,12 +236,14 @@ export default {
     // One .page per item => one label per printed page
     buildDocument(items, barcodes, { preview = false } = {}) {
       const pages = items
-        .map(
-          (item, i) => `
-        <div class="page ${this.isLandscape(item) ? "landscape-page" : ""}">
-          ${this.stickerHTML(item, barcodes[i])}
-        </div>`,
-        )
+        .map((item, i) => {
+          const land = this.isLandscape(item);
+          const sticker = this.stickerHTML(item, barcodes[i]);
+          return `
+      <div class="page ${land ? "landscape-page" : ""}">
+        ${land ? `<div class="rotate-wrap">${sticker}</div>` : sticker}
+      </div>`;
+        })
         .join("");
 
       return `<!DOCTYPE html>
@@ -228,8 +260,7 @@ export default {
     getStyles(preview) {
       return `<style>
         @page { size: 4in 6in; margin: 0; }
-        @page land { size: 6in 4in; margin: 0; }
-
+      
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { background: white; font-family: Helvetica, Arial, sans-serif; }
 
@@ -242,7 +273,17 @@ export default {
           break-after: page;
         }
         .page:last-child { page-break-after: auto; break-after: auto; }
-        .page.landscape-page { width: 6in; height: 4in; page: land; }
+        .page.landscape-page { padding: 0; position: relative; }
+.rotate-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6in;
+  height: 4in;
+  padding: 0.1in;
+  transform-origin: top left;
+  transform: translateX(4in) rotate(90deg);
+}
 
         .sticker-content {
           width: 100%;
@@ -309,7 +350,50 @@ export default {
         .separator-line { height: 1px; background: black; }
         .product-line1, .product-line2 { margin: 2px 0; font-size: 12px; line-height: 1.1; }
         .landscape .product-line1, .landscape .product-line2 { font-size: 9px; }
+/* ---------- non-film landscape layout ---------- */
+.landscape .ls-batch {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 2px solid black;
+  padding: 8px 14px;
+  margin: 4px 0;
+  font-size: 22px;
+}
 
+.landscape .ls-middle {
+  flex: 1;
+ 
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+}
+.landscape .ls-barcode {
+  flex: 1 1 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.landscape .ls-barcode img { max-width: 100%; max-height: 110px; object-fit: contain; }
+
+.landscape .ls-company {
+
+  text-align: center;
+  border-left: 1px solid black;
+  padding-left: 8px;
+}
+.landscape .ls-company .company-name { font-size: 24px; margin: 2px 0; }
+.landscape .ls-company .address,
+.landscape .ls-company .contact-web { font-size: 18px; }
+
+.landscape .ls-bottom {
+  border-top: 1px solid black;
+  text-align: center;
+  padding-top: 3px;
+}
+.landscape .ls-bottom .product-line1,
+.landscape .ls-bottom .product-line2 { font-size: 10px; margin: 1px 0; }
         ${
           preview
             ? "body { overflow: hidden; }"
@@ -380,7 +464,10 @@ export default {
 .sticker-container {
   font-family: Arial, sans-serif;
 }
-
+.preview-frame.landscape {
+  width: 6in;
+  height: 4in;
+}
 .preview-frame {
   display: block;
   width: 4in;

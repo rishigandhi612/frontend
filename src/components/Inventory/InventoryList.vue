@@ -362,6 +362,7 @@
         v-if="thermalItems.length > 0"
         ref="thermalComponent"
         :inventory-items="thermalItems"
+        :product-name="stickerProductName"
       />
     </div>
     <!-- Print Confirmation Dialog -->
@@ -428,7 +429,6 @@ export default {
       stickerProductName: "",
       thermalItems: [],
       printMode: "a4", // "a4" | "thermal"
-      thermalStickerProductName: "",
       printDialog: false,
       printItemsCount: 0,
       pendingPrintAction: null,
@@ -481,7 +481,6 @@ export default {
         };
       });
     },
-
     isTableLoading() {
       return (
         this.isLoading ||
@@ -519,7 +518,11 @@ export default {
         console.error("Error in created hook:", error);
       }
     },
+   findProductName(productId) {
+  const product = this.allProducts.find((p) => p._id === productId);
 
+  return product?.name || `Unknown Product (ID: ${productId})`;
+},
     // Sticker Printing Methods
     printSingleSticker(item) {
       this.printItemsCount = 1;
@@ -573,12 +576,13 @@ export default {
         netWeight: item.netWeight,
         grossWeight: item.grossWeight,
         mtr: item.mtr,
-        productName: item.productName,
+        productName: this.findProductName(item.productId) || "Unknown Product",
       }));
     },
     async executeThermalPrint(items) {
       try {
         this.thermalItems = this.mapStickerItems(items);
+        console.log("Thermal sticker items to print:", this.thermalItems);
         await this.$nextTick();
         if (!this.$refs.thermalComponent) {
           throw new Error("Thermal sticker component not found");
