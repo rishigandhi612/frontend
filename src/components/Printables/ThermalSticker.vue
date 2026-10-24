@@ -148,7 +148,7 @@ export default {
     <div class="sticker-content landscape">
       <div class="product-name-header">
         <h1 class="product-name">${e(
-          this.capitalizeFirstLetter(item.productName) || "Product Name",
+          (item.productName) || "Product Name",
         )}</h1>
       </div>
 
@@ -213,7 +213,7 @@ export default {
         }">
           <div class="product-name-header">
             <h1 class="product-name">${e(
-              this.capitalizeFirstLetter(this.productName) || "Product Name",
+              this.capitalizeFirstLetter(item.productName) || "Product Name",
             )}</h1>
           </div>
           ${rows}
