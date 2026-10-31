@@ -44,6 +44,7 @@ import BankTransactions from "@/components/Bank/ BankTransactions.vue";
 import AddSupplier from "@/components/Suppliers/AddSupplier.vue";
 import SupplierList from "@/components/Suppliers/SupplierList.vue";
 import SupplierDetail from "@/components/Suppliers/SupplierDetail.vue";
+import DiwaliSticker from "@/components/Printables/ShippingStickerPrinter.vue";
 Vue.use(Router);
 
 // Define routes
@@ -341,6 +342,12 @@ const routes = [
     path: "/supplier/:id",
     component: SupplierDetail,
     name: "SupplierDetail",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/diwali-sticker",
+    component: DiwaliSticker,
+    name: "diwaliSticker",
     meta: { requiresAuth: true },
   },
   {
