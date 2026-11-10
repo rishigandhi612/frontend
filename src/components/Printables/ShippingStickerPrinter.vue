@@ -75,8 +75,8 @@ const REQUIRED = [
 ];
 
 const SENDER = {
-  name: "Hemant Traders",
-  address: "1281, Sadashiv Peth, Vertex Arcade, Pune - 411030",
+  name: "HEMANT TRADERS",
+  address: "1281,Sadashiv Peth, Vertex Arcade, Pune-411030",
   phone: "(+91) 9422080922 / 9420699675",
 };
 
@@ -218,14 +218,14 @@ export default {
       return `
         <div class="label">
           <div class="banner">
-            <img class="orn" src="${img}" alt="">
+          
             <span class="greet">Happy Diwali</span>
-            <img class="orn" src="${img}" alt="">
+           
           </div>
 
           <div class="body">
             <div class="to">
-              <div class="tag">Ship to</div>
+              <div class="tag">To,</div>
               <div class="name" style="font-size:${this.nameSize(name)}px">${e(
         name,
       )}</div>
@@ -371,9 +371,9 @@ export default {
           text-align: center;
           gap: 2px;
         }
-        .from-name { font-size: 17px; font-weight: bold; }
-        .from-line { font-size: 11px; line-height: 1.25; }
-        .seal { width: 74px; height: 74px; margin-top: auto; }
+        .from-name { font-size: 18px; font-weight: bold; }
+        .from-line { font-size: 15px; line-height: 1.25; }
+        .seal { width: 74px; height: 74px; margin-top: auto;}
 
         /* Footer greeting */
         .wish {
