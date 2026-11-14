@@ -19,6 +19,18 @@
           class="mb-4"
         ></v-text-field>
 
+        <v-btn
+          color="deep-purple"
+          dark
+          class="mb-4"
+          :disabled="selectedInvoiceIds.length === 0 || tallyXmlDownloading"
+          :loading="tallyXmlDownloading"
+          @click="downloadSelectedTallyXml"
+        >
+          <v-icon left>mdi-file-export</v-icon>
+          Tally XML ({{ selectedInvoiceIds.length }})
+        </v-btn>
+
         <v-data-table
           ref="dataTable"
           :headers="headers"
@@ -38,6 +50,15 @@
               @click="navigateToInvoiceDetail(item._id)"
               style="cursor: pointer"
             >
+              <td>
+                <v-checkbox
+                  dense
+                  hide-details
+                  :input-value="isInvoiceSelected(item._id)"
+                  @click.stop
+                  @change="toggleInvoiceSelection(item._id, $event)"
+                ></v-checkbox>
+              </td>
               <td>{{ item.invoiceNumber ? item.invoiceNumber : "N/A" }}</td>
               <td>{{ item.customer ? item.customer.name : "N/A" }}</td>
               <td>{{ formatDate(item.createdAt) }}</td>
@@ -74,12 +95,14 @@
 <script>
 import { mapGetters } from "vuex";
 import debounce from "lodash/debounce";
+import { buildTallyXml } from "@/utils/tallyXml";
 
 export default {
   name: "InvoiceList",
   data() {
     return {
       headers: [
+        { text: "", value: "select", sortable: false, width: "48px" },
         { text: "Invoice No.", value: "invoiceNumber" },
         { text: "Customer Name", value: "customerName" },
         { text: "Date", value: "date" },
@@ -94,6 +117,8 @@ export default {
         sortDesc: [true],
       },
       searchQuery: "",
+      selectedInvoiceIds: [],
+      tallyXmlDownloading: false,
       fetchInitiated: false, // Flag to prevent duplicate initial fetches
       isTableUpdating: false, // Flag to prevent double calls from table options
     };
@@ -220,6 +245,65 @@ export default {
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const year = date.getFullYear();
       return `${day}-${month}-${year}`;
+    },
+
+    isInvoiceSelected(invoiceId) {
+      return this.selectedInvoiceIds.includes(invoiceId);
+    },
+
+    toggleInvoiceSelection(invoiceId, selected) {
+      if (selected && !this.isInvoiceSelected(invoiceId)) {
+        this.selectedInvoiceIds.push(invoiceId);
+      } else if (!selected) {
+        this.selectedInvoiceIds = this.selectedInvoiceIds.filter(
+          (id) => id !== invoiceId,
+        );
+      }
+    },
+
+    async downloadSelectedTallyXml() {
+      if (!this.selectedInvoiceIds.length || this.tallyXmlDownloading) return;
+
+      this.tallyXmlDownloading = true;
+      try {
+        const responses = await Promise.all(
+          this.selectedInvoiceIds.map((id) =>
+            this.$store.dispatch("invoices/fetchInvoiceById", id),
+          ),
+        );
+        const invoices = responses.map((response) => {
+          if (!response?.success || !response.data) {
+            throw new Error("Unable to load one or more selected invoices.");
+          }
+          return response.data;
+        });
+        const xml = buildTallyXml(invoices);
+        const blob = new Blob([xml], {
+          type: "application/xml;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const timestamp = new Date()
+          .toISOString()
+          .replace(/[-:]|\.\d{3}/g, "");
+
+        link.href = url;
+        link.download = `tally_invoices_${timestamp}.xml`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        this.selectedInvoiceIds = [];
+        this.$toast?.success?.(
+          `${invoices.length} invoice${invoices.length === 1 ? "" : "s"} exported to Tally XML.`,
+        );
+      } catch (error) {
+        console.error("Bulk Tally XML download failed:", error);
+        alert(error.message || "Unable to generate Tally XML.");
+      } finally {
+        this.tallyXmlDownloading = false;
+      }
     },
 
     navigateToInvoiceDetail(invoiceId) {
